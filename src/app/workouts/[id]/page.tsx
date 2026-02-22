@@ -92,12 +92,14 @@ export default function WorkoutDetailPage() {
     }
 
     function handleShare(friendId: string) {
+        if (!workout) return;
         if (workout.sharedWith.includes(friendId)) return;
         updateWorkout({ ...workout, sharedWith: [...workout.sharedWith, friendId] });
         setToast({ msg: 'Treino compartilhado!', type: 'success' });
     }
 
     function removeShare(friendId: string) {
+        if (!workout) return;
         updateWorkout({ ...workout, sharedWith: workout.sharedWith.filter((sid) => sid !== friendId) });
         setToast({ msg: 'Compartilhamento removido.', type: 'success' });
     }
