@@ -187,7 +187,7 @@ export default function WorkoutDetailPage() {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                 {sets.map((setDef, sIdx) => (
                                                     <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 60 }}>Série {sIdx + 1}</span>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 60 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
                                                         <input
                                                             className="input"
                                                             type="number"

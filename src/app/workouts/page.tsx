@@ -62,7 +62,14 @@ export default function WorkoutsPage() {
     function updateSetReps(exIdx: number, setIdx: number, reps: number) {
         setWExList((prev) => prev.map((e, i) => {
             if (i !== exIdx) return e;
-            return { ...e, sets: e.sets.map((s, si) => si === setIdx ? { reps } : s) };
+            return { ...e, sets: e.sets.map((s, si) => si === setIdx ? { ...s, reps } : s) };
+        }));
+    }
+
+    function updateSetLabel(exIdx: number, setIdx: number, label: string) {
+        setWExList((prev) => prev.map((e, i) => {
+            if (i !== exIdx) return e;
+            return { ...e, sets: e.sets.map((s, si) => si === setIdx ? { ...s, label } : s) };
         }));
     }
 
@@ -230,7 +237,14 @@ export default function WorkoutsPage() {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {item.sets.map((s, setIdx) => (
                                                     <div key={setIdx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', minWidth: 52 }}>Série {setIdx + 1}</span>
+                                                        <input
+                                                            className="input"
+                                                            type="text"
+                                                            placeholder={`Série ${setIdx + 1}`}
+                                                            value={s.label ?? ''}
+                                                            onChange={(e) => updateSetLabel(exIdx, setIdx, e.target.value)}
+                                                            style={{ width: 110, fontSize: '0.78rem' }}
+                                                        />
                                                         <input
                                                             className="input"
                                                             type="number"
@@ -238,9 +252,9 @@ export default function WorkoutsPage() {
                                                             max={100}
                                                             value={s.reps}
                                                             onChange={(e) => updateSetReps(exIdx, setIdx, +e.target.value)}
-                                                            style={{ width: 70 }}
+                                                            style={{ width: 64 }}
                                                         />
-                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>reps</span>
+                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>reps</span>
                                                         {item.sets.length > 1 && (
                                                             <button type="button" onClick={() => removeSet(exIdx, setIdx)}
                                                                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2, display: 'flex', marginLeft: 'auto' }}>

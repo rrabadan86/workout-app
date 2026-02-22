@@ -16,6 +16,7 @@ export interface Exercise {
 
 export interface WorkoutSet {
   reps: number;
+  label?: string; // optional custom name, e.g. "Aquecimento", "Falha"
 }
 
 export interface WorkoutExercise {
