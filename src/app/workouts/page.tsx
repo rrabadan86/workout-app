@@ -73,6 +73,13 @@ export default function WorkoutsPage() {
         }));
     }
 
+    function updateSetNotes(exIdx: number, setIdx: number, notes: string) {
+        setWExList((prev) => prev.map((e, i) => {
+            if (i !== exIdx) return e;
+            return { ...e, sets: e.sets.map((s, si) => si === setIdx ? { ...s, notes } : s) };
+        }));
+    }
+
     function openCreate() {
         setEditTarget(null);
         setWName(''); setWEndDate(''); setWExList([]);
@@ -240,10 +247,10 @@ export default function WorkoutsPage() {
                                                         <input
                                                             className="input"
                                                             type="text"
-                                                            placeholder={`Série ${setIdx + 1}`}
+                                                            placeholder={`S${setIdx + 1}`}
                                                             value={s.label ?? ''}
                                                             onChange={(e) => updateSetLabel(exIdx, setIdx, e.target.value)}
-                                                            style={{ width: 110, fontSize: '0.78rem' }}
+                                                            style={{ width: 64, fontSize: '0.78rem' }}
                                                         />
                                                         <input
                                                             className="input"
@@ -255,9 +262,17 @@ export default function WorkoutsPage() {
                                                             style={{ width: 64 }}
                                                         />
                                                         <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>reps</span>
+                                                        <input
+                                                            className="input"
+                                                            type="text"
+                                                            placeholder="Observações"
+                                                            value={s.notes ?? ''}
+                                                            onChange={(e) => updateSetNotes(exIdx, setIdx, e.target.value)}
+                                                            style={{ flex: 1, fontSize: '0.78rem' }}
+                                                        />
                                                         {item.sets.length > 1 && (
                                                             <button type="button" onClick={() => removeSet(exIdx, setIdx)}
-                                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2, display: 'flex', marginLeft: 'auto' }}>
+                                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2, display: 'flex' }}>
                                                                 <X size={13} />
                                                             </button>
                                                         )}
