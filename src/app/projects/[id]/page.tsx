@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Plus, Dumbbell, Pencil, Trash2, ChevronRight, FolderOpen, X } from 'lucide-react';
+import { Plus, Dumbbell, Pencil, Trash2, ChevronRight, FolderOpen, X, ArrowUp, ArrowDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
@@ -31,7 +31,33 @@ export default function ProjectDetailPage() {
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
     const project = store.projects.find((p) => p.id === id);
-    const workouts = store.workouts.filter((w) => w.projectId === id);
+    const workouts = store.workouts
+        .filter((w) => w.projectId === id)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    // Local ordering state (array of workout ids in display order)
+    const [orderedIds, setOrderedIds] = useState<string[]>([]);
+    // Sync orderedIds when workouts change
+    useEffect(() => {
+        setOrderedIds(workouts.map((w) => w.id));
+    }, [workouts.map((w) => w.id).join(',')]);
+    const orderedWorkouts = orderedIds
+        .map((wid) => workouts.find((w) => w.id === wid))
+        .filter(Boolean) as typeof workouts;
+
+    async function moveWorkout(idx: number, dir: -1 | 1) {
+        const newIds = [...orderedIds];
+        const swapIdx = idx + dir;
+        if (swapIdx < 0 || swapIdx >= newIds.length) return;
+        [newIds[idx], newIds[swapIdx]] = [newIds[swapIdx], newIds[idx]];
+        setOrderedIds(newIds);
+        // Persist order to DB
+        await Promise.all(newIds.map((wid, i) => {
+            const w = workouts.find((x) => x.id === wid);
+            if (!w) return Promise.resolve();
+            return updateWorkout({ ...w, order: i });
+        }));
+    }
 
     if (!ready || !userId) return null;
     if (!project) return (
@@ -56,6 +82,14 @@ export default function ProjectDetailPage() {
     }
 
     function removeEx(exIdx: number) { setWExList((prev) => prev.filter((_, i) => i !== exIdx)); }
+
+    function moveEx(exIdx: number, dir: -1 | 1) {
+        const newList = [...wExList];
+        const swapIdx = exIdx + dir;
+        if (swapIdx < 0 || swapIdx >= newList.length) return;
+        [newList[exIdx], newList[swapIdx]] = [newList[swapIdx], newList[exIdx]];
+        setWExList(newList);
+    }
 
     function addSet(exIdx: number) {
         setWExList((prev) => prev.map((e, i) => i !== exIdx ? e : { ...e, sets: [...e.sets, { reps: 10, label: '', notes: '' }] }));
@@ -155,10 +189,22 @@ export default function ProjectDetailPage() {
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 40 }}>
-                        {workouts.map((w) => {
+                        {orderedWorkouts.map((w, idx) => {
                             const exCount = w.exercises.length;
                             return (
                                 <div key={w.id} className="item-card">
+                                    {isOwner && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0, marginRight: 4 }}>
+                                            <button className="btn-icon" style={{ padding: 2, opacity: idx === 0 ? 0.2 : 1 }}
+                                                onClick={() => moveWorkout(idx, -1)} disabled={idx === 0} title="Mover para cima">
+                                                <ArrowUp size={13} />
+                                            </button>
+                                            <button className="btn-icon" style={{ padding: 2, opacity: idx === orderedWorkouts.length - 1 ? 0.2 : 1 }}
+                                                onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1} title="Mover para baixo">
+                                                <ArrowDown size={13} />
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="stat-icon stat-icon-green" style={{ width: 40, height: 40, flexShrink: 0 }}>
                                         <Dumbbell size={18} />
                                     </div>
@@ -215,7 +261,20 @@ export default function ProjectDetailPage() {
                             return (
                                 <div key={exIdx} className="card" style={{ padding: '12px 14px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                        <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{exInfo?.name ?? 'Exercício'}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {/* Exercise reorder buttons */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                                <button type="button" onClick={() => moveEx(exIdx, -1)} disabled={exIdx === 0}
+                                                    style={{ background: 'none', border: 'none', color: exIdx === 0 ? 'var(--text-muted)' : 'var(--accent)', cursor: exIdx === 0 ? 'default' : 'pointer', padding: '1px 2px', display: 'flex', opacity: exIdx === 0 ? 0.3 : 1 }}>
+                                                    <ArrowUp size={12} />
+                                                </button>
+                                                <button type="button" onClick={() => moveEx(exIdx, 1)} disabled={exIdx === wExList.length - 1}
+                                                    style={{ background: 'none', border: 'none', color: exIdx === wExList.length - 1 ? 'var(--text-muted)' : 'var(--accent)', cursor: exIdx === wExList.length - 1 ? 'default' : 'pointer', padding: '1px 2px', display: 'flex', opacity: exIdx === wExList.length - 1 ? 0.3 : 1 }}>
+                                                    <ArrowDown size={12} />
+                                                </button>
+                                            </div>
+                                            <span style={{ fontWeight: 700, fontSize: '0.88rem' }}>{exInfo?.name ?? 'Exercício'}</span>
+                                        </div>
                                         <button type="button" onClick={() => removeEx(exIdx)}
                                             style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', display: 'flex' }}>
                                             <X size={15} />

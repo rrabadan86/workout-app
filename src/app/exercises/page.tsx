@@ -11,11 +11,12 @@ import { useStore } from '@/lib/store';
 import { uid } from '@/lib/utils';
 import type { Exercise } from '@/lib/types';
 
-const MUSCLES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Abdômen', 'Glúteos', 'Panturrilha', 'Antebraço'];
+const MUSCLES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Abdômen', 'Glúteos', 'Panturrilha', 'Antebraço', 'Aeróbico'];
 const muscleColors: Record<string, string> = {
     Peito: 'badge-purple', Costas: 'badge-green', Ombros: 'badge-red',
     Bíceps: 'badge-orange', Tríceps: 'badge-purple', Pernas: 'badge-green',
     Abdômen: 'badge-red', Glúteos: 'badge-orange', Panturrilha: 'badge-green', Antebraço: 'badge-red',
+    Aeróbico: 'badge-green',
 };
 
 export default function ExercisesPage() {

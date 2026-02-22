@@ -42,6 +42,7 @@ export interface Workout {
   ownerId: string;
   projectId: string; // parent project
   exercises: WorkoutExercise[];
+  order?: number;    // display order within the project
 }
 
 export interface SetLog {
