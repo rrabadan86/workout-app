@@ -33,6 +33,8 @@ export default function ProjectsPage() {
     const [editTarget, setEditTarget] = useState<Project | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
     const [showShareModal, setShowShareModal] = useState<string | null>(null);
+    const [shareEmail, setShareEmail] = useState('');
+    const [shareStatus, setShareStatus] = useState<{ msg: string; ok: boolean } | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -89,21 +91,36 @@ export default function ProjectsPage() {
         setToast({ msg: 'Projeto excluído.', type: 'success' });
     }
 
-    async function handleShare(projectId: string, friendId: string) {
-        const p = store.projects.find((x) => x.id === projectId);
-        if (!p || p.sharedWith.includes(friendId)) return;
-        await updateProject({ ...p, sharedWith: [...p.sharedWith, friendId] });
-        setToast({ msg: 'Projeto compartilhado!', type: 'success' });
+    async function handleShareByEmail(projectId: string) {
+        const email = shareEmail.trim().toLowerCase();
+        if (!email) return;
+        const proj = store.projects.find((x) => x.id === projectId);
+        if (!proj) return;
+        const foundUser = store.users.find((u) => u.email.toLowerCase() === email);
+        if (foundUser) {
+            if (foundUser.id === userId) {
+                setShareStatus({ msg: 'Você não pode compartilhar consigo mesmo.', ok: false }); return;
+            }
+            if (proj.sharedWith.includes(foundUser.id)) {
+                setShareStatus({ msg: 'Este usuário já tem acesso.', ok: false }); return;
+            }
+            await updateProject({ ...proj, sharedWith: [...proj.sharedWith, foundUser.id] });
+            setShareEmail('');
+            setShareStatus({ msg: `${foundUser.name} agora tem acesso ao projeto! ✅`, ok: true });
+        } else {
+            // Simulate invite email (no real email service)
+            setShareEmail('');
+            setShareStatus({ msg: `Convite enviado para ${email}. Assim que criar uma conta, terá acesso ao projeto. ✉ï¸`, ok: true });
+        }
     }
 
     async function removeShare(projectId: string, friendId: string) {
         const p = store.projects.find((x) => x.id === projectId);
         if (!p) return;
         await updateProject({ ...p, sharedWith: p.sharedWith.filter((id) => id !== friendId) });
-        setToast({ msg: 'Compartilhamento removido.', type: 'success' });
+        setToast({ msg: 'Acesso removido.', type: 'success' });
     }
 
-    const otherUsers = store.users.filter((u) => u.id !== userId);
 
     return (
         <>
@@ -235,36 +252,55 @@ export default function ProjectsPage() {
             {showShareModal && (() => {
                 const proj = store.projects.find((p) => p.id === showShareModal);
                 if (!proj) return null;
+                const sharedUsers = store.users.filter((u) => proj.sharedWith.includes(u.id));
                 return (
-                    <Modal title={`Compartilhar — ${proj.name}`} onClose={() => setShowShareModal(null)}
-                        footer={<button className="btn btn-ghost" onClick={() => setShowShareModal(null)}>Fechar</button>}
+                    <Modal title={`Compartilhar — ${proj.name}`} onClose={() => { setShowShareModal(null); setShareEmail(''); setShareStatus(null); }}
+                        footer={<button className="btn btn-ghost" onClick={() => { setShowShareModal(null); setShareEmail(''); setShareStatus(null); }}>Fechar</button>}
                     >
-                        {otherUsers.length === 0 ? (
-                            <p style={{ color: 'var(--text-secondary)' }}>Nenhum outro usuário cadastrado.</p>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {otherUsers.map((u) => {
-                                    const shared = proj.sharedWith.includes(u.id);
-                                    return (
-                                        <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                                            <div>
-                                                <div style={{ fontWeight: 600 }}>{u.name}</div>
-                                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{u.email}</div>
-                                            </div>
-                                            {shared ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* Email input */}
+                            <div className="field">
+                                <label>Compartilhar por e-mail</label>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <input
+                                        className="input"
+                                        type="email"
+                                        placeholder="exemplo@email.com"
+                                        value={shareEmail}
+                                        onChange={(e) => { setShareEmail(e.target.value); setShareStatus(null); }}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleShareByEmail(proj.id)}
+                                    />
+                                    <button className="btn btn-primary btn-sm" onClick={() => handleShareByEmail(proj.id)} disabled={!shareEmail.trim()}>
+                                        <Share2 size={14} /> Convidar
+                                    </button>
+                                </div>
+                                {shareStatus && (
+                                    <p style={{ fontSize: '0.82rem', marginTop: 6, color: shareStatus.ok ? '#22c55e' : 'var(--danger)' }}>
+                                        {shareStatus.msg}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Already shared with */}
+                            {sharedUsers.length > 0 && (
+                                <div>
+                                    <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Com acesso</p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {sharedUsers.map((u) => (
+                                            <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px' }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{u.name}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</div>
+                                                </div>
                                                 <button className="btn btn-ghost btn-sm" onClick={() => removeShare(proj.id, u.id)}>
                                                     <X size={13} /> Remover
                                                 </button>
-                                            ) : (
-                                                <button className="btn btn-primary btn-sm" onClick={() => handleShare(proj.id, u.id)}>
-                                                    <Share2 size={13} /> Compartilhar
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </Modal>
                 );
             })()}

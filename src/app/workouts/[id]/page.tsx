@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Save } from 'lucide-react';
+import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Save, Play, Square, Timer } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -20,6 +21,42 @@ export default function WorkoutDetailPage() {
     const [weights, setWeights] = useState<Record<string, string[]>>({});
     const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+    // ─── Timer ────────────────────────────────────────────────────────────
+    const [timerRunning, setTimerRunning] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const [showSummary, setShowSummary] = useState(false);
+    const [finalDuration, setFinalDuration] = useState(0);
+    const startedAtRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (!timerRunning) return;
+        const interval = setInterval(() => {
+            setElapsedSeconds(Math.floor((Date.now() - (startedAtRef.current ?? Date.now())) / 1000));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [timerRunning]);
+
+    function fmtTime(s: number) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return h > 0
+            ? `${h}h ${String(m).padStart(2, '0')}min ${String(sec).padStart(2, '0')}s`
+            : `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    }
+
+    function startWorkout() {
+        startedAtRef.current = Date.now();
+        setElapsedSeconds(0);
+        setTimerRunning(true);
+    }
+
+    function finishWorkout() {
+        setTimerRunning(false);
+        setFinalDuration(elapsedSeconds);
+        setShowSummary(true);
+    }
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
@@ -107,6 +144,27 @@ export default function WorkoutDetailPage() {
                         </div>
                         <h1 className="page-title">{workout.name}</h1>
                         <p className="page-subtitle">{workout.exercises.length} exercício(s)</p>
+                    </div>
+                    {/* Timer display */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                        {timerRunning && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius)', padding: '6px 14px' }}>
+                                <Timer size={16} color="#22c55e" />
+                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '1.1rem', color: '#22c55e', letterSpacing: 1 }}>
+                                    {fmtTime(elapsedSeconds)}
+                                </span>
+                            </div>
+                        )}
+                        {!timerRunning ? (
+                            <button className="btn btn-primary" onClick={startWorkout} style={{ gap: 6 }}>
+                                <Play size={15} /> Iniciar Treino
+                            </button>
+                        ) : (
+                            <button onClick={finishWorkout}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '8px 18px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+                                <Square size={14} fill="currentColor" /> Finalizar
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -244,6 +302,31 @@ export default function WorkoutDetailPage() {
             </div>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+
+            {/* Summary Modal */}
+            {showSummary && (
+                <Modal title="🏁 Treino Finalizado!" onClose={() => setShowSummary(false)}
+                    footer={
+                        <>
+                            <button className="btn btn-ghost" onClick={() => setShowSummary(false)}>Fechar</button>
+                            <button className="btn btn-primary" onClick={() => { setShowSummary(false); router.push(project ? `/projects/${project.id}` : '/projects'); }}>
+                                Voltar ao Projeto
+                            </button>
+                        </>
+                    }
+                >
+                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: 12 }}>💪</div>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>Duração do treino</p>
+                        <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#22c55e', fontVariantNumeric: 'tabular-nums', letterSpacing: 1 }}>
+                            {fmtTime(finalDuration)}
+                        </div>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 12 }}>
+                            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
+                    </div>
+                </Modal>
+            )}
         </>
     );
 }
