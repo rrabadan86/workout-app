@@ -1,9 +1,11 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut } from 'lucide-react';
+import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
+
+const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
 const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -22,6 +24,8 @@ export default function Navbar() {
 
     const user = store.users.find((u) => u.id === userId);
     if (!user) return null;
+
+    const isSupervisor = user.email === SUPERVISOR_EMAIL;
 
     function handleLogout() {
         logout();
@@ -42,6 +46,13 @@ export default function Navbar() {
                         {label}
                     </a>
                 ))}
+                {isSupervisor && (
+                    <a href="/admin" className={`nav-link ${pathname.startsWith('/admin') ? 'active' : ''}`}
+                        style={{ color: 'var(--accent)' }}>
+                        <Shield size={14} style={{ display: 'inline', marginRight: 4 }} />
+                        Admin
+                    </a>
+                )}
             </div>
 
             <div className="nav-user">

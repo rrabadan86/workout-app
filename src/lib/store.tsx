@@ -93,7 +93,7 @@ export function useStore() {
     }, [refresh]);
 
     return {
-        store, loading,
+        store, loading, refresh,
         addUser, addExercise, updateExercise, deleteExercise,
         addWorkout, updateWorkout, deleteWorkout, addLog,
     };
