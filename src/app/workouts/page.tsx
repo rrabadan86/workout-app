@@ -92,38 +92,38 @@ export default function WorkoutsPage() {
         setShowModal(true);
     }
 
-    function handleSave(e: React.FormEvent) {
+    async function handleSave(e: React.FormEvent) {
         e.preventDefault();
         if (wExList.length === 0) { setToast({ msg: 'Adicione ao menos um exercício.', type: 'error' }); return; }
         if (editTarget) {
-            updateWorkout({ ...editTarget, name: wName, endDate: wEndDate, exercises: wExList });
+            await updateWorkout({ ...editTarget, name: wName, endDate: wEndDate, exercises: wExList });
             setToast({ msg: 'Treino atualizado!', type: 'success' });
         } else {
-            addWorkout({ id: uid(), name: wName, ownerId: userId, exercises: wExList, endDate: wEndDate, sharedWith: [] });
+            await addWorkout({ id: uid(), name: wName, ownerId: userId, exercises: wExList, endDate: wEndDate, sharedWith: [] });
             setToast({ msg: 'Treino criado!', type: 'success' });
         }
         setWName(''); setWEndDate(''); setWExList([]);
         setShowModal(false);
     }
 
-    function confirmDelete() {
+    async function confirmDelete() {
         if (!deleteTarget) return;
-        deleteWorkout(deleteTarget.id);
+        await deleteWorkout(deleteTarget.id);
         setDeleteTarget(null);
         setToast({ msg: 'Treino excluído.', type: 'success' });
     }
 
-    function handleShare(workoutId: string, friendId: string) {
+    async function handleShare(workoutId: string, friendId: string) {
         const w = store.workouts.find((x) => x.id === workoutId);
         if (!w || w.sharedWith.includes(friendId)) return;
-        updateWorkout({ ...w, sharedWith: [...w.sharedWith, friendId] });
+        await updateWorkout({ ...w, sharedWith: [...w.sharedWith, friendId] });
         setToast({ msg: 'Treino compartilhado!', type: 'success' });
     }
 
-    function removeShare(workoutId: string, friendId: string) {
+    async function removeShare(workoutId: string, friendId: string) {
         const w = store.workouts.find((x) => x.id === workoutId);
         if (!w) return;
-        updateWorkout({ ...w, sharedWith: w.sharedWith.filter((id) => id !== friendId) });
+        await updateWorkout({ ...w, sharedWith: w.sharedWith.filter((id) => id !== friendId) });
         setToast({ msg: 'Compartilhamento removido.', type: 'success' });
     }
 

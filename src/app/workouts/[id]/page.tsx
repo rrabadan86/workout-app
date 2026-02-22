@@ -82,12 +82,12 @@ export default function WorkoutDetailPage() {
         });
     }
 
-    function handleSaveLog(exId: string, setsDef: { reps: number }[]) {
+    async function handleSaveLog(exId: string, setsDef: { reps: number }[]) {
         const ws = weights[exId] ?? [];
         if (ws.some((w) => !w || parseFloat(w) <= 0)) {
             setToast({ msg: 'Informe o peso para todas as séries.', type: 'error' }); return;
         }
-        addLog({
+        await addLog({
             id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
             sets: ws.map((w, i) => ({ weight: parseFloat(w), reps: setsDef[i]?.reps ?? 0 }))
         });
@@ -95,16 +95,16 @@ export default function WorkoutDetailPage() {
         setToast({ msg: 'Registro salvo!', type: 'success' });
     }
 
-    function handleShare(friendId: string) {
+    async function handleShare(friendId: string) {
         if (!workout) return;
         if (workout.sharedWith.includes(friendId)) return;
-        updateWorkout({ ...workout, sharedWith: [...workout.sharedWith, friendId] });
+        await updateWorkout({ ...workout, sharedWith: [...workout.sharedWith, friendId] });
         setToast({ msg: 'Treino compartilhado!', type: 'success' });
     }
 
-    function removeShare(friendId: string) {
+    async function removeShare(friendId: string) {
         if (!workout) return;
-        updateWorkout({ ...workout, sharedWith: workout.sharedWith.filter((sid) => sid !== friendId) });
+        await updateWorkout({ ...workout, sharedWith: workout.sharedWith.filter((sid) => sid !== friendId) });
         setToast({ msg: 'Compartilhamento removido.', type: 'success' });
     }
 

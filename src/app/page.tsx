@@ -3,41 +3,55 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dumbbell, Eye, EyeOff } from 'lucide-react';
-import { useStore, getSession } from '@/lib/store';
+import { getSession } from '@/lib/store';
 import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { uid } from '@/lib/utils';
 import Toast from '@/components/Toast';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { store, addUser } = useStore();
   const { login } = useAuth();
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (getSession()) router.replace('/dashboard');
   }, [router]);
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    const user = store.users.find((u) => u.email === email && u.password === password);
-    if (!user) { setToast({ msg: 'E-mail ou senha incorretos.', type: 'error' }); return; }
-    login(user.id);
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .eq('password', password)
+      .maybeSingle();
+    setLoading(false);
+    if (error || !data) { setToast({ msg: 'E-mail ou senha incorretos.', type: 'error' }); return; }
+    login(data.id);
     router.push('/dashboard');
   }
 
-  function handleRegister(e: React.FormEvent) {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
-    if (store.users.find((u) => u.email === email)) {
+    setLoading(true);
+    // Check if email already exists
+    const { data: existing } = await supabase.from('users').select('id').eq('email', email).maybeSingle();
+    if (existing) {
+      setLoading(false);
       setToast({ msg: 'Já existe uma conta com esse e-mail.', type: 'error' }); return;
     }
-    const newUser = { id: uid(), name, email, password, friendIds: [] };
-    addUser(newUser);
+    const newUser = { id: uid(), name, email, password, friend_ids: [] };
+    const { error } = await supabase.from('users').insert(newUser);
+    setLoading(false);
+    if (error) { setToast({ msg: 'Erro ao criar conta. Tente novamente.', type: 'error' }); return; }
     login(newUser.id);
     router.push('/dashboard');
   }
@@ -73,7 +87,9 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" className="btn btn-primary" style={{ marginTop: 4 }}>Entrar</button>
+            <button type="submit" className="btn btn-primary" style={{ marginTop: 4 }} disabled={loading}>
+              {loading ? 'Entrando...' : 'Entrar'}
+            </button>
           </form>
         ) : (
           <form className="auth-form" onSubmit={handleRegister}>
@@ -94,12 +110,14 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" className="btn btn-primary" style={{ marginTop: 4 }}>Criar conta</button>
+            <button type="submit" className="btn btn-primary" style={{ marginTop: 4 }} disabled={loading}>
+              {loading ? 'Criando conta...' : 'Criar conta'}
+            </button>
           </form>
         )}
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          Seus dados ficam salvos localmente no seu dispositivo.
+          Seus dados ficam salvos na nuvem — acesse de qualquer dispositivo.
         </p>
       </div>
       {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}

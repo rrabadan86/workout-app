@@ -51,22 +51,22 @@ export default function ExercisesPage() {
         setShowModal(true);
     }
 
-    function handleSave(e: React.FormEvent) {
+    async function handleSave(e: React.FormEvent) {
         e.preventDefault();
         if (editTarget) {
-            updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc });
+            await updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc });
             setToast({ msg: 'Exercício atualizado!', type: 'success' });
         } else {
-            addExercise({ id: uid(), name: exName, muscle: exMuscle, description: exDesc, createdBy: userId });
+            await addExercise({ id: uid(), name: exName, muscle: exMuscle, description: exDesc, createdBy: userId });
             setToast({ msg: 'Exercício criado!', type: 'success' });
         }
         setExName(''); setExMuscle('Peito'); setExDesc('');
         setShowModal(false);
     }
 
-    function confirmDelete() {
+    async function confirmDelete() {
         if (!deleteTarget) return;
-        deleteExercise(deleteTarget.id);
+        await deleteExercise(deleteTarget.id);
         setDeleteTarget(null);
         setToast({ msg: 'Exercício excluído.', type: 'success' });
     }
