@@ -39,12 +39,31 @@ export default function WorkoutsPage() {
 
     function addExToList() {
         if (!selEx || wExList.find((x) => x.exerciseId === selEx)) return;
-        setWExList((prev) => [...prev, { exerciseId: selEx, sets: 3, reps: 10 }]);
+        setWExList((prev) => [...prev, { exerciseId: selEx, sets: [{ reps: 10 }] }]);
         setSelEx('');
     }
 
-    function updateExEntry(idx: number, field: 'sets' | 'reps', val: number) {
-        setWExList((prev) => prev.map((e, i) => i === idx ? { ...e, [field]: val } : e));
+    function addSet(exIdx: number) {
+        setWExList((prev) => prev.map((e, i) => {
+            if (i !== exIdx) return e;
+            const lastReps = e.sets[e.sets.length - 1]?.reps ?? 10;
+            return { ...e, sets: [...e.sets, { reps: lastReps }] };
+        }));
+    }
+
+    function removeSet(exIdx: number, setIdx: number) {
+        setWExList((prev) => prev.map((e, i) => {
+            if (i !== exIdx) return e;
+            const newSets = e.sets.filter((_, si) => si !== setIdx);
+            return { ...e, sets: newSets.length > 0 ? newSets : [{ reps: 10 }] };
+        }));
+    }
+
+    function updateSetReps(exIdx: number, setIdx: number, reps: number) {
+        setWExList((prev) => prev.map((e, i) => {
+            if (i !== exIdx) return e;
+            return { ...e, sets: e.sets.map((s, si) => si === setIdx ? { reps } : s) };
+        }));
     }
 
     function openCreate() {
@@ -191,22 +210,52 @@ export default function WorkoutsPage() {
                                 </p>
                             )}
                         </div>
+
                         {wExList.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {wExList.map((item, idx) => {
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {wExList.map((item, exIdx) => {
                                     const ex = store.exercises.find((e) => e.id === item.exerciseId);
                                     return (
-                                        <div key={item.exerciseId} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                                            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 600 }}>{ex?.name}</span>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <input className="input" type="number" min={1} max={20} value={item.sets} onChange={(e) => updateExEntry(idx, 'sets', +e.target.value)} style={{ width: 60 }} />
-                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>séries</span>
-                                                <input className="input" type="number" min={1} max={100} value={item.reps} onChange={(e) => updateExEntry(idx, 'reps', +e.target.value)} style={{ width: 60 }} />
-                                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>reps</span>
-                                                <button type="button" onClick={() => setWExList((prev) => prev.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 4 }}>
-                                                    <X size={14} />
+                                        <div key={item.exerciseId} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
+                                            {/* Exercise header */}
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-primary)' }}>{ex?.name}</span>
+                                                <button type="button" onClick={() => setWExList((prev) => prev.filter((_, i) => i !== exIdx))}
+                                                    style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 4, display: 'flex' }}>
+                                                    <Trash2 size={14} />
                                                 </button>
                                             </div>
+
+                                            {/* Sets list */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                {item.sets.map((s, setIdx) => (
+                                                    <div key={setIdx} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', minWidth: 52 }}>Série {setIdx + 1}</span>
+                                                        <input
+                                                            className="input"
+                                                            type="number"
+                                                            min={1}
+                                                            max={100}
+                                                            value={s.reps}
+                                                            onChange={(e) => updateSetReps(exIdx, setIdx, +e.target.value)}
+                                                            style={{ width: 70 }}
+                                                        />
+                                                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>reps</span>
+                                                        {item.sets.length > 1 && (
+                                                            <button type="button" onClick={() => removeSet(exIdx, setIdx)}
+                                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2, display: 'flex', marginLeft: 'auto' }}>
+                                                                <X size={13} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Add set button */}
+                                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => addSet(exIdx)}
+                                                style={{ marginTop: 10, fontSize: '0.78rem', padding: '4px 10px' }}>
+                                                <Plus size={12} /> Série
+                                            </button>
                                         </div>
                                     );
                                 })}

@@ -18,6 +18,7 @@ export default function WorkoutDetailPage() {
     const { userId, ready } = useAuth();
     const { store, addLog, updateWorkout } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
+    // weights[exerciseId][setIndex] = string value
     const [weights, setWeights] = useState<Record<string, string[]>>({});
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [showShareModal, setShowShareModal] = useState(false);
@@ -32,7 +33,7 @@ export default function WorkoutDetailPage() {
             setWeights((prev) => {
                 const next = { ...prev };
                 workout.exercises.forEach(({ exerciseId, sets }) => {
-                    if (!next[exerciseId]) next[exerciseId] = Array(sets).fill('');
+                    if (!next[exerciseId]) next[exerciseId] = Array(sets.length).fill('');
                 });
                 return next;
             });
@@ -81,13 +82,16 @@ export default function WorkoutDetailPage() {
         });
     }
 
-    function handleSaveLog(exId: string, sets: number, reps: number) {
+    function handleSaveLog(exId: string, setsDef: { reps: number }[]) {
         const ws = weights[exId] ?? [];
         if (ws.some((w) => !w || parseFloat(w) <= 0)) {
             setToast({ msg: 'Informe o peso para todas as séries.', type: 'error' }); return;
         }
-        addLog({ id: uid(), workoutId: id, userId, exerciseId: exId, date: today(), sets: ws.map((w) => ({ weight: parseFloat(w), reps })) });
-        setWeights((prev) => ({ ...prev, [exId]: Array(sets).fill('') }));
+        addLog({
+            id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
+            sets: ws.map((w, i) => ({ weight: parseFloat(w), reps: setsDef[i]?.reps ?? 0 }))
+        });
+        setWeights((prev) => ({ ...prev, [exId]: Array(setsDef.length).fill('') }));
         setToast({ msg: 'Registro salvo!', type: 'success' });
     }
 
@@ -135,13 +139,15 @@ export default function WorkoutDetailPage() {
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
-                    {workout.exercises.map(({ exerciseId, sets, reps }) => {
+                    {workout.exercises.map(({ exerciseId, sets }) => {
                         const exName = store.exercises.find((e) => e.id === exerciseId)?.name ?? 'Exercício';
                         const isOpen = expanded === exerciseId;
                         const myLogs = getUserLogs(exerciseId, userId);
                         const lastLog = myLogs[myLogs.length - 1];
                         const lastFriendLog = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId).slice(-1)[0] : undefined;
                         const chartData = buildChartData(exerciseId);
+                        // Build a human-readable summary like "15, 15, 12, 10 reps"
+                        const repsSummary = sets.map((s) => s.reps).join(', ');
 
                         return (
                             <div key={exerciseId} className="exercise-panel animate-fade">
@@ -151,7 +157,7 @@ export default function WorkoutDetailPage() {
                                         <div>
                                             <div style={{ fontWeight: 700 }}>{exName}</div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                                {sets} séries · {reps} reps
+                                                {sets.length} séries · {repsSummary} reps
                                                 {lastLog && <span style={{ marginLeft: 8, color: 'var(--accent3)' }}>· Último: {Math.max(...lastLog.sets.map(s => s.weight))} kg</span>}
                                             </div>
                                         </div>
@@ -179,7 +185,7 @@ export default function WorkoutDetailPage() {
                                         <div>
                                             <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                                {Array.from({ length: sets }).map((_, sIdx) => (
+                                                {sets.map((setDef, sIdx) => (
                                                     <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 60 }}>Série {sIdx + 1}</span>
                                                         <input
@@ -190,17 +196,17 @@ export default function WorkoutDetailPage() {
                                                             placeholder="kg"
                                                             value={weights[exerciseId]?.[sIdx] ?? ''}
                                                             onChange={(e) => {
-                                                                const arr = [...(weights[exerciseId] ?? Array(sets).fill(''))];
+                                                                const arr = [...(weights[exerciseId] ?? Array(sets.length).fill(''))];
                                                                 arr[sIdx] = e.target.value;
                                                                 setWeights((prev) => ({ ...prev, [exerciseId]: arr }));
                                                             }}
                                                             style={{ maxWidth: 120 }}
                                                         />
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>× {reps} reps</span>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>× {setDef.reps} reps</span>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => handleSaveLog(exerciseId, sets, reps)}>
+                                            <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => handleSaveLog(exerciseId, sets)}>
                                                 <Save size={14} /> Salvar Registro
                                             </button>
                                         </div>

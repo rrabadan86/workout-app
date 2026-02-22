@@ -14,10 +14,13 @@ export interface Exercise {
   createdBy: string; // userId
 }
 
+export interface WorkoutSet {
+  reps: number;
+}
+
 export interface WorkoutExercise {
   exerciseId: string;
-  sets: number;
-  reps: number;
+  sets: WorkoutSet[]; // each element = one set, with its own reps
 }
 
 export interface Workout {
