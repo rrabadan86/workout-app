@@ -30,8 +30,9 @@ export default function WorkoutDetailPage() {
         if (workout) {
             setWeights((prev) => {
                 const next = { ...prev };
-                workout.exercises.forEach(({ exerciseId, sets }) => {
-                    if (!next[exerciseId]) next[exerciseId] = Array(sets.length).fill('');
+                workout.exercises.forEach(({ exerciseId, sets }, idx) => {
+                    const key = `${exerciseId}-${idx}`;
+                    if (!next[key]) next[key] = Array(sets.length).fill('');
                 });
                 return next;
             });
@@ -78,17 +79,17 @@ export default function WorkoutDetailPage() {
         });
     }
 
-    async function handleSaveLog(exId: string, setsDef: { reps: number }[]) {
-        const ws = weights[exId] ?? [];
+    async function handleSaveLog(slotKey: string, exId: string, setsDef: { reps: number }[]) {
+        const ws = weights[slotKey] ?? [];
         if (ws.some((w) => !w || parseFloat(w) <= 0)) {
             setToast({ msg: 'Informe o peso para todas as séries.', type: 'error' }); return;
         }
-        setSaving(exId);
+        setSaving(slotKey);
         await addLog({
             id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
             sets: ws.map((w, i) => ({ weight: parseFloat(w), reps: setsDef[i]?.reps ?? 0 }))
         });
-        setWeights((prev) => ({ ...prev, [exId]: Array(setsDef.length).fill('') }));
+        setWeights((prev) => ({ ...prev, [slotKey]: Array(setsDef.length).fill('') }));
         setSaving(null);
         setToast({ msg: 'Registro salvo!', type: 'success' });
     }
@@ -110,9 +111,10 @@ export default function WorkoutDetailPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
-                    {workout.exercises.map(({ exerciseId, sets }) => {
+                    {workout.exercises.map(({ exerciseId, sets }, exIdx) => {
+                        const slotKey = `${exerciseId}-${exIdx}`;
                         const exName = store.exercises.find((e) => e.id === exerciseId)?.name ?? 'Exercício';
-                        const isOpen = expanded === exerciseId;
+                        const isOpen = expanded === slotKey;
                         const myLogs = getUserLogs(exerciseId, userId);
                         const lastLog = myLogs[myLogs.length - 1];
                         const lastFriendLog = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId).slice(-1)[0] : undefined;
@@ -120,8 +122,8 @@ export default function WorkoutDetailPage() {
                         const repsSummary = sets.map((s) => s.reps).join(', ');
 
                         return (
-                            <div key={exerciseId} className="exercise-panel animate-fade">
-                                <div className="exercise-panel-header" onClick={() => setExpanded(isOpen ? null : exerciseId)}>
+                            <div key={slotKey} className="exercise-panel animate-fade">
+                                <div className="exercise-panel-header" onClick={() => setExpanded(isOpen ? null : slotKey)}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <div className="stat-icon stat-icon-purple" style={{ width: 38, height: 38 }}><Dumbbell size={16} /></div>
                                         <div>
@@ -165,11 +167,11 @@ export default function WorkoutDetailPage() {
                                                             min={0}
                                                             step={0.5}
                                                             placeholder="kg"
-                                                            value={weights[exerciseId]?.[sIdx] ?? ''}
+                                                            value={weights[slotKey]?.[sIdx] ?? ''}
                                                             onChange={(e) => {
-                                                                const arr = [...(weights[exerciseId] ?? Array(sets.length).fill(''))];
+                                                                const arr = [...(weights[slotKey] ?? Array(sets.length).fill(''))];
                                                                 arr[sIdx] = e.target.value;
-                                                                setWeights((prev) => ({ ...prev, [exerciseId]: arr }));
+                                                                setWeights((prev) => ({ ...prev, [slotKey]: arr }));
                                                             }}
                                                             style={{ maxWidth: 100 }}
                                                         />
@@ -184,10 +186,10 @@ export default function WorkoutDetailPage() {
                                             <button
                                                 className="btn btn-primary btn-sm"
                                                 style={{ marginTop: 12 }}
-                                                onClick={() => handleSaveLog(exerciseId, sets)}
-                                                disabled={saving === exerciseId}
+                                                onClick={() => handleSaveLog(slotKey, exerciseId, sets)}
+                                                disabled={saving === slotKey}
                                             >
-                                                <Save size={14} /> {saving === exerciseId ? 'Salvando...' : 'Salvar Registro'}
+                                                <Save size={14} /> {saving === slotKey ? 'Salvando...' : 'Salvar Registro'}
                                             </button>
                                         </div>
 

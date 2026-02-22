@@ -76,7 +76,6 @@ export default function ProjectDetailPage() {
     // ─── Set management ───────────────────────────────────────────────────────
     function addExToList() {
         if (!selEx) return;
-        if (wExList.find((e) => e.exerciseId === selEx)) return;
         setWExList((prev) => [...prev, { exerciseId: selEx, sets: [{ reps: 10, label: '', notes: '' }] }]);
         setSelEx('');
     }
