@@ -158,6 +158,7 @@ export default function WorkoutDetailPage() {
                                                 {sets.map((setDef, sIdx) => (
                                                     <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                                                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 60 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
                                                         <input
                                                             className="input"
                                                             type="number"
@@ -170,9 +171,8 @@ export default function WorkoutDetailPage() {
                                                                 arr[sIdx] = e.target.value;
                                                                 setWeights((prev) => ({ ...prev, [exerciseId]: arr }));
                                                             }}
-                                                            style={{ maxWidth: 120 }}
+                                                            style={{ maxWidth: 100 }}
                                                         />
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
                                                         {setDef.notes && (
                                                             <span style={{ fontSize: '0.78rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
                                                                 💬 {setDef.notes}
