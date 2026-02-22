@@ -20,6 +20,7 @@ export default function WorkoutDetailPage() {
     const [expanded, setExpanded] = useState<string | null>(null);
     // weights[exerciseId][setIndex] = string value
     const [weights, setWeights] = useState<Record<string, string[]>>({});
+    const [saving, setSaving] = useState<string | null>(null); // exerciseId being saved
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [showShareModal, setShowShareModal] = useState(false);
 
@@ -87,11 +88,13 @@ export default function WorkoutDetailPage() {
         if (ws.some((w) => !w || parseFloat(w) <= 0)) {
             setToast({ msg: 'Informe o peso para todas as séries.', type: 'error' }); return;
         }
+        setSaving(exId);
         await addLog({
             id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
             sets: ws.map((w, i) => ({ weight: parseFloat(w), reps: setsDef[i]?.reps ?? 0 }))
         });
         setWeights((prev) => ({ ...prev, [exId]: Array(setsDef.length).fill('') }));
+        setSaving(null);
         setToast({ msg: 'Registro salvo!', type: 'success' });
     }
 
@@ -211,8 +214,13 @@ export default function WorkoutDetailPage() {
                                                     </div>
                                                 ))}
                                             </div>
-                                            <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }} onClick={() => handleSaveLog(exerciseId, sets)}>
-                                                <Save size={14} /> Salvar Registro
+                                            <button
+                                                className="btn btn-primary btn-sm"
+                                                style={{ marginTop: 12 }}
+                                                onClick={() => handleSaveLog(exerciseId, sets)}
+                                                disabled={saving === exerciseId}
+                                            >
+                                                <Save size={14} /> {saving === exerciseId ? 'Salvando...' : 'Salvar Registro'}
                                             </button>
                                         </div>
 

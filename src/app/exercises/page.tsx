@@ -26,6 +26,7 @@ export default function ExercisesPage() {
     const [editTarget, setEditTarget] = useState<Exercise | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null);
     const [search, setSearch] = useState('');
+    const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [exName, setExName] = useState('');
     const [exMuscle, setExMuscle] = useState('Peito');
@@ -53,6 +54,7 @@ export default function ExercisesPage() {
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
+        setSaving(true);
         if (editTarget) {
             await updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc });
             setToast({ msg: 'Exercício atualizado!', type: 'success' });
@@ -61,12 +63,15 @@ export default function ExercisesPage() {
             setToast({ msg: 'Exercício criado!', type: 'success' });
         }
         setExName(''); setExMuscle('Peito'); setExDesc('');
+        setSaving(false);
         setShowModal(false);
     }
 
     async function confirmDelete() {
         if (!deleteTarget) return;
+        setSaving(true);
         await deleteExercise(deleteTarget.id);
+        setSaving(false);
         setDeleteTarget(null);
         setToast({ msg: 'Exercício excluído.', type: 'success' });
     }
@@ -129,8 +134,10 @@ export default function ExercisesPage() {
                 <Modal title={editTarget ? 'Editar Exercício' : 'Novo Exercício'} onClose={() => setShowModal(false)}
                     footer={
                         <>
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancelar</button>
-                            <button className="btn btn-primary" form="ex-form" type="submit">{editTarget ? 'Salvar' : 'Criar'}</button>
+                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
+                            <button className="btn btn-primary" form="ex-form" type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar')}
+                            </button>
                         </>
                     }
                 >
@@ -158,8 +165,10 @@ export default function ExercisesPage() {
                 <Modal title="Excluir Exercício" onClose={() => setDeleteTarget(null)}
                     footer={
                         <>
-                            <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                            <button className="btn btn-danger" onClick={confirmDelete}>Excluir</button>
+                            <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
+                            <button className="btn btn-danger" onClick={confirmDelete} disabled={saving}>
+                                {saving ? 'Excluindo...' : 'Excluir'}
+                            </button>
                         </>
                     }
                 >

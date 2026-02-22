@@ -20,6 +20,7 @@ export default function WorkoutsPage() {
     const [deleteTarget, setDeleteTarget] = useState<Workout | null>(null);
     const [showShareModal, setShowShareModal] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+    const [saving, setSaving] = useState(false);
     const [search, setSearch] = useState('');
     const [wName, setWName] = useState('');
     const [wEndDate, setWEndDate] = useState('');
@@ -95,6 +96,7 @@ export default function WorkoutsPage() {
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();
         if (wExList.length === 0) { setToast({ msg: 'Adicione ao menos um exercício.', type: 'error' }); return; }
+        setSaving(true);
         if (editTarget) {
             await updateWorkout({ ...editTarget, name: wName, endDate: wEndDate, exercises: wExList });
             setToast({ msg: 'Treino atualizado!', type: 'success' });
@@ -103,12 +105,15 @@ export default function WorkoutsPage() {
             setToast({ msg: 'Treino criado!', type: 'success' });
         }
         setWName(''); setWEndDate(''); setWExList([]);
+        setSaving(false);
         setShowModal(false);
     }
 
     async function confirmDelete() {
         if (!deleteTarget) return;
+        setSaving(true);
         await deleteWorkout(deleteTarget.id);
+        setSaving(false);
         setDeleteTarget(null);
         setToast({ msg: 'Treino excluído.', type: 'success' });
     }
@@ -194,8 +199,10 @@ export default function WorkoutsPage() {
                 <Modal title={editTarget ? 'Editar Treino' : 'Novo Treino'} onClose={() => setShowModal(false)}
                     footer={
                         <>
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Cancelar</button>
-                            <button className="btn btn-primary" form="workout-form" type="submit">{editTarget ? 'Salvar' : 'Criar Treino'}</button>
+                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
+                            <button className="btn btn-primary" form="workout-form" type="submit" disabled={saving}>
+                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Treino')}
+                            </button>
                         </>
                     }
                 >
