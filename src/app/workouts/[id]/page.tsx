@@ -186,7 +186,7 @@ export default function WorkoutDetailPage() {
                                             <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                                 {sets.map((setDef, sIdx) => (
-                                                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                                                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 60 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
                                                         <input
                                                             className="input"
@@ -202,7 +202,12 @@ export default function WorkoutDetailPage() {
                                                             }}
                                                             style={{ maxWidth: 120 }}
                                                         />
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>× {setDef.reps} reps</span>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
+                                                        {setDef.notes && (
+                                                            <span style={{ fontSize: '0.78rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
+                                                                💬 {setDef.notes}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
