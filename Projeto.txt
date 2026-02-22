@@ -1,0 +1,9 @@
+Gostaria de fazer um APP de treinos! ESse app terá uma tela de login, na qual terei telas de criar exercícios e criar treinos.
+Quando eu criar treino, eu vou selecionar os exercícios desejados e informar a quantidade de seríes e repetições que serão feitas para cada exercicio. Também preciso informar a data de término desse treino.
+
+Quando o usuário selecionar o treino desejado, ele precisa selecionar o exercicio para ver o que será feito. O usuário informará sempre o peso que pegou, para que possa acompanhar a evolução toda vez que repetir esse exercicio.
+
+O treino criado tambem poderá ser compartilhado com um amigo para que ele tb possa fazer o treino e comparar o treino entre os amigos. Fui claro?
+A ideia é que o usuário A compartilhe o treino dele com o Usuário B. Então toda vez que o usuário B tiver fazendo um exercício que tenha do usuário A, o Usuário B consiga ver a evolução desse exercício do Usuário A. Fui claro 
+
+Caso tenha duvidas pode me acionar!
