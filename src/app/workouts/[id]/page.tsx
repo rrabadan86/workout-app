@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, Dumbbell, Calendar, Share2, TrendingUp, Save, Users, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Save } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -16,19 +15,17 @@ export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addLog, updateWorkout } = useStore();
+    const { store, addLog } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
-    // weights[exerciseId][setIndex] = string value
     const [weights, setWeights] = useState<Record<string, string[]>>({});
-    const [saving, setSaving] = useState<string | null>(null); // exerciseId being saved
+    const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-    const [showShareModal, setShowShareModal] = useState(false);
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
     const workout = store.workouts.find((x) => x.id === id) ?? null;
+    const project = workout ? store.projects.find((p) => p.id === workout.projectId) ?? null : null;
 
-    // Initialize weight inputs when workout loads
     useEffect(() => {
         if (workout) {
             setWeights((prev) => {
@@ -46,19 +43,17 @@ export default function WorkoutDetailPage() {
     if (!workout) return (
         <>
             <Navbar />
-            <div className="container" style={{ paddingTop: 40 }}><div className="empty-state"><p>Treino não encontrado.</p></div></div>
+            <div className="container" style={{ paddingTop: 40 }}>
+                <div className="empty-state"><p>Treino não encontrado.</p></div>
+            </div>
         </>
     );
 
-    const isOwner = workout.ownerId === userId;
-    const owner = store.users.find((u) => u.id === workout.ownerId);
-    const sharedFriends = store.users.filter((u) => workout.sharedWith.includes(u.id));
-    const otherUsers = store.users.filter((u) => u.id !== userId);
-
-    // If I'm the owner, compare with first shared user; if I'm shared, compare with owner
-    const comparisonFriendId = isOwner
-        ? (workout.sharedWith[0] ?? undefined)
-        : workout.ownerId;
+    // Determine comparison friend from project sharedWith
+    const projectSharedWith = project?.sharedWith ?? [];
+    const comparisonFriendId = projectSharedWith.includes(userId)
+        ? workout.ownerId   // I'm a shared user → compare with owner
+        : (projectSharedWith[0] ?? undefined); // I'm owner → compare with first shared user
     const friendName = comparisonFriendId
         ? store.users.find((u) => u.id === comparisonFriendId)?.name ?? 'Amigo'
         : '';
@@ -98,19 +93,6 @@ export default function WorkoutDetailPage() {
         setToast({ msg: 'Registro salvo!', type: 'success' });
     }
 
-    async function handleShare(friendId: string) {
-        if (!workout) return;
-        if (workout.sharedWith.includes(friendId)) return;
-        await updateWorkout({ ...workout, sharedWith: [...workout.sharedWith, friendId] });
-        setToast({ msg: 'Treino compartilhado!', type: 'success' });
-    }
-
-    async function removeShare(friendId: string) {
-        if (!workout) return;
-        await updateWorkout({ ...workout, sharedWith: workout.sharedWith.filter((sid) => sid !== friendId) });
-        setToast({ msg: 'Compartilhamento removido.', type: 'success' });
-    }
-
     return (
         <>
             <Navbar />
@@ -118,28 +100,14 @@ export default function WorkoutDetailPage() {
                 <div className="page-header">
                     <div>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => router.back()} className="btn btn-ghost btn-sm">← Voltar</button>
-                            {!isOwner && <span className="badge badge-green">De {owner?.name}</span>}
-                            {isOwner && workout.sharedWith.length > 0 && <span className="badge badge-purple">Compartilhado</span>}
+                            <button onClick={() => router.push(project ? `/projects/${project.id}` : '/projects')} className="btn btn-ghost btn-sm">
+                                ← {project?.name ?? 'Projetos'}
+                            </button>
                         </div>
                         <h1 className="page-title">{workout.name}</h1>
-                        <p className="page-subtitle"><Calendar size={13} style={{ display: 'inline' }} /> Até {formatDate(workout.endDate)} · {workout.exercises.length} exercício(s)</p>
+                        <p className="page-subtitle">{workout.exercises.length} exercício(s)</p>
                     </div>
-                    {isOwner && (
-                        <button className="btn btn-ghost" onClick={() => setShowShareModal(true)}>
-                            <Share2 size={16} /> Compartilhar
-                        </button>
-                    )}
                 </div>
-
-                {isOwner && sharedFriends.length > 0 && (
-                    <div className="card card-sm" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <Users size={18} color="var(--accent)" />
-                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                            Compartilhado com: <strong>{sharedFriends.map((f) => f.name).join(', ')}</strong>
-                        </span>
-                    </div>
-                )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
                     {workout.exercises.map(({ exerciseId, sets }) => {
@@ -149,7 +117,6 @@ export default function WorkoutDetailPage() {
                         const lastLog = myLogs[myLogs.length - 1];
                         const lastFriendLog = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId).slice(-1)[0] : undefined;
                         const chartData = buildChartData(exerciseId);
-                        // Build a human-readable summary like "15, 15, 12, 10 reps"
                         const repsSummary = sets.map((s) => s.reps).join(', ');
 
                         return (
@@ -170,7 +137,7 @@ export default function WorkoutDetailPage() {
 
                                 {isOpen && (
                                     <div className="exercise-panel-body">
-                                        {/* Friend's last log */}
+                                        {/* Friend comparison */}
                                         {lastFriendLog && (
                                             <div style={{ background: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px' }}>
                                                 <p style={{ fontSize: '0.78rem', color: 'var(--accent-light)', fontWeight: 700, marginBottom: 6 }}>📊 Último treino de {friendName}</p>
@@ -273,36 +240,6 @@ export default function WorkoutDetailPage() {
                     })}
                 </div>
             </div>
-
-            {/* Share Modal */}
-            {showShareModal && (
-                <Modal title="Compartilhar Treino" onClose={() => setShowShareModal(false)}
-                    footer={<button className="btn btn-ghost" onClick={() => setShowShareModal(false)}>Fechar</button>}
-                >
-                    {otherUsers.length === 0 ? (
-                        <p style={{ color: 'var(--text-secondary)' }}>Nenhum outro usuário cadastrado.</p>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Gerencie com quem este treino é compartilhado:</p>
-                            {otherUsers.map((u) => {
-                                const isShared = workout.sharedWith.includes(u.id);
-                                return (
-                                    <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                            <div className="avatar">{u.name[0].toUpperCase()}</div>
-                                            <span style={{ fontWeight: 500 }}>{u.name}</span>
-                                        </div>
-                                        {isShared
-                                            ? <button className="btn btn-danger btn-sm" onClick={() => removeShare(u.id)}><X size={14} /> Parar de compartilhar</button>
-                                            : <button className="btn btn-primary btn-sm" onClick={() => handleShare(u.id)}><Share2 size={14} /> Compartilhar</button>
-                                        }
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </Modal>
-            )}
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
         </>

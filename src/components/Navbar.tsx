@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield } from 'lucide-react';
+import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield, FolderOpen } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 
@@ -10,7 +10,7 @@ const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/exercises', label: 'Exercícios', icon: ListChecks },
-    { href: '/workouts', label: 'Treinos', icon: Dumbbell },
+    { href: '/projects', label: 'Projetos', icon: FolderOpen },
     { href: '/compare', label: 'Comparar', icon: BarChart2 },
 ];
 

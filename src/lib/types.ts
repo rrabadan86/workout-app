@@ -25,13 +25,23 @@ export interface WorkoutExercise {
   sets: WorkoutSet[]; // each element = one set, with its own reps
 }
 
+// ─── Project (top-level container) ─────────────────────────────────────────
+export interface Project {
+  id: string;
+  name: string;
+  ownerId: string;
+  startDate: string; // ISO date
+  endDate: string;   // ISO date
+  sharedWith: string[]; // userIds
+}
+
+// ─── Workout (belongs to a Project) ────────────────────────────────────────
 export interface Workout {
   id: string;
   name: string;
   ownerId: string;
+  projectId: string; // parent project
   exercises: WorkoutExercise[];
-  endDate: string; // ISO date string
-  sharedWith: string[]; // userIds
 }
 
 export interface SetLog {
@@ -51,6 +61,7 @@ export interface WorkoutLog {
 export interface AppStore {
   users: User[];
   exercises: Exercise[];
+  projects: Project[];
   workouts: Workout[];
   logs: WorkoutLog[];
 }

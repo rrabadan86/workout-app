@@ -24,8 +24,9 @@ export default function ComparePage() {
     const otherUsers = store.users.filter((u) => u.id !== userId);
 
     const availableWorkouts = !friendId ? [] : store.workouts.filter((w) => {
-        const myAccess = w.ownerId === userId || w.sharedWith.includes(userId);
-        const frAccess = w.ownerId === friendId || w.sharedWith.includes(friendId);
+        const proj = store.projects.find((p) => p.id === w.projectId);
+        const myAccess = w.ownerId === userId || (proj?.sharedWith ?? []).includes(userId);
+        const frAccess = w.ownerId === friendId || (proj?.sharedWith ?? []).includes(friendId);
         return myAccess || frAccess;
     });
 

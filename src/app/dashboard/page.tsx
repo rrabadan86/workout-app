@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, Calendar, TrendingUp } from 'lucide-react';
+import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -22,11 +22,11 @@ export default function DashboardPage() {
     const user = store.users.find((u) => u.id === userId);
     if (!user) return null;
 
-    const myWorkouts = store.workouts.filter((w) => w.ownerId === userId || w.sharedWith.includes(userId));
+    const myProjects = store.projects.filter((p) => p.ownerId === userId || p.sharedWith.includes(userId));
     const myStats = {
         exercises: store.exercises.length,
-        workouts: store.workouts.filter((w) => w.ownerId === userId).length,
-        shared: store.workouts.filter((w) => w.sharedWith.includes(userId)).length,
+        projects: store.projects.filter((p) => p.ownerId === userId).length,
+        shared: store.projects.filter((p) => p.sharedWith.includes(userId)).length,
         logs: store.logs.filter((l) => l.userId === userId).length,
     };
 
@@ -42,7 +42,7 @@ export default function DashboardPage() {
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{greeting},</p>
                         <h1 className="page-title">{user.name} 💪</h1>
                     </div>
-                    <button className="btn btn-primary" onClick={() => router.push('/workouts')}>
+                    <button className="btn btn-primary" onClick={() => router.push('/projects')}>
                         <Dumbbell size={16} /> Iniciar Treino
                     </button>
                 </div>
@@ -50,8 +50,8 @@ export default function DashboardPage() {
                 <div className="grid-2" style={{ marginBottom: 32 }}>
                     {[
                         { value: myStats.exercises, label: 'Exercícios cadastrados', icon: ListChecks, cls: 'stat-icon-purple', href: '/exercises' },
-                        { value: myStats.workouts, label: 'Meus treinos', icon: Dumbbell, cls: 'stat-icon-green', href: '/workouts' },
-                        { value: myStats.shared, label: 'Treinos compartilhados', icon: Users, cls: 'stat-icon-pink', href: '/workouts' },
+                        { value: myStats.projects, label: 'Meus projetos', icon: FolderOpen, cls: 'stat-icon-green', href: '/projects' },
+                        { value: myStats.shared, label: 'Projetos compartilhados', icon: Users, cls: 'stat-icon-pink', href: '/projects' },
                         { value: myStats.logs, label: 'Registros de treino', icon: TrendingUp, cls: 'stat-icon-orange', href: '/compare' },
                     ].map(({ value, label, icon: Icon, cls, href }) => (
                         <div key={label} className="stat-card" onClick={() => router.push(href)} style={{ cursor: 'pointer' }}>
@@ -66,23 +66,23 @@ export default function DashboardPage() {
 
                 <div style={{ marginBottom: 32 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Treinos Recentes</h2>
-                        <a href="/workouts" className="btn btn-ghost btn-sm">Ver todos <ChevronRight size={14} /></a>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Projetos Recentes</h2>
+                        <a href="/projects" className="btn btn-ghost btn-sm">Ver todos <ChevronRight size={14} /></a>
                     </div>
-                    {myWorkouts.length === 0 ? (
+                    {myProjects.length === 0 ? (
                         <div className="card" style={{ textAlign: 'center', padding: '40px 24px' }}>
-                            <Dumbbell size={36} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-                            <p style={{ color: 'var(--text-secondary)' }}>Nenhum treino ainda. Crie seu primeiro treino!</p>
-                            <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => router.push('/workouts')}>Criar treino</button>
+                            <FolderOpen size={36} color="var(--text-muted)" style={{ marginBottom: 12 }} />
+                            <p style={{ color: 'var(--text-secondary)' }}>Nenhum projeto ainda. Crie seu primeiro projeto!</p>
+                            <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => router.push('/projects')}>Criar projeto</button>
                         </div>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {myWorkouts.slice(0, 3).map((w) => (
-                                <div key={w.id} className="item-card" onClick={() => router.push(`/workouts/${w.id}`)}>
-                                    <div className="stat-icon stat-icon-purple" style={{ width: 40, height: 40 }}><Dumbbell size={18} /></div>
+                            {myProjects.slice(0, 3).map((p) => (
+                                <div key={p.id} className="item-card" onClick={() => router.push(`/projects/${p.id}`)}>
+                                    <div className="stat-icon stat-icon-purple" style={{ width: 40, height: 40 }}><FolderOpen size={18} /></div>
                                     <div className="item-card-info">
-                                        <div className="item-card-title">{w.name}</div>
-                                        <div className="item-card-sub"><Calendar size={12} style={{ display: 'inline' }} /> até {formatDate(w.endDate)}</div>
+                                        <div className="item-card-title">{p.name}</div>
+                                        <div className="item-card-sub">{store.workouts.filter((w) => w.projectId === p.id).length} treino(s)</div>
                                     </div>
                                     <ChevronRight size={18} color="var(--text-muted)" />
                                 </div>
@@ -95,7 +95,7 @@ export default function DashboardPage() {
                     {[
                         { label: 'Meus Exercícios', sub: 'Gerencie sua biblioteca', href: '/exercises', icon: ListChecks, cls: 'stat-icon-purple' },
                         { label: 'Comparar Evolução', sub: 'Compare com amigos', href: '/compare', icon: BarChart2, cls: 'stat-icon-green' },
-                        { label: 'Treinos', sub: 'Crie e gerencie', href: '/workouts', icon: Dumbbell, cls: 'stat-icon-pink' },
+                        { label: 'Projetos', sub: 'Crie e gerencie', href: '/projects', icon: FolderOpen, cls: 'stat-icon-pink' },
                     ].map(({ label, sub, href, icon: Icon, cls }) => (
                         <a key={href} href={href} className="item-card">
                             <div className={`stat-icon ${cls}`} style={{ width: 40, height: 40 }}><Icon size={18} /></div>
