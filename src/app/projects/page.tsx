@@ -63,15 +63,21 @@ export default function ProjectsPage() {
         e.preventDefault();
         if (pEnd < pStart) { setToast({ msg: 'A data de término deve ser após o início.', type: 'error' }); return; }
         setSaving(true);
-        if (editTarget) {
-            await updateProject({ ...editTarget, name: pName, startDate: pStart, endDate: pEnd });
-            setToast({ msg: 'Projeto atualizado!', type: 'success' });
-        } else {
-            await addProject({ id: uid(), name: pName, ownerId: userId, startDate: pStart, endDate: pEnd, sharedWith: [] });
-            setToast({ msg: 'Projeto criado!', type: 'success' });
+        try {
+            if (editTarget) {
+                await updateProject({ ...editTarget, name: pName, startDate: pStart, endDate: pEnd });
+                setToast({ msg: 'Projeto atualizado!', type: 'success' });
+            } else {
+                await addProject({ id: uid(), name: pName, ownerId: userId, startDate: pStart, endDate: pEnd, sharedWith: [] });
+                setToast({ msg: 'Projeto criado!', type: 'success' });
+            }
+            setShowModal(false);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Erro ao salvar projeto';
+            setToast({ msg: `Erro: ${msg}`, type: 'error' });
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
-        setShowModal(false);
     }
 
     async function confirmDelete() {

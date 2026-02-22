@@ -76,12 +76,14 @@ export function useStore() {
 
     // ─── Projects ─────────────────────────────────────────────────────────
     const addProject = useCallback(async (p: Project) => {
-        await supabase.from('projects').insert(p);
+        const { error } = await supabase.from('projects').insert(p);
+        if (error) { console.error('addProject error:', error); throw new Error(error.message); }
         await refresh();
     }, [refresh]);
 
     const updateProject = useCallback(async (p: Project) => {
-        await supabase.from('projects').update(p).eq('id', p.id);
+        const { error } = await supabase.from('projects').update(p).eq('id', p.id);
+        if (error) { console.error('updateProject error:', error); throw new Error(error.message); }
         await refresh();
     }, [refresh]);
 
