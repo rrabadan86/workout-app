@@ -210,9 +210,15 @@ export default function WorkoutDetailPage() {
                             </div>
                         )}
                         {!timerRunning ? (
-                            <button className="btn btn-primary" onClick={startWorkout} style={{ gap: 6 }}>
-                                <Play size={15} /> Iniciar Treino
-                            </button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button className="btn btn-primary" onClick={startWorkout} style={{ gap: 6 }}>
+                                    <Play size={15} /> Iniciar Treino
+                                </button>
+                                <button onClick={finishWorkout} title="Finalizar e compartilhar sem usar cronômetro"
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--glass)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius)', padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>
+                                    <Square size={14} fill="currentColor" opacity={0.5} /> Finalizar
+                                </button>
+                            </div>
                         ) : (
                             <button onClick={finishWorkout}
                                 style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '8px 18px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
