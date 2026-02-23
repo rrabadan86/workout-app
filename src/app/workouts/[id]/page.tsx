@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Save, Play, Square, Timer } from 'lucide-react';
+import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Save, Play, Square, Timer, Trash2, Edit2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
@@ -16,7 +16,7 @@ export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addLog, addFeedEvent } = useStore();
+    const { store, addLog, updateLog, deleteLog, addFeedEvent } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
     const [weights, setWeights] = useState<Record<string, string[]>>({});
     const [loadedStorage, setLoadedStorage] = useState(false);
@@ -336,8 +336,30 @@ export default function WorkoutDetailPage() {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                     {myLogs.slice().reverse().slice(0, 5).map((log) => (
                                                         <div key={log.id} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{formatDate(log.date)}</span>
-                                                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{formatDate(log.date)}</span>
+                                                                <div style={{ display: 'flex', gap: 4 }}>
+                                                                    <button className="btn-icon" style={{ padding: 4 }} title="Carregar valores para hoje" onClick={() => {
+                                                                        const arr = Array(sets.length).fill('');
+                                                                        log.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
+                                                                        setWeights(prev => ({ ...prev, [slotKey]: arr }));
+                                                                        setToast({ msg: 'Valores carregados. Clique em Salvar para registrar hoje.', type: 'success' });
+                                                                    }}>
+                                                                        <Edit2 size={14} color="var(--text-muted)" />
+                                                                    </button>
+                                                                    <button className="btn-icon" style={{ padding: 4 }} title="Excluir este registro" onClick={async () => {
+                                                                        if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
+                                                                            setSaving(log.id);
+                                                                            await deleteLog(log.id);
+                                                                            setSaving(null);
+                                                                            setToast({ msg: 'Registro excluído.', type: 'success' });
+                                                                        }
+                                                                    }}>
+                                                                        <Trash2 size={14} color="var(--danger)" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
                                                                 {log.sets.map((s, i) => (
                                                                     <span key={i} style={{ fontSize: '0.8rem', background: 'rgba(108,99,255,0.15)', padding: '3px 8px', borderRadius: 4 }}>{s.weight}kg</span>
                                                                 ))}

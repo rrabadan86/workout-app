@@ -130,6 +130,16 @@ export function useStore() {
         await refresh();
     }, [refresh]);
 
+    const updateLog = useCallback(async (l: WorkoutLog) => {
+        await supabase.from('workout_logs').update(l).eq('id', l.id);
+        await refresh();
+    }, [refresh]);
+
+    const deleteLog = useCallback(async (id: string) => {
+        await supabase.from('workout_logs').delete().eq('id', id);
+        await refresh();
+    }, [refresh]);
+
     const addLog = useCallback(async (l: WorkoutLog) => {
         await supabase.from('workout_logs').insert(l);
         await refresh();
@@ -138,6 +148,17 @@ export function useStore() {
     // ─── Feed & Kudos ─────────────────────────────────────────────────────
     const addFeedEvent = useCallback(async (f: FeedEvent) => {
         await supabase.from('feed_events').insert(f);
+        await refresh();
+    }, [refresh]);
+
+    const updateFeedEvent = useCallback(async (f: FeedEvent) => {
+        await supabase.from('feed_events').update(f).eq('id', f.id);
+        await refresh();
+    }, [refresh]);
+
+    const deleteFeedEvent = useCallback(async (id: string) => {
+        await supabase.from('kudos').delete().eq('feedEventId', id);
+        await supabase.from('feed_events').delete().eq('id', id);
         await refresh();
     }, [refresh]);
 
@@ -158,8 +179,8 @@ export function useStore() {
         addExercise, updateExercise, deleteExercise,
         addProject, updateProject, deleteProject,
         addWorkout, updateWorkout, deleteWorkout,
-        addLog,
-        addFeedEvent, toggleKudo,
+        addLog, updateLog, deleteLog,
+        addFeedEvent, updateFeedEvent, deleteFeedEvent, toggleKudo,
     };
 }
 

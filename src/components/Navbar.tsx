@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield, FolderOpen, Users } from 'lucide-react';
+import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield, FolderOpen, Users, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/projects', label: 'Projetos', icon: FolderOpen },
     { href: '/compare', label: 'Comparar', icon: BarChart2 },
+    { href: '/history', label: 'Histórico', icon: Clock },
     { href: '/community', label: 'Comunidade', icon: Users },
 ];
 
