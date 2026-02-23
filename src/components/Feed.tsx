@@ -66,9 +66,10 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
                     const workout = store.workouts.find(w => w.id === event.referenceId);
                     const project = workout ? store.projects.find(p => p.id === workout.projectId) : null;
                     if (workout) {
+                        const durationText = event.duration ? ` em ${Math.floor(event.duration / 60)}m ${event.duration % 60}s` : '';
                         eventText = project
-                            ? `concluiu o treino "${workout.name}" do projeto "${project.name}"`
-                            : `concluiu o treino "${workout.name}"`;
+                            ? `concluiu o treino "${workout.name}" do projeto "${project.name}"${durationText}`
+                            : `concluiu o treino "${workout.name}"${durationText}`;
                         icon = <Dumbbell size={20} />;
                         colorClass = 'stat-icon-green';
                         if (project) {

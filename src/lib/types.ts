@@ -65,6 +65,7 @@ export interface FeedEvent {
   eventType: string;  // e.g. "WO_COMPLETED"
   referenceId: string; // e.g. workoutId
   createdAt: string;   // ISO date
+  duration?: number;   // workout duration in seconds
 }
 
 export interface Kudo {

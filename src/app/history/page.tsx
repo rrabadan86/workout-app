@@ -139,7 +139,7 @@ export default function HistoryPage() {
                                                     {isHidden && <span style={{ fontSize: '0.65rem', backgroundColor: 'var(--border)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 4 }}>Privado</span>}
                                                 </div>
                                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                                                    {formattedDate} · {totalWeight} kg levantados
+                                                    {formattedDate} · {totalWeight} kg levantados {event.duration ? ` · ⏱️ ${Math.floor(event.duration / 60)}m ${event.duration % 60}s` : ''}
                                                 </div>
                                             </div>
                                         </div>
@@ -168,11 +168,32 @@ export default function HistoryPage() {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {dayLogs.map((log) => {
                                                     const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                                    const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
+                                                    const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
+                                                    const skippedSets = Math.max(0, plannedSets - log.sets.length);
+
+                                                    const groups: { count: number, weight: number }[] = [];
+                                                    for (const s of log.sets) {
+                                                        if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                            groups[groups.length - 1].count++;
+                                                        } else {
+                                                            groups.push({ count: 1, weight: s.weight });
+                                                        }
+                                                    }
+                                                    const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+
                                                     return (
-                                                        <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                                            <span style={{ color: 'var(--text-secondary)' }}>{exName}</span>
-                                                            <span style={{ color: 'var(--accent-light)', fontWeight: 500 }}>
-                                                                {log.sets.length} séries
+                                                        <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '2px 0' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                                <span style={{ color: 'var(--text-secondary)' }}>{exName}</span>
+                                                                {skippedSets > 0 && (
+                                                                    <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                                                        faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span style={{ color: 'var(--accent-light)', fontWeight: 500, textAlign: 'right', paddingLeft: 12 }}>
+                                                                {setsDisplay}
                                                             </span>
                                                         </div>
                                                     );
