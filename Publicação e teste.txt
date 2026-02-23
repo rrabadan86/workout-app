@@ -1,0 +1,8 @@
+Para Publicar ONLINE
+   git add . 
+   git commit -m "Escrever o que foi feito"
+   git push
+
+Para testar localmente
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process 
+   npm run dev   

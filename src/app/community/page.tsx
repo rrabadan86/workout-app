@@ -6,7 +6,9 @@ import Navbar from '@/components/Navbar';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { Users, UserPlus, UserCheck, Search } from 'lucide-react';
+import { Users, UserPlus, UserCheck, Search, Activity, Dumbbell } from 'lucide-react';
+import type { User, FeedEvent, WorkoutLog } from '@/lib/types';
+import Modal from '@/components/Modal';
 
 export default function CommunityPage() {
     const router = useRouter();
@@ -16,6 +18,7 @@ export default function CommunityPage() {
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     useEffect(() => {
         if (ready && !userId) router.replace('/');
@@ -62,6 +65,67 @@ export default function CommunityPage() {
         }
     }
 
+    function getUserRecentActivity(uid: string) {
+        const fifteenDaysAgo = new Date();
+        fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+        return store.feedEvents
+            .filter(e => e.userId === uid && e.eventType === 'WO_COMPLETED' && new Date(e.createdAt) >= fifteenDaysAgo)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    function renderModalActivity(event: FeedEvent) {
+        const workout = store.workouts.find(w => w.id === event.referenceId);
+        if (!workout) return null;
+
+        const eventDateObj = new Date(event.createdAt);
+        const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
+        const formattedDate = eventDateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+
+        const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
+
+        return (
+            <div key={event.id} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div className="stat-icon stat-icon-green" style={{ width: 28, height: 28 }}><Dumbbell size={14} /></div>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{workout.name}</div>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formattedDate}</span>
+                </div>
+
+                {dayLogs.length > 0 && (
+                    <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {dayLogs.map((log) => {
+                                const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+
+                                const groups: { count: number, weight: number }[] = [];
+                                for (const s of log.sets) {
+                                    if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                        groups[groups.length - 1].count++;
+                                    } else {
+                                        groups.push({ count: 1, weight: s.weight });
+                                    }
+                                }
+                                const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+
+                                return (
+                                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '2px 0' }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>{exName}</span>
+                                        <span style={{ color: 'var(--accent-light)', fontWeight: 500, textAlign: 'right', paddingLeft: 12 }}>
+                                            {setsDisplay}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <>
             <Navbar />
@@ -104,7 +168,12 @@ export default function CommunityPage() {
                             const isLoading = saving === u.id;
 
                             return (
-                                <div key={u.id} className="card animate-fade" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div key={u.id} className="card animate-fade"
+                                    onClick={() => setSelectedUser(u)}
+                                    style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s', border: '1px solid transparent' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.border = '1px solid var(--accent)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.border = '1px solid transparent'}
+                                >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                                         <div style={{
                                             width: 44, height: 44, borderRadius: '50%',
@@ -122,7 +191,7 @@ export default function CommunityPage() {
 
                                     <button
                                         className={`btn ${isFollowing ? 'btn-ghost' : 'btn-primary'}`}
-                                        onClick={() => toggleFollow(u.id)}
+                                        onClick={(e) => { e.stopPropagation(); toggleFollow(u.id); }}
                                         disabled={isLoading}
                                         style={{ width: 140, display: 'flex', justifyContent: 'center' }}
                                     >
@@ -140,6 +209,41 @@ export default function CommunityPage() {
             </div>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+
+            {/* User Profile Modal */}
+            {selectedUser && (
+                <Modal title="Perfil do Usuário" onClose={() => setSelectedUser(null)}
+                    footer={<button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setSelectedUser(null)}>Fechar</button>}
+                >
+                    <div style={{ textAlign: 'center', marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{
+                            width: 64, height: 64, borderRadius: '50%',
+                            background: 'var(--primary)', color: '#fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 800, fontSize: '1.8rem', marginBottom: 12
+                        }}>
+                            {selectedUser.name.charAt(0).toUpperCase()}
+                        </div>
+                        <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>{selectedUser.name}</h2>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Membro FitSync</p>
+                    </div>
+
+                    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Activity size={16} color="var(--accent)" />
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>ATIVIDADE RECENTE (15 DIAS)</span>
+                    </div>
+
+                    {getUserRecentActivity(selectedUser.id).length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '30px 20px', background: 'var(--sidebar)', borderRadius: 'var(--radius)' }}>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Nenhuma atividade registrada nos últimos 15 dias.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
+                            {getUserRecentActivity(selectedUser.id).map(renderModalActivity)}
+                        </div>
+                    )}
+                </Modal>
+            )}
         </>
     );
 }

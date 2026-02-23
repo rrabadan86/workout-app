@@ -19,6 +19,7 @@ export default function WorkoutDetailPage() {
     const { store, addLog, addFeedEvent } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
     const [weights, setWeights] = useState<Record<string, string[]>>({});
+    const [loadedStorage, setLoadedStorage] = useState(false);
     const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
@@ -56,6 +57,7 @@ export default function WorkoutDetailPage() {
         setTimerRunning(false);
         setFinalDuration(elapsedSeconds);
         setShowSummary(true);
+        localStorage.removeItem(`fitsync_active_${id}`);
         if (workout) {
             await addFeedEvent({
                 id: uid(),
@@ -73,17 +75,50 @@ export default function WorkoutDetailPage() {
     const project = workout ? store.projects.find((p) => p.id === workout.projectId) ?? null : null;
 
     useEffect(() => {
-        if (workout) {
+        if (!workout) return;
+        try {
+            const saved = localStorage.getItem(`fitsync_active_${id}`);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.weights && Object.keys(parsed.weights).length > 0) {
+                    setWeights(parsed.weights);
+                } else {
+                    initWeights();
+                }
+                if (parsed.timerRunning) setTimerRunning(true);
+                if (parsed.startedAt) startedAtRef.current = parsed.startedAt;
+
+                if (parsed.timerRunning && parsed.startedAt) {
+                    setElapsedSeconds(Math.floor((Date.now() - parsed.startedAt) / 1000));
+                }
+            } else {
+                initWeights();
+            }
+        } catch (e) {
+            initWeights();
+        }
+        setLoadedStorage(true);
+
+        function initWeights() {
             setWeights((prev) => {
                 const next = { ...prev };
-                workout.exercises.forEach(({ exerciseId, sets }, idx) => {
+                workout!.exercises.forEach(({ exerciseId, sets }, idx) => {
                     const key = `${exerciseId}-${idx}`;
                     if (!next[key]) next[key] = Array(sets.length).fill('');
                 });
                 return next;
             });
         }
-    }, [workout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [id, workout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (!workout || !loadedStorage) return;
+        localStorage.setItem(`fitsync_active_${id}`, JSON.stringify({
+            timerRunning,
+            startedAt: startedAtRef.current,
+            weights
+        }));
+    }, [id, workout?.id, timerRunning, weights, loadedStorage]);
 
     if (!ready || !userId) return null;
 
