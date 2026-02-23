@@ -663,6 +663,11 @@ textarea.input {
   color: var(--warning);
 }
 
+.stat-icon-blue {
+  background: rgba(85, 172, 238, 0.15);
+  color: #55acee;
+}
+
 .stat-value {
   font-size: 1.8rem;
   font-weight: 800;
