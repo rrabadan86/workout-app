@@ -99,6 +99,9 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                         {dayLogs.map((log) => {
                                             const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                            const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
+                                            const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
+                                            const skippedSets = Math.max(0, plannedSets - log.sets.length);
 
                                             const groups: { count: number, weight: number }[] = [];
                                             for (const s of log.sets) {
@@ -112,7 +115,14 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
 
                                             return (
                                                 <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '2px 0' }}>
-                                                    <span style={{ color: 'var(--text-primary)' }}>{exName}</span>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                        <span style={{ color: 'var(--text-primary)' }}>{exName}</span>
+                                                        {skippedSets > 0 && (
+                                                            <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
+                                                                faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span style={{ color: 'var(--accent-light)', fontWeight: 500, textAlign: 'right', paddingLeft: 12 }}>
                                                         {setsDisplay}
                                                     </span>

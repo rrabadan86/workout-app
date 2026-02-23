@@ -162,13 +162,23 @@ export default function WorkoutDetailPage() {
 
     async function handleSaveLog(slotKey: string, exId: string, setsDef: { reps: number }[]) {
         const ws = weights[slotKey] ?? [];
-        if (ws.some((w) => !w || parseFloat(w) <= 0)) {
-            setToast({ msg: 'Informe o peso para todas as séries.', type: 'error' }); return;
+        const validSets = setsDef
+            .map((def, i) => {
+                const val = ws[i];
+                const weight = parseFloat(val);
+                return { weight, reps: def.reps, isValid: val !== undefined && val.trim() !== '' && !isNaN(weight) && weight >= 0 };
+            })
+            .filter(s => s.isValid)
+            .map(s => ({ weight: s.weight, reps: s.reps }));
+
+        if (validSets.length === 0) {
+            setToast({ msg: 'Informe o peso de pelo menos uma série.', type: 'error' }); return;
         }
+
         setSaving(slotKey);
         await addLog({
             id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
-            sets: ws.map((w, i) => ({ weight: parseFloat(w), reps: setsDef[i]?.reps ?? 0 }))
+            sets: validSets
         });
         setWeights((prev) => ({ ...prev, [slotKey]: Array(setsDef.length).fill('') }));
         setSaving(null);
