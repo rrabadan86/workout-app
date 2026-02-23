@@ -46,24 +46,41 @@ export default function HistoryPage() {
         const eventDateObj = new Date(deleteTarget.createdAt);
         const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
 
-        // Find all logs for this event
-        const logsToDelete = store.logs.filter(l =>
-            l.userId === userId &&
-            l.workoutId === deleteTarget.referenceId &&
-            l.date === localDateStr
-        );
+        // Check if there are multiple feedEvents for this exact workout on this exact day
+        const sameDayEvents = store.feedEvents.filter(e => {
+            if (e.userId !== userId || e.referenceId !== deleteTarget.referenceId) return false;
+            if (e.eventType !== 'WO_COMPLETED' && e.eventType !== 'WO_COMPLETED_HIDDEN') return false;
 
-        // Delete logs one by one (could be optimized with a bulk delete in store if needed)
-        for (const log of logsToDelete) {
-            await deleteLog(log.id);
+            const eDateObj = new Date(e.createdAt);
+            const eDateStr = `${eDateObj.getFullYear()}-${String(eDateObj.getMonth() + 1).padStart(2, '0')}-${String(eDateObj.getDate()).padStart(2, '0')}`;
+            return eDateStr === localDateStr;
+        });
+
+        // Only delete the underlying logs if this is the ONLY time they completed this workout today
+        if (sameDayEvents.length <= 1) {
+            // Find all logs for this event
+            const logsToDelete = store.logs.filter(l =>
+                l.userId === userId &&
+                l.workoutId === deleteTarget.referenceId &&
+                l.date === localDateStr
+            );
+
+            for (const log of logsToDelete) {
+                await deleteLog(log.id);
+            }
         }
 
-        // Delete the feed event
+        // Always delete the feed event
         await deleteFeedEvent(deleteTarget.id);
 
         setSaving(false);
         setDeleteTarget(null);
-        setToast({ msg: 'Treino e registros excluídos do histórico.', type: 'success' });
+
+        if (sameDayEvents.length <= 1) {
+            setToast({ msg: 'Treino e registros excluídos do histórico.', type: 'success' });
+        } else {
+            setToast({ msg: 'Treino removido do histórico. As séries foram mantidas pois há outras sessões no mesmo dia.', type: 'success' });
+        }
     }
 
     return (
@@ -72,6 +89,11 @@ export default function HistoryPage() {
             <div className="container">
                 <div className="page-header" style={{ paddingTop: 40, alignItems: 'center' }}>
                     <div>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                            <button onClick={() => router.push('/')} className="btn btn-ghost btn-sm" style={{ paddingLeft: 0 }}>
+                                ← Voltar ao Dashboard
+                            </button>
+                        </div>
                         <h1 className="page-title">Histórico</h1>
                         <p className="page-subtitle">Seus treinos já realizados</p>
                     </div>
