@@ -128,11 +128,16 @@ export default function ProjectsPage() {
             <div className="container">
                 <div className="page-header">
                     <div>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                            <button onClick={() => router.push('/')} className="btn btn-ghost btn-sm" style={{ paddingLeft: 0 }}>
+                                ← Voltar ao Dashboard
+                            </button>
+                        </div>
                         <h1 className="page-title">Projetos</h1>
                         <p className="page-subtitle">{myProjects.length} projeto(s)</p>
                     </div>
-                    <button className="btn btn-primary" onClick={openCreate}>
-                        <Plus size={16} /> Novo Projeto
+                    <button className="btn btn-primary" onClick={openCreate} style={{ alignSelf: 'flex-start', marginTop: 32 }}>
+                        <Plus size={16} /> Novo
                     </button>
                 </div>
 
