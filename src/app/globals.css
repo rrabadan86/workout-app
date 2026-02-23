@@ -819,7 +819,12 @@ textarea.input {
   border-left: 3px solid var(--danger);
 }
 
-/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (min-width: 641px) {
+  .hide-on-desktop {
+    display: none !important;
+  }
+}
+
 @media (max-width: 640px) {
   .navbar-links {
     display: none;

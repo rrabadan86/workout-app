@@ -105,10 +105,10 @@ export default function DashboardPage() {
                         { label: 'Meus Exercícios', sub: 'Gerencie sua biblioteca', href: '/exercises', icon: ListChecks, cls: 'stat-icon-purple' },
                         { label: 'Comparar Evolução', sub: 'Compare com amigos', href: '/compare', icon: BarChart2, cls: 'stat-icon-green' },
                         { label: 'Projetos', sub: 'Crie e gerencie', href: '/projects', icon: FolderOpen, cls: 'stat-icon-pink' },
-                        { label: 'Comunidade', sub: 'Encontre amigos', href: '/community', icon: Users, cls: 'stat-icon-orange' },
-                        { label: 'Histórico', sub: 'Veja treinos passados', href: '/history', icon: Clock, cls: 'stat-icon-blue' },
-                    ].map(({ label, sub, href, icon: Icon, cls }) => (
-                        <a key={href} href={href} className="item-card">
+                        { label: 'Comunidade', sub: 'Encontre amigos', href: '/community', icon: Users, cls: 'stat-icon-orange', hideOnDesktop: true },
+                        { label: 'Histórico', sub: 'Veja treinos passados', href: '/history', icon: Clock, cls: 'stat-icon-blue', hideOnDesktop: true },
+                    ].map(({ label, sub, href, icon: Icon, cls, hideOnDesktop }) => (
+                        <a key={href} href={href} className={`item-card ${hideOnDesktop ? 'hide-on-desktop' : ''}`}>
                             <div className={`stat-icon ${cls}`} style={{ width: 40, height: 40 }}><Icon size={18} /></div>
                             <div className="item-card-info">
                                 <div className="item-card-title">{label}</div>
