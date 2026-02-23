@@ -34,7 +34,15 @@ export default function ExercisesPage() {
     const [exDesc, setExDesc] = useState('');
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
+
     if (!ready || !userId) return null;
+    const user = store.users.find((u) => u.id === userId);
+    if (!user) return null;
+    const isSupervisor = user.email === 'rodrigorabadan@gmail.com';
+    if (!isSupervisor) {
+        if (typeof window !== 'undefined') router.replace('/dashboard');
+        return null;
+    }
 
     const exercises = store.exercises.filter((e) =>
         e.name.toLowerCase().includes(search.toLowerCase()) ||

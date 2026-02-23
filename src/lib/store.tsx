@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from './supabase';
-import type { AppStore, User, Exercise, Project, Workout, WorkoutLog } from './types';
+import type { AppStore, User, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo } from './types';
 
-const defaultStore: AppStore = { users: [], exercises: [], projects: [], workouts: [], logs: [] };
+const defaultStore: AppStore = { users: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [] };
 
 // ─── Store Context ────────────────────────────────────────────────────────────
 interface StoreContextValue {
@@ -24,12 +24,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     const refresh = useCallback(async () => {
-        const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes] = await Promise.all([
+        const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes] = await Promise.all([
             supabase.from('users').select('*'),
             supabase.from('exercises').select('*'),
             supabase.from('projects').select('*'),
             supabase.from('workouts').select('*'),
             supabase.from('workout_logs').select('*'),
+            supabase.from('feed_events').select('*'),
+            supabase.from('kudos').select('*'),
         ]);
         setStore({
             users: (usersRes.data ?? []) as User[],
@@ -37,6 +39,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             projects: (projectsRes.data ?? []) as Project[],
             workouts: (workoutsRes.data ?? []) as Workout[],
             logs: (logsRes.data ?? []) as WorkoutLog[],
+            feedEvents: (feedRes.data ?? []) as FeedEvent[],
+            kudos: (kudosRes.data ?? []) as Kudo[],
         });
         setLoading(false);
     }, []);
@@ -56,6 +60,15 @@ export function useStore() {
 
     const addUser = useCallback(async (u: User) => {
         await supabase.from('users').insert(u);
+        await refresh();
+    }, [refresh]);
+
+    const updateUser = useCallback(async (u: User) => {
+        const { error } = await supabase.from('users').update(u).eq('id', u.id);
+        if (error) {
+            console.error('updateUser error:', error);
+            throw new Error(error.message);
+        }
         await refresh();
     }, [refresh]);
 
@@ -122,13 +135,31 @@ export function useStore() {
         await refresh();
     }, [refresh]);
 
+    // ─── Feed & Kudos ─────────────────────────────────────────────────────
+    const addFeedEvent = useCallback(async (f: FeedEvent) => {
+        await supabase.from('feed_events').insert(f);
+        await refresh();
+    }, [refresh]);
+
+    const toggleKudo = useCallback(async (kudo: Kudo) => {
+        // Check if kudo from this user already exists on this event
+        const existing = store.kudos.find(k => k.feedEventId === kudo.feedEventId && k.userId === kudo.userId);
+        if (existing) {
+            await supabase.from('kudos').delete().eq('id', existing.id);
+        } else {
+            await supabase.from('kudos').insert(kudo);
+        }
+        await refresh();
+    }, [refresh, store.kudos]);
+
     return {
         store, loading, refresh,
-        addUser,
+        addUser, updateUser,
         addExercise, updateExercise, deleteExercise,
         addProject, updateProject, deleteProject,
         addWorkout, updateWorkout, deleteWorkout,
         addLog,
+        addFeedEvent, toggleKudo,
     };
 }
 

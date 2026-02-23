@@ -16,7 +16,7 @@ export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addLog } = useStore();
+    const { store, addLog, addFeedEvent } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
     const [weights, setWeights] = useState<Record<string, string[]>>({});
     const [saving, setSaving] = useState<string | null>(null);
@@ -52,10 +52,19 @@ export default function WorkoutDetailPage() {
         setTimerRunning(true);
     }
 
-    function finishWorkout() {
+    async function finishWorkout() {
         setTimerRunning(false);
         setFinalDuration(elapsedSeconds);
         setShowSummary(true);
+        if (workout) {
+            await addFeedEvent({
+                id: uid(),
+                userId,
+                eventType: 'WO_COMPLETED',
+                referenceId: workout.id,
+                createdAt: new Date().toISOString()
+            });
+        }
     }
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
@@ -213,11 +222,11 @@ export default function WorkoutDetailPage() {
 
                                         {/* Weight inputs */}
                                         <div>
-                                            <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                            <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                                 {sets.map((setDef, sIdx) => (
-                                                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 60 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
+                                                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 20 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
                                                         <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
                                                         <input
                                                             className="input"
@@ -231,10 +240,10 @@ export default function WorkoutDetailPage() {
                                                                 arr[sIdx] = e.target.value;
                                                                 setWeights((prev) => ({ ...prev, [slotKey]: arr }));
                                                             }}
-                                                            style={{ maxWidth: 100 }}
+                                                            style={{ width: 60, padding: '4px 8px', height: 32, fontSize: '0.85rem' }}
                                                         />
                                                         {setDef.notes && (
-                                                            <span style={{ fontSize: '0.78rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
+                                                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
                                                                 💬 {setDef.notes}
                                                             </span>
                                                         )}

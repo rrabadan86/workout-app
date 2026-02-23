@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Feed from '@/components/Feed';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { formatDate } from '@/lib/utils';
@@ -89,6 +90,14 @@ export default function DashboardPage() {
                             ))}
                         </div>
                     )}
+                </div>
+
+                {/* --- Feed Section --- */}
+                <div style={{ marginBottom: 40 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Atividade Recente</h2>
+                    </div>
+                    <Feed friendIds={user.friendIds || []} myId={userId} />
                 </div>
 
                 <div className="grid-3" style={{ marginBottom: 40 }}>

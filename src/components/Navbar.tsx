@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield, FolderOpen } from 'lucide-react';
+import { Dumbbell, LayoutDashboard, ListChecks, BarChart2, LogOut, Shield, FolderOpen, Users } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 
@@ -9,9 +9,9 @@ const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
 const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/exercises', label: 'Exercícios', icon: ListChecks },
     { href: '/projects', label: 'Projetos', icon: FolderOpen },
     { href: '/compare', label: 'Comparar', icon: BarChart2 },
+    { href: '/community', label: 'Comunidade', icon: Users },
 ];
 
 export default function Navbar() {
@@ -47,11 +47,17 @@ export default function Navbar() {
                     </a>
                 ))}
                 {isSupervisor && (
-                    <a href="/admin" className={`nav-link ${pathname.startsWith('/admin') ? 'active' : ''}`}
-                        style={{ color: 'var(--accent)' }}>
-                        <Shield size={14} style={{ display: 'inline', marginRight: 4 }} />
-                        Admin
-                    </a>
+                    <>
+                        <a href="/exercises" className={`nav-link ${pathname.startsWith('/exercises') ? 'active' : ''}`}>
+                            <ListChecks size={14} style={{ display: 'inline', marginRight: 4 }} />
+                            Exercícios
+                        </a>
+                        <a href="/admin" className={`nav-link ${pathname.startsWith('/admin') ? 'active' : ''}`}
+                            style={{ color: 'var(--accent)' }}>
+                            <Shield size={14} style={{ display: 'inline', marginRight: 4 }} />
+                            Admin
+                        </a>
+                    </>
                 )}
             </div>
 

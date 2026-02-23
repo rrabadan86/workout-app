@@ -59,10 +59,27 @@ export interface WorkoutLog {
   sets: SetLog[];
 }
 
+export interface FeedEvent {
+  id: string;
+  userId: string;
+  eventType: string;  // e.g. "WO_COMPLETED"
+  referenceId: string; // e.g. workoutId
+  createdAt: string;   // ISO date
+}
+
+export interface Kudo {
+  id: string;
+  feedEventId: string;
+  userId: string;
+  createdAt: string;
+}
+
 export interface AppStore {
   users: User[];
   exercises: Exercise[];
   projects: Project[];
   workouts: Workout[];
   logs: WorkoutLog[];
+  feedEvents: FeedEvent[];
+  kudos: Kudo[];
 }
