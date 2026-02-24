@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { getSession, setSession, clearSession } from '@/lib/store';

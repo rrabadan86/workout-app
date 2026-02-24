@@ -82,7 +82,7 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
 
                         // Calculate total volume
                         let totalVolume = 0;
-                        let exerciseCount = dayLogs.length;
+                        const exerciseCount = dayLogs.length;
 
                         dayLogs.forEach(log => {
                             log.sets.forEach(set => {
