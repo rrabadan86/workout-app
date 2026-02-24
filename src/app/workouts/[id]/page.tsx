@@ -141,6 +141,8 @@ export default function WorkoutDetailPage() {
         ? store.users.find((u) => u.id === comparisonFriendId)?.name ?? 'Amigo'
         : '';
 
+    const hasAccess = workout.ownerId === userId || projectSharedWith.includes(userId);
+
     function getUserLogs(exId: string, uid: string): WorkoutLog[] {
         return store.logs
             .filter((l) => l.workoutId === id && l.exerciseId === exId && l.userId === uid)
@@ -176,6 +178,13 @@ export default function WorkoutDetailPage() {
             setToast({ msg: 'Informe o peso de pelo menos uma série.', type: 'error' }); return;
         }
 
+        const existingToday = store.logs.find(l => l.workoutId === id && l.exerciseId === exId && l.userId === userId && l.date === today());
+        if (existingToday) {
+            if (!window.confirm('Você já salvou um registro para este exercício hoje. Deseja salvar um novo registro mesmo assim?')) {
+                return;
+            }
+        }
+
         setSaving(slotKey);
         await addLog({
             id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
@@ -201,32 +210,34 @@ export default function WorkoutDetailPage() {
                         <p className="page-subtitle">{workout.exercises.length} exercício(s)</p>
                     </div>
                     {/* Timer display */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                        {timerRunning && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius)', padding: '6px 14px' }}>
-                                <Timer size={16} color="#22c55e" />
-                                <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '1.1rem', color: '#22c55e', letterSpacing: 1 }}>
-                                    {fmtTime(elapsedSeconds)}
-                                </span>
-                            </div>
-                        )}
-                        {!timerRunning ? (
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <button className="btn btn-primary" onClick={startWorkout} style={{ gap: 6 }}>
-                                    <Play size={15} /> Iniciar Cronômetro
+                    {hasAccess && (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                            {timerRunning && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius)', padding: '6px 14px' }}>
+                                    <Timer size={16} color="#22c55e" />
+                                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '1.1rem', color: '#22c55e', letterSpacing: 1 }}>
+                                        {fmtTime(elapsedSeconds)}
+                                    </span>
+                                </div>
+                            )}
+                            {!timerRunning ? (
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button className="btn btn-primary" onClick={startWorkout} style={{ gap: 6 }}>
+                                        <Play size={15} /> Iniciar Cronômetro
+                                    </button>
+                                    <button onClick={finishWorkout} title="Finalizar e compartilhar sem usar cronômetro"
+                                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--glass)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius)', padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>
+                                        <Square size={14} fill="currentColor" opacity={0.5} /> Finalizar
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={finishWorkout}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '8px 18px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
+                                    <Square size={14} fill="currentColor" /> Finalizar
                                 </button>
-                                <button onClick={finishWorkout} title="Finalizar e compartilhar sem usar cronômetro"
-                                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--glass)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius)', padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>
-                                    <Square size={14} fill="currentColor" opacity={0.5} /> Finalizar
-                                </button>
-                            </div>
-                        ) : (
-                            <button onClick={finishWorkout}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '8px 18px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
-                                <Square size={14} fill="currentColor" /> Finalizar
-                            </button>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
@@ -273,44 +284,46 @@ export default function WorkoutDetailPage() {
                                         )}
 
                                         {/* Weight inputs */}
-                                        <div>
-                                            <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                {sets.map((setDef, sIdx) => (
-                                                    <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 20 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
-                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
-                                                        <input
-                                                            className="input"
-                                                            type="number"
-                                                            min={0}
-                                                            step={0.5}
-                                                            placeholder="kg"
-                                                            value={weights[slotKey]?.[sIdx] ?? ''}
-                                                            onChange={(e) => {
-                                                                const arr = [...(weights[slotKey] ?? Array(sets.length).fill(''))];
-                                                                arr[sIdx] = e.target.value;
-                                                                setWeights((prev) => ({ ...prev, [slotKey]: arr }));
-                                                            }}
-                                                            style={{ width: 60, padding: '4px 8px', height: 32, fontSize: '0.85rem' }}
-                                                        />
-                                                        {setDef.notes && (
-                                                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
-                                                                💬 {setDef.notes}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                        {hasAccess && (
+                                            <div>
+                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                                    {sets.map((setDef, sIdx) => (
+                                                        <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 20 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
+                                                            <input
+                                                                className="input"
+                                                                type="number"
+                                                                min={0}
+                                                                step={0.5}
+                                                                placeholder="kg"
+                                                                value={weights[slotKey]?.[sIdx] ?? ''}
+                                                                onChange={(e) => {
+                                                                    const arr = [...(weights[slotKey] ?? Array(sets.length).fill(''))];
+                                                                    arr[sIdx] = e.target.value;
+                                                                    setWeights((prev) => ({ ...prev, [slotKey]: arr }));
+                                                                }}
+                                                                style={{ width: 60, padding: '4px 8px', height: 32, fontSize: '0.85rem' }}
+                                                            />
+                                                            {setDef.notes && (
+                                                                <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
+                                                                    💬 {setDef.notes}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    className="btn btn-primary btn-sm"
+                                                    style={{ marginTop: 12 }}
+                                                    onClick={() => handleSaveLog(slotKey, exerciseId, sets)}
+                                                    disabled={saving === slotKey}
+                                                >
+                                                    <Save size={14} /> {saving === slotKey ? 'Salvando...' : 'Salvar Registro'}
+                                                </button>
                                             </div>
-                                            <button
-                                                className="btn btn-primary btn-sm"
-                                                style={{ marginTop: 12 }}
-                                                onClick={() => handleSaveLog(slotKey, exerciseId, sets)}
-                                                disabled={saving === slotKey}
-                                            >
-                                                <Save size={14} /> {saving === slotKey ? 'Salvando...' : 'Salvar Registro'}
-                                            </button>
-                                        </div>
+                                        )}
 
                                         {/* Chart */}
                                         {chartData.length > 0 && (
