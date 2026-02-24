@@ -23,6 +23,8 @@ export default function DashboardPage() {
     const user = store.users.find((u) => u.id === userId);
     if (!user) return null;
 
+    const isSupervisor = user.email === 'rodrigorabadan@gmail.com';
+
     const myProjects = store.projects.filter((p) => p.ownerId === userId || p.sharedWith.includes(userId));
     const myStats = {
         exercises: store.exercises.length,
@@ -50,11 +52,11 @@ export default function DashboardPage() {
 
                 <div className="grid-2" style={{ marginBottom: 32 }}>
                     {[
-                        { value: myStats.exercises, label: 'Exercícios cadastrados', icon: ListChecks, cls: 'stat-icon-purple', href: '/exercises' },
+                        { value: myStats.exercises, label: 'Exercícios cadastrados', icon: ListChecks, cls: 'stat-icon-purple', href: '/exercises', adminOnly: true },
                         { value: myStats.projects, label: 'Meus projetos', icon: FolderOpen, cls: 'stat-icon-green', href: '/projects' },
                         { value: myStats.shared, label: 'Projetos compartilhados', icon: Users, cls: 'stat-icon-pink', href: '/projects' },
                         { value: myStats.logs, label: 'Registros de treino', icon: TrendingUp, cls: 'stat-icon-orange', href: '/compare' },
-                    ].map(({ value, label, icon: Icon, cls, href }) => (
+                    ].filter(i => !i.adminOnly || isSupervisor).map(({ value, label, icon: Icon, cls, href }) => (
                         <div key={label} className="stat-card" onClick={() => router.push(href)} style={{ cursor: 'pointer' }}>
                             <div className={`stat-icon ${cls}`}><Icon size={22} /></div>
                             <div>
@@ -102,12 +104,12 @@ export default function DashboardPage() {
 
                 <div className="grid-3" style={{ marginBottom: 40 }}>
                     {[
-                        { label: 'Meus Exercícios', sub: 'Gerencie sua biblioteca', href: '/exercises', icon: ListChecks, cls: 'stat-icon-purple' },
+                        { label: 'Meus Exercícios', sub: 'Gerencie sua biblioteca', href: '/exercises', icon: ListChecks, cls: 'stat-icon-purple', adminOnly: true },
                         { label: 'Comparar Evolução', sub: 'Compare com amigos', href: '/compare', icon: BarChart2, cls: 'stat-icon-green' },
                         { label: 'Projetos', sub: 'Crie e gerencie', href: '/projects', icon: FolderOpen, cls: 'stat-icon-pink' },
                         { label: 'Comunidade', sub: 'Encontre amigos', href: '/community', icon: Users, cls: 'stat-icon-orange', hideOnDesktop: true },
                         { label: 'Histórico', sub: 'Veja treinos passados', href: '/history', icon: Clock, cls: 'stat-icon-blue', hideOnDesktop: true },
-                    ].map(({ label, sub, href, icon: Icon, cls, hideOnDesktop }) => (
+                    ].filter(i => !i.adminOnly || isSupervisor).map(({ label, sub, href, icon: Icon, cls, hideOnDesktop }) => (
                         <a key={href} href={href} className={`item-card ${hideOnDesktop ? 'hide-on-desktop' : ''}`}>
                             <div className={`stat-icon ${cls}`} style={{ width: 40, height: 40 }}><Icon size={18} /></div>
                             <div className="item-card-info">
