@@ -56,6 +56,11 @@ export default function ComparePage() {
         <>
             <Navbar />
             <div className="container">
+                <div style={{ marginBottom: 8, paddingTop: 32 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => router.push('/dashboard')} style={{ marginBottom: 12, paddingLeft: 0 }}>
+                        ← Voltar ao Dashboard
+                    </button>
+                </div>
                 <div className="page-header">
                     <div>
                         <h1 className="page-title">Comparar Evolução</h1>

@@ -65,7 +65,12 @@ export default function AdminPage() {
         <>
             <Navbar />
             <div className="container">
-                <div className="page-header" style={{ paddingTop: 32 }}>
+                <div style={{ marginBottom: 8, paddingTop: 32 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => router.push('/dashboard')} style={{ marginBottom: 12, paddingLeft: 0 }}>
+                        ← Voltar ao Dashboard
+                    </button>
+                </div>
+                <div className="page-header">
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                             <Shield size={20} color="var(--accent)" />

@@ -140,7 +140,12 @@ export default function CommunityPage() {
         <>
             <Navbar />
             <div className="container">
-                <div className="page-header" style={{ paddingTop: 40, alignItems: 'center' }}>
+                <div style={{ marginBottom: 8, paddingTop: 32 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => router.push('/dashboard')} style={{ marginBottom: 12, paddingLeft: 0 }}>
+                        ← Voltar ao Dashboard
+                    </button>
+                </div>
+                <div className="page-header" style={{ alignItems: 'center' }}>
                     <div>
                         <h1 className="page-title">Comunidade</h1>
                         <p className="page-subtitle">Encontre amigos para acompanhar</p>
