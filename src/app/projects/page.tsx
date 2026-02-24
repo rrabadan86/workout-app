@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users } from 'lucide-react';
+import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Sparkles, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
@@ -27,9 +27,10 @@ const STATUS_LABEL = {
 export default function ProjectsPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addProject, updateProject, deleteProject } = useStore();
+    const { store, addProject, updateProject, deleteProject, addWorkout } = useStore();
 
     const [showModal, setShowModal] = useState(false);
+    const [showAIModal, setShowAIModal] = useState(false);
     const [editTarget, setEditTarget] = useState<Project | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
     const [showShareModal, setShowShareModal] = useState<string | null>(null);
@@ -41,6 +42,14 @@ export default function ProjectsPage() {
     const [pName, setPName] = useState('');
     const [pStart, setPStart] = useState('');
     const [pEnd, setPEnd] = useState('');
+
+    const [aiFocus, setAiFocus] = useState('');
+    const [aiDays, setAiDays] = useState('4');
+    const [aiTime, setAiTime] = useState('60');
+    const [aiExperience, setAiExperience] = useState('Iniciante');
+    const [aiLimitations, setAiLimitations] = useState('');
+    const [aiUsePrevious, setAiUsePrevious] = useState(false);
+    const [aiGenerating, setAiGenerating] = useState(false);
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
     if (!ready || !userId) return null;
@@ -121,6 +130,70 @@ export default function ProjectsPage() {
         setToast({ msg: 'Acesso removido.', type: 'success' });
     }
 
+    async function handleGenerateAI(e: React.FormEvent) {
+        e.preventDefault();
+        setAiGenerating(true);
+        try {
+            let lastProjectInfo = '';
+            const myProjs = store.projects.filter(p => p.ownerId === userId);
+            if (aiUsePrevious && myProjs.length > 0) {
+                lastProjectInfo = myProjs[myProjs.length - 1].name;
+            }
+
+            const res = await fetch('/api/generate-project', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    focus: aiFocus,
+                    daysPerWeek: parseInt(aiDays),
+                    maxTimeMins: parseInt(aiTime),
+                    experienceLevel: aiExperience,
+                    limitations: aiLimitations,
+                    lastProjectInfo,
+                    existingExercises: store.exercises.map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle }))
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro na IA');
+
+            const newProjectId = uid();
+            const today = new Date().toISOString().slice(0, 10);
+            const future = new Date();
+            future.setDate(future.getDate() + 30);
+            const endDate = future.toISOString().slice(0, 10);
+
+            await addProject({
+                id: newProjectId,
+                name: `✨ ${data.projectName || `Projeto IA (${aiFocus})`}`,
+                ownerId: userId,
+                startDate: today,
+                endDate: endDate,
+                sharedWith: []
+            });
+
+            for (const w of (data.workouts || [])) {
+                await addWorkout({
+                    id: uid(),
+                    projectId: newProjectId,
+                    ownerId: userId,
+                    name: w.name,
+                    order: w.order,
+                    exercises: w.exercises || []
+                });
+            }
+
+            setToast({ msg: 'Projeto Especialista Gerado! 🚀', type: 'success' });
+            setShowAIModal(false);
+            setAiFocus('');
+            setAiLimitations('');
+        } catch (err: any) {
+            setToast({ msg: err.message || 'Falha ao gerar o projeto.', type: 'error' });
+        } finally {
+            setAiGenerating(false);
+        }
+    }
+
 
     return (
         <>
@@ -136,9 +209,14 @@ export default function ProjectsPage() {
                         <h1 className="page-title">Projetos</h1>
                         <p className="page-subtitle">{myProjects.length} projeto(s)</p>
                     </div>
-                    <button className="btn btn-primary" onClick={openCreate} style={{ alignSelf: 'flex-start', marginTop: 32 }}>
-                        <Plus size={16} /> Novo
-                    </button>
+                    <div style={{ alignSelf: 'flex-start', marginTop: 32, display: 'flex', gap: 10 }}>
+                        <button className="btn btn-secondary" onClick={() => setShowAIModal(true)} style={{ background: 'var(--primary)', color: 'white', border: 'none' }}>
+                            <Sparkles size={16} /> Gerar por IA
+                        </button>
+                        <button className="btn btn-primary" onClick={openCreate}>
+                            <Plus size={16} /> Novo
+                        </button>
+                    </div>
                 </div>
 
                 {myProjects.length === 0 ? (
@@ -165,6 +243,11 @@ export default function ProjectsPage() {
                                         onClick={() => router.push(`/projects/${p.id}`)}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                                             <span className="item-card-title">{p.name}</span>
+                                            {p.name.includes('✨') && (
+                                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#C084FC', background: '#C084FC22', borderRadius: 20, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <Sparkles size={10} /> IA
+                                                </span>
+                                            )}
                                             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: st.color, background: `${st.color}22`, borderRadius: 20, padding: '2px 10px' }}>
                                                 {st.dot} {st.label}
                                             </span>
@@ -231,6 +314,78 @@ export default function ProjectsPage() {
                                 <input className="input" type="date" value={pEnd} onChange={(e) => setPEnd(e.target.value)} required min={pStart} />
                             </div>
                         </div>
+                    </form>
+                </Modal>
+            )}
+
+            {/* AI Generation Modal */}
+            {showAIModal && (
+                <Modal title="✨ Novo Projeto por IA" onClose={() => setShowAIModal(false)}
+                    footer={
+                        <>
+                            {aiGenerating && (
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: 'auto', display: 'flex', alignItems: 'center' }}>
+                                    Isso pode levar até 3 minutos...
+                                </span>
+                            )}
+                            <button className="btn btn-ghost" onClick={() => setShowAIModal(false)} disabled={aiGenerating}>Cancelar</button>
+                            <button className="btn btn-primary" form="ai-form" type="submit" disabled={aiGenerating} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {aiGenerating && <Loader2 className="spinner" size={16} />}
+                                {aiGenerating ? 'Criando a mágica...' : 'Gerar Treino Mágico'}
+                            </button>
+                        </>
+                    }
+                >
+                    <form id="ai-form" onSubmit={handleGenerateAI} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div className="field">
+                            <label>Qual o seu objetivo principal? *</label>
+                            <input className="input" placeholder="Ex: Hipertrofia, Emagrecimento, Força..." value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} required />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                            <div className="field">
+                                <label>Dias por semana *</label>
+                                <select className="input" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required>
+                                    {[1, 2, 3, 4, 5, 6, 7].map(num => (
+                                        <option key={num} value={num}>{num} dias</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="field">
+                                <label>Nível de experiência *</label>
+                                <select className="input" value={aiExperience} onChange={(e) => setAiExperience(e.target.value)} required>
+                                    <option value="Iniciante">Iniciante</option>
+                                    <option value="Intermediário">Intermediário</option>
+                                    <option value="Avançado">Avançado</option>
+                                </select>
+                            </div>
+                            <div className="field">
+                                <label>Tempo por treino (aprox.) *</label>
+                                <select className="input" value={aiTime} onChange={(e) => setAiTime(e.target.value)} required>
+                                    <option value="30">30 minutos</option>
+                                    <option value="45">45 minutos</option>
+                                    <option value="60">60 minutos</option>
+                                    <option value="90">90 minutos</option>
+                                    <option value="120">120 minutos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="field">
+                            <label>Possui alguma limitação física ou preferência? (Opcional)</label>
+                            <input className="input" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
+                        </div>
+                        {store.projects.filter(p => p.ownerId === userId).length > 0 && (
+                            <div className="field" style={{ marginTop: 8 }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 'normal', color: 'var(--text-secondary)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={aiUsePrevious}
+                                        onChange={(e) => setAiUsePrevious(e.target.checked)}
+                                        style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
+                                    />
+                                    Evoluir a partir do meu projeto: "{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}"
+                                </label>
+                            </div>
+                        )}
                     </form>
                 </Modal>
             )}

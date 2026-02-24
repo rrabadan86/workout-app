@@ -542,6 +542,20 @@ textarea.input {
   animation: slideUp 0.3s ease;
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
 /* ─── Login Page ────────────────────────────────────────────────────────────── */
 .auth-wrapper {
   min-height: 100vh;
