@@ -250,7 +250,9 @@ export default function ProjectDetailPage() {
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <select className="input" value={selEx} onChange={(e) => setSelEx(e.target.value)}>
                                     <option value="">Selecione...</option>
-                                    {store.exercises.map((ex) => <option key={ex.id} value={ex.id}>{ex.name} ({ex.muscle})</option>)}
+                                    {[...store.exercises]
+                                        .sort((a, b) => a.name.localeCompare(b.name))
+                                        .map((ex) => <option key={ex.id} value={ex.id}>{ex.name} ({ex.muscle})</option>)}
                                 </select>
                                 <button type="button" className="btn btn-ghost" onClick={addExToList}><Plus size={16} /></button>
                             </div>

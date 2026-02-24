@@ -27,6 +27,7 @@ export default function ExercisesPage() {
     const [editTarget, setEditTarget] = useState<Exercise | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null);
     const [search, setSearch] = useState('');
+    const [filterMuscle, setFilterMuscle] = useState('Todos');
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [exName, setExName] = useState('');
@@ -44,10 +45,13 @@ export default function ExercisesPage() {
         return null;
     }
 
-    const exercises = store.exercises.filter((e) =>
-        e.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.muscle.toLowerCase().includes(search.toLowerCase())
-    );
+    const exercises = store.exercises
+        .filter((e) => {
+            const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.muscle.toLowerCase().includes(search.toLowerCase());
+            const matchMuscle = filterMuscle === 'Todos' || e.muscle === filterMuscle;
+            return matchSearch && matchMuscle;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
 
     function openCreate() {
         setEditTarget(null);
@@ -99,10 +103,17 @@ export default function ExercisesPage() {
                     </button>
                 </div>
 
-                <div style={{ position: 'relative', marginBottom: 24 }}>
-                    <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input className="input" placeholder="Buscar exercício ou músculo..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
-                    {search && <button style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setSearch('')}><X size={16} /></button>}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+                        <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <input className="input" placeholder="Buscar exercício ou músculo..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
+                        {search && <button style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }} onClick={() => setSearch('')}><X size={16} /></button>}
+                    </div>
+
+                    <select className="input" value={filterMuscle} onChange={(e) => setFilterMuscle(e.target.value)} style={{ width: 180 }}>
+                        <option value="Todos">Todos os músculos</option>
+                        {[...MUSCLES].sort((a, b) => a.localeCompare(b)).map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
                 </div>
 
                 {exercises.length === 0 ? (
@@ -158,7 +169,7 @@ export default function ExercisesPage() {
                         <div className="field">
                             <label>Grupo muscular *</label>
                             <select className="input" value={exMuscle} onChange={(e) => setExMuscle(e.target.value)}>
-                                {MUSCLES.map((m) => <option key={m}>{m}</option>)}
+                                {[...MUSCLES].sort((a, b) => a.localeCompare(b)).map((m) => <option key={m}>{m}</option>)}
                             </select>
                         </div>
                         <div className="field">
