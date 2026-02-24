@@ -26,7 +26,7 @@ ${limitations ? `- Limitações ou restrições: ${limitations}` : ''}
 ${lastProjectInfo ? `- Contexto do projeto anterior: ${lastProjectInfo}` : ''}
 
 Você tem a seguinte lista de exercícios disponíveis no banco de dados do aplicativo (Listados como 'ID | Nome | Músculo'):
-${existingExercises.map((e: any) => `${e.id} | ${e.name} | ${e.muscle}`).join('\n')}
+${existingExercises.map((e: { id: string, name: string, muscle: string }) => `${e.id} | ${e.name} | ${e.muscle}`).join('\n')}
 
 Seu objetivo é montar um projeto que contenha de ${daysPerWeek} treinos diferentes (ex: Treino A, Treino B, etc).
 Cada treino deve conter uma lista de exercícios escolhidos ESTRITAMENTE da lista fornecida acima. A quantidade de exercícios e séries por treino deve respeitar o limite de tempo de ${maxTimeMins} minutos (assumindo descanso e execução).
@@ -76,8 +76,8 @@ Lembre-se: Use APENAS os IDs de exercícios da lista fornecida. Retorne APENAS o
       console.error("Failed to parse JSON:", responseText);
       return NextResponse.json({ error: 'Erro ao gerar o formato do treino. Tente novamente.' }, { status: 500 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Gemini API error:', error);
-    return NextResponse.json({ error: error.message || 'Erro interno no servidor' }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message || 'Erro interno no servidor' }, { status: 500 });
   }
 }

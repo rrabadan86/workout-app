@@ -38,9 +38,12 @@ export default function ProjectDetailPage() {
     // Local ordering state (array of workout ids in display order)
     const [orderedIds, setOrderedIds] = useState<string[]>([]);
     // Sync orderedIds when workouts change
+    const wIdsStr = workouts.map((w) => w.id).join(',');
     useEffect(() => {
-        setOrderedIds(workouts.map((w) => w.id));
-    }, [workouts.map((w) => w.id).join(',')]);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setOrderedIds(wIdsStr ? wIdsStr.split(',') : []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [wIdsStr]);
     const orderedWorkouts = orderedIds
         .map((wid) => workouts.find((w) => w.id === wid))
         .filter(Boolean) as typeof workouts;

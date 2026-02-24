@@ -187,8 +187,8 @@ export default function ProjectsPage() {
             setShowAIModal(false);
             setAiFocus('');
             setAiLimitations('');
-        } catch (err: any) {
-            setToast({ msg: err.message || 'Falha ao gerar o projeto.', type: 'error' });
+        } catch (err: unknown) {
+            setToast({ msg: (err as Error).message || 'Falha ao gerar o projeto.', type: 'error' });
         } finally {
             setAiGenerating(false);
         }
@@ -381,7 +381,7 @@ export default function ProjectsPage() {
                                         onChange={(e) => setAiUsePrevious(e.target.checked)}
                                         style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
                                     />
-                                    Evoluir a partir do meu projeto: "{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}"
+                                    Evoluir a partir do meu projeto: &quot;{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}&quot;
                                 </label>
                             </div>
                         )}

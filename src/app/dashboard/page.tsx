@@ -30,7 +30,7 @@ export default function DashboardPage() {
         const allRelevantUsers = store.users.filter(u => user.friendIds?.includes(u.id) || u.id === user.id);
         const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
         return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
-    }, [store.feedEvents, store.users, user?.friendIds, user?.id, userId]);
+    }, [store.feedEvents, store.users, user, userId]);
 
     const activeProject = myProjects.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 

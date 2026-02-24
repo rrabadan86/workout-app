@@ -1,0 +1,135 @@
+
+> workout-app@0.1.0 lint
+> eslint
+
+
+C:\AntiGravity\workout-app\check-models.js
+  1:12  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\AntiGravity\workout-app\src\app\api\generate-project\route.ts
+  29:29  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  75:14  warning  'jsonErr' is defined but never used       @typescript-eslint/no-unused-vars
+  79:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AntiGravity\workout-app\src\app\community\page.tsx
+  10:32  warning  'WorkoutLog' is defined but never used    @typescript-eslint/no-unused-vars
+  11:8   warning  'Modal' is defined but never used         @typescript-eslint/no-unused-vars
+  61:23  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\AntiGravity\workout-app\src\app\dashboard\page.tsx
+   5:10  warning  'Dumbbell' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   5:20  warning  'ListChecks' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   5:32  warning  'BarChart2' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   5:64  warning  'TrendingUp' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  24:31  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [store.feedEvents, store.users, user?.friendIds, user?.id, userId]. Inferred less specific property than source.
+
+C:\AntiGravity\workout-app\src\app\dashboard\page.tsx:24:31
+  22 |
+  23 |     // Find active friends (just top 4 friends who logged recently)
+> 24 |     const topActive = useMemo(() => {
+     |                               ^^^^^^^
+> 25 |         if (!userId || !user) return [];
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |         const counts: Record<string, number> = {};
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         store.feedEvents.forEach(e => {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |             if (e.eventType === 'WO_COMPLETED') counts[e.userId] = (counts[e.userId] || 0) + 1;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |         });
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |         const allRelevantUsers = store.users.filter(u => user.friendIds?.includes(u.id) || u.id === user.id);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |         const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |     }, [store.feedEvents, store.users, user?.friendIds, user?.id, userId]);
+     | ^^^^^^ Could not preserve existing manual memoization
+  34 |
+  35 |     const activeProject = myProjects.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+  36 |  react-hooks/preserve-manual-memoization
+  24:31  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [store.feedEvents, store.users, user?.friendIds, user?.id, userId]. Inferred less specific property than source.
+
+C:\AntiGravity\workout-app\src\app\dashboard\page.tsx:24:31
+  22 |
+  23 |     // Find active friends (just top 4 friends who logged recently)
+> 24 |     const topActive = useMemo(() => {
+     |                               ^^^^^^^
+> 25 |         if (!userId || !user) return [];
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 26 |         const counts: Record<string, number> = {};
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 27 |         store.feedEvents.forEach(e => {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 28 |             if (e.eventType === 'WO_COMPLETED') counts[e.userId] = (counts[e.userId] || 0) + 1;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 29 |         });
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 30 |         const allRelevantUsers = store.users.filter(u => user.friendIds?.includes(u.id) || u.id === user.id);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 31 |         const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 32 |         return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 33 |     }, [store.feedEvents, store.users, user?.friendIds, user?.id, userId]);
+     | ^^^^^^ Could not preserve existing manual memoization
+  34 |
+  35 |     const activeProject = myProjects.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+  36 |  react-hooks/preserve-manual-memoization
+  33:8   warning  React Hook useMemo has a missing dependency: 'user'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+  64:18  warning  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+
+C:\AntiGravity\workout-app\src\app\history\page.tsx
+  10:48  warning  'Play' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\AntiGravity\workout-app\src\app\layout.tsx
+  22:9  warning  A font-display parameter is missing (adding `&display=optional` is recommended). See: https://nextjs.org/docs/messages/google-font-display                       @next/next/google-font-display
+  22:9  warning  Custom fonts not added in `pages/_document.js` will only load for a single page. This is discouraged. See: https://nextjs.org/docs/messages/no-page-custom-font  @next/next/no-page-custom-font
+
+C:\AntiGravity\workout-app\src\app\projects\[id]\page.tsx
+   3:31  warning  'useCallback' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  42:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\AntiGravity\workout-app\src\app\projects\[id]\page.tsx:42:9
+  40 |     // Sync orderedIds when workouts change
+  41 |     useEffect(() => {
+> 42 |         setOrderedIds(workouts.map((w) => w.id));
+     |         ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  43 |     }, [workouts.map((w) => w.id).join(',')]);
+  44 |     const orderedWorkouts = orderedIds
+  45 |         .map((wid) => workouts.find((w) => w.id === wid))  react-hooks/set-state-in-effect
+  43:8   warning  React Hook useEffect has a missing dependency: 'workouts'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+  43:9   warning  React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/exhaustive-deps
+
+C:\AntiGravity\workout-app\src\app\projects\page.tsx
+  190:23   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  384:70   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  384:134  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\AntiGravity\workout-app\src\app\workouts\[id]\page.tsx
+   20:28  warning  'updateLog' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+   99:18  warning  'e' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+  123:8   warning  React Hook useEffect has a missing dependency: 'workout'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\AntiGravity\workout-app\src\components\Feed.tsx
+   5:10  warning  'useAuth' is defined but never used                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   7:10  warning  'FeedEvent' is defined but never used                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   7:21  warning  'Kudo' is defined but never used                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  36:11  warning  The 'allRelevantIds' array makes the dependencies of useMemo Hook (at line 43) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'allRelevantIds' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\AntiGravity\workout-app\src\components\Toast.tsx
+  3:21  warning  'useState' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 33 problems (10 errors, 23 warnings)
+

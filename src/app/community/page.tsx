@@ -58,10 +58,10 @@ export default function CommunityPage() {
                 msg: isFollowing ? 'Você deixou de seguir este usuário.' : 'Agora você segue este usuário!',
                 type: 'success'
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
             setSaving(null);
-            setToast({ msg: 'Erro ao seguir: ' + (err.message || 'Falha na comunicação com o banco'), type: 'error' });
+            setToast({ msg: 'Erro ao seguir: ' + ((err as Error).message || 'Falha na comunicação com o banco'), type: 'error' });
         }
     }
 
