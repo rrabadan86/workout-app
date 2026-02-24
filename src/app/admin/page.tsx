@@ -64,63 +64,61 @@ export default function AdminPage() {
     return (
         <>
             <Navbar />
-            <div className="container">
-                <div style={{ marginBottom: 8, paddingTop: 32 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => router.push('/dashboard')} style={{ marginBottom: 12, paddingLeft: 0 }}>
+            <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 lg:px-12 py-8">
+                <div className="mb-4">
+                    <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/dashboard')}>
                         ← Voltar ao Dashboard
                     </button>
                 </div>
-                <div className="page-header">
+                <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                            <Shield size={20} color="var(--accent)" />
-                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px' }}>Supervisor</span>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Shield size={18} className="text-primary" />
+                            <span className="text-[10px] font-bold font-montserrat tracking-widest uppercase text-primary">Supervisor</span>
                         </div>
                         <h1 className="page-title">Gerenciar Usuários</h1>
                         <p className="page-subtitle">{otherUsers.length} usuário(s) cadastrado(s)</p>
                     </div>
-                    <div className="stat-icon stat-icon-purple" style={{ width: 48, height: 48, flexShrink: 0 }}>
-                        <Users size={22} />
+                    <div className="size-12 rounded-xl flex items-center justify-center bg-[#C084FC]/10 text-[#C084FC] shrink-0">
+                        <Users size={24} />
                     </div>
                 </div>
 
                 {otherUsers.length === 0 ? (
-                    <div className="empty-state">
-                        <Users size={48} color="var(--text-muted)" />
-                        <p>Nenhum usuário cadastrado ainda.</p>
+                    <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
+                        <Users size={48} className="text-slate-300 mb-4" />
+                        <p className="text-slate-500 font-bold font-roboto">Nenhum usuário cadastrado ainda.</p>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 40 }}>
+                    <div className="flex flex-col gap-4 mb-10">
                         {otherUsers.map((u) => {
                             const userWorkouts = store.workouts.filter((w) => w.ownerId === u.id).length;
                             const userLogs = store.logs.filter((l) => l.userId === u.id).length;
                             return (
-                                <div key={u.id} className="item-card">
-                                    <div className="avatar" style={{ width: 44, height: 44, flexShrink: 0, fontSize: '1.1rem' }}>
-                                        {u.name[0].toUpperCase()}
-                                    </div>
-                                    <div className="item-card-info" style={{ flex: 1 }}>
-                                        <div className="item-card-title">{u.name}</div>
-                                        <div className="item-card-sub">{u.email}</div>
-                                        <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                🏋️ {userWorkouts} treino(s)
-                                            </span>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                📊 {userLogs} registro(s)
-                                            </span>
+                                <div key={u.id} className="bg-white rounded-xl card-depth p-5 md:p-6 border border-slate-100 flex flex-col sm:flex-row gap-4 sm:items-center">
+                                    <div className="flex gap-4 items-center flex-1">
+                                        <div className="size-10 md:size-12 rounded-xl flex items-center justify-center bg-slate-100 font-bold font-inter text-slate-500 text-lg shrink-0">
+                                            {u.name[0].toUpperCase()}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-bold font-inter text-slate-900">{u.name}</div>
+                                            <div className="text-sm font-roboto text-slate-500">{u.email}</div>
+                                            <div className="flex gap-3 mt-1 text-xs font-roboto text-slate-400">
+                                                <span>🏋️ {userWorkouts} treino(s)</span>
+                                                <span>📊 {userLogs} registro(s)</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                                    <div className="flex gap-2 shrink-0 self-end sm:self-center">
                                         <button
-                                            className="btn btn-ghost btn-sm"
+                                            className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-2 text-sm"
                                             onClick={() => { setResetTarget(u); setNewPassword(''); }}
                                             title="Redefinir senha"
                                         >
                                             <KeyRound size={14} /> Senha
                                         </button>
                                         <button
-                                            className="btn btn-danger btn-sm"
+                                            className="btn bg-rose-50 text-rose-500 hover:bg-rose-100 px-4 py-2 text-sm"
                                             onClick={() => setDeleteTarget(u)}
                                             title="Excluir usuário"
                                         >
@@ -132,26 +130,28 @@ export default function AdminPage() {
                         })}
                     </div>
                 )}
-            </div>
+            </main>
 
             {/* Delete Modal */}
             {deleteTarget && (
                 <Modal title="Excluir Usuário" onClose={() => setDeleteTarget(null)}
                     footer={
-                        <>
-                            <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                            <button className="btn btn-danger" onClick={confirmDelete} disabled={saving}>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+                            <button className="btn bg-rose-500 text-white hover:bg-rose-600 shadow-xl shadow-rose-500/30 px-6 py-4" onClick={confirmDelete} disabled={saving}>
                                 {saving ? 'Excluindo...' : 'Excluir'}
                             </button>
-                        </>
+                        </div>
                     }
                 >
-                    <p style={{ color: 'var(--text-secondary)' }}>
-                        Tem certeza que deseja excluir o usuário <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong> ({deleteTarget.email})?
-                    </p>
-                    <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginTop: 10 }}>
-                        ⚠️ Todos os treinos, exercícios e registros deste usuário também serão removidos.
-                    </p>
+                    <div className="flex flex-col gap-3">
+                        <p className="text-slate-600 font-roboto text-sm">
+                            Tem certeza que deseja excluir o usuário <strong className="text-slate-900">{deleteTarget.name}</strong> ({deleteTarget.email})?
+                        </p>
+                        <p className="text-rose-500 font-roboto text-xs font-medium px-4 py-3 bg-rose-50 rounded-xl border border-rose-100">
+                            ⚠️ Todos os treinos, exercícios e registros deste usuário também serão removidos.
+                        </p>
+                    </div>
                 </Modal>
             )}
 
@@ -159,19 +159,19 @@ export default function AdminPage() {
             {resetTarget && (
                 <Modal title={`Redefinir senha — ${resetTarget.name}`} onClose={() => setResetTarget(null)}
                     footer={
-                        <>
-                            <button className="btn btn-ghost" onClick={() => setResetTarget(null)}>Cancelar</button>
-                            <button className="btn btn-primary" onClick={confirmResetPassword} disabled={saving || !newPassword.trim()}>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setResetTarget(null)}>Cancelar</button>
+                            <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={confirmResetPassword} disabled={saving || !newPassword.trim()}>
                                 {saving ? 'Salvando...' : 'Confirmar'}
                             </button>
-                        </>
+                        </div>
                     }
                 >
-                    <div className="field">
-                        <label>Nova senha para <strong>{resetTarget.name}</strong></label>
-                        <div style={{ position: 'relative' }}>
+                    <div className="flex flex-col gap-1.5 mt-6">
+                        <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nova senha para {resetTarget.name}</label>
+                        <div className="relative">
                             <input
-                                className="input"
+                                className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white"
                                 type="text"
                                 placeholder="Digite a nova senha..."
                                 value={newPassword}
@@ -180,12 +180,12 @@ export default function AdminPage() {
                             />
                             {newPassword && (
                                 <button type="button" onClick={() => setNewPassword('')}
-                                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                                     <X size={14} />
                                 </button>
                             )}
                         </div>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                        <p className="text-xs font-roboto text-slate-500 mt-1">
                             O usuário deverá usar esta nova senha no próximo login.
                         </p>
                     </div>

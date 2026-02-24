@@ -196,51 +196,51 @@ export default function WorkoutDetailPage() {
     }
 
     return (
-        <>
+        <div className="min-h-screen bg-slate-50 flex flex-col">
             <Navbar />
-            <div className="container">
-                <div className="page-header">
-                    <div>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => router.push(project ? `/projects/${project.id}` : '/projects')} className="btn btn-ghost btn-sm">
-                                ← {project?.name ?? 'Projetos'}
-                            </button>
-                        </div>
-                        <h1 className="page-title">{workout.name}</h1>
-                        <p className="page-subtitle">{workout.exercises.length} exercício(s)</p>
+            <div className="w-full max-w-[1000px] mx-auto px-6 py-10 flex-1">
+                <div className="mb-10">
+                    <div className="flex items-center gap-2 mb-6">
+                        <button onClick={() => router.push(project ? `/projects/${project.id}` : '/projects')} className="btn btn-ghost btn-sm" style={{ color: 'var(--text-secondary)' }}>
+                            ← Voltar para {project?.name ?? 'Projetos'}
+                        </button>
                     </div>
-                    {/* Timer display */}
-                    {hasAccess && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                            {timerRunning && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius)', padding: '6px 14px' }}>
-                                    <Timer size={16} color="#22c55e" />
-                                    <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: '1.1rem', color: '#22c55e', letterSpacing: 1 }}>
-                                        {fmtTime(elapsedSeconds)}
-                                    </span>
-                                </div>
-                            )}
-                            {!timerRunning ? (
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <button className="btn btn-primary" onClick={startWorkout} style={{ gap: 6 }}>
-                                        <Play size={15} /> Iniciar Cronômetro
-                                    </button>
-                                    <button onClick={finishWorkout} title="Finalizar e compartilhar sem usar cronômetro"
-                                        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--glass)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius)', padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}>
-                                        <Square size={14} fill="currentColor" opacity={0.5} /> Finalizar
-                                    </button>
-                                </div>
-                            ) : (
-                                <button onClick={finishWorkout}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--radius)', padding: '8px 18px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>
-                                    <Square size={14} fill="currentColor" /> Finalizar
-                                </button>
-                            )}
+
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div>
+                            <h1 className="page-title" style={{ marginBottom: 4 }}>{workout.name}</h1>
+                            <p className="page-subtitle" style={{ marginTop: 0 }}>{workout.exercises.length} EXERCÍCIO(S)</p>
                         </div>
-                    )}
+
+                        {/* Timer Box */}
+                        {hasAccess && (
+                            <div className="flex items-center gap-3">
+                                {timerRunning && (
+                                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-5 py-3 rounded-2xl text-emerald-600 font-extrabold text-xl tabular-nums tracking-wider shadow-sm">
+                                        <Timer size={24} />
+                                        {fmtTime(elapsedSeconds)}
+                                    </div>
+                                )}
+                                {!timerRunning ? (
+                                    <div className="flex items-center gap-3">
+                                        <button className="btn btn-primary" onClick={startWorkout} style={{ padding: '12px 24px', fontSize: '1rem' }}>
+                                            <Play size={18} fill="currentColor" /> Iniciar Cronômetro
+                                        </button>
+                                        <button onClick={finishWorkout} className="btn btn-ghost" title="Finalizar e compartilhar sem cronômetro" style={{ border: '1px solid var(--glass-border)', padding: '12px 24px', fontSize: '1rem' }}>
+                                            <Square size={16} fill="currentColor" /> Finalizar
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button onClick={finishWorkout} className="btn" style={{ background: 'var(--danger)', color: 'white', padding: '12px 24px', fontSize: '1rem' }}>
+                                        <Square size={18} fill="currentColor" /> Finalizar
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
+                <div className="flex flex-col gap-6 mb-12">
                     {workout.exercises.map(({ exerciseId, sets }, exIdx) => {
                         const slotKey = `${exerciseId}-${exIdx}`;
                         const exName = store.exercises.find((e) => e.id === exerciseId)?.name ?? 'Exercício';
@@ -252,143 +252,152 @@ export default function WorkoutDetailPage() {
                         const repsSummary = sets.map((s) => s.reps).join(', ');
 
                         return (
-                            <div key={slotKey} className="exercise-panel animate-fade">
-                                <div className="exercise-panel-header" onClick={() => setExpanded(isOpen ? null : slotKey)}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <div className="stat-icon stat-icon-purple" style={{ width: 38, height: 38 }}><Dumbbell size={16} /></div>
-                                        <div>
-                                            <div style={{ fontWeight: 700 }}>{exName}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            <div key={slotKey} className="bg-white rounded-2xl card-depth overflow-hidden animate-fade transition-all">
+                                <div className="p-6 md:p-8 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" onClick={() => setExpanded(isOpen ? null : slotKey)}>
+                                    <div className="flex items-center gap-5">
+                                        <div className="size-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                            <Dumbbell size={24} />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <h3 className="text-xl font-extrabold text-slate-900 leading-tight">{exName}</h3>
+                                            <p className="text-sm font-bold text-slate-500">
                                                 {sets.length} séries · {repsSummary} reps
-                                                {lastLog && <span style={{ marginLeft: 8, color: 'var(--accent3)' }}>· Último: {Math.max(...lastLog.sets.map(s => s.weight))} kg</span>}
-                                            </div>
+                                                {lastLog && <span className="ml-2 text-primary">· Último: {Math.max(...lastLog.sets.map(s => s.weight))} kg</span>}
+                                            </p>
                                         </div>
                                     </div>
-                                    {isOpen ? <ChevronUp size={18} color="var(--text-muted)" /> : <ChevronDown size={18} color="var(--text-muted)" />}
+                                    <div className="hidden sm:block">
+                                        {isOpen ? <ChevronUp className="text-slate-400" size={24} /> : <ChevronDown className="text-slate-400" size={24} />}
+                                    </div>
+                                    <div className="sm:hidden flex justify-center w-full">
+                                        {isOpen ? <ChevronUp className="text-slate-400" size={24} /> : <ChevronDown className="text-slate-400" size={24} />}
+                                    </div>
                                 </div>
 
                                 {isOpen && (
-                                    <div className="exercise-panel-body">
+                                    <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-8">
                                         {/* Friend comparison */}
                                         {lastFriendLog && (
-                                            <div style={{ background: 'rgba(108,99,255,0.08)', border: '1px solid rgba(108,99,255,0.2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px' }}>
-                                                <p style={{ fontSize: '0.78rem', color: 'var(--accent-light)', fontWeight: 700, marginBottom: 6 }}>📊 Último treino de {friendName}</p>
-                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
+                                                <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-3">📊 Último treino de {friendName}</p>
+                                                <div className="flex flex-wrap gap-2">
                                                     {lastFriendLog.sets.map((s, i) => (
-                                                        <span key={i} style={{ fontSize: '0.825rem', background: 'rgba(108,99,255,0.15)', padding: '4px 10px', borderRadius: 6 }}>
-                                                            S{i + 1}: <strong>{s.weight} kg</strong> × {s.reps}
+                                                        <span key={i} className="text-xs font-bold bg-white text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 shadow-sm">
+                                                            S{i + 1}: <strong className="text-indigo-900">{s.weight} kg</strong> × {s.reps}
                                                         </span>
                                                     ))}
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Weight inputs */}
-                                        {hasAccess && (
-                                            <div>
-                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registrar hoje</p>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                    {sets.map((setDef, sIdx) => (
-                                                        <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 20 }}>{setDef.label || `Série ${sIdx + 1}`}</span>
-                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>× {setDef.reps} reps</span>
-                                                            <input
-                                                                className="input"
-                                                                type="number"
-                                                                min={0}
-                                                                step={0.5}
-                                                                placeholder="kg"
-                                                                value={weights[slotKey]?.[sIdx] ?? ''}
-                                                                onChange={(e) => {
-                                                                    const arr = [...(weights[slotKey] ?? Array(sets.length).fill(''))];
-                                                                    arr[sIdx] = e.target.value;
-                                                                    setWeights((prev) => ({ ...prev, [slotKey]: arr }));
-                                                                }}
-                                                                style={{ width: 60, padding: '4px 8px', height: 32, fontSize: '0.85rem' }}
-                                                            />
-                                                            {setDef.notes && (
-                                                                <span style={{ fontSize: '0.75rem', color: 'var(--accent-light)', fontStyle: 'italic', opacity: 0.85 }}>
-                                                                    💬 {setDef.notes}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <button
-                                                    className="btn btn-primary btn-sm"
-                                                    style={{ marginTop: 12 }}
-                                                    onClick={() => handleSaveLog(slotKey, exerciseId, sets)}
-                                                    disabled={saving === slotKey}
-                                                >
-                                                    <Save size={14} /> {saving === slotKey ? 'Salvando...' : 'Salvar Registro'}
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Chart */}
-                                        {chartData.length > 0 && (
-                                            <div>
-                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                    <TrendingUp size={14} style={{ display: 'inline', marginRight: 4 }} />Evolução (kg)
-                                                </p>
-                                                <div className="chart-wrapper">
-                                                    <ResponsiveContainer width="100%" height={200}>
-                                                        <LineChart data={chartData}>
-                                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                                            <XAxis dataKey="date" tick={{ fill: '#9999bb', fontSize: 11 }} axisLine={false} tickLine={false} />
-                                                            <YAxis tick={{ fill: '#9999bb', fontSize: 11 }} axisLine={false} tickLine={false} />
-                                                            <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#f0f0f8' }} />
-                                                            <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                                                            <Line type="monotone" dataKey="Você" stroke="#6c63ff" strokeWidth={2} dot={{ fill: '#6c63ff', r: 4 }} activeDot={{ r: 6 }} />
-                                                            {comparisonFriendId && friendName && (
-                                                                <Line type="monotone" dataKey={friendName} stroke="#ff6584" strokeWidth={2} dot={{ fill: '#ff6584', r: 4 }} strokeDasharray="5 5" />
-                                                            )}
-                                                        </LineChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* History */}
-                                        {myLogs.length > 0 && (
-                                            <div>
-                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Histórico</p>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                    {myLogs.slice().reverse().slice(0, 5).map((log) => (
-                                                        <div key={log.id} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{formatDate(log.date)}</span>
-                                                                <div style={{ display: 'flex', gap: 4 }}>
-                                                                    <button className="btn-icon" style={{ padding: 4 }} title="Carregar valores para hoje" onClick={() => {
-                                                                        const arr = Array(sets.length).fill('');
-                                                                        log.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
-                                                                        setWeights(prev => ({ ...prev, [slotKey]: arr }));
-                                                                        setToast({ msg: 'Valores carregados. Clique em Salvar para registrar hoje.', type: 'success' });
-                                                                    }}>
-                                                                        <Edit2 size={14} color="var(--text-muted)" />
-                                                                    </button>
-                                                                    <button className="btn-icon" style={{ padding: 4 }} title="Excluir este registro" onClick={async () => {
-                                                                        if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
-                                                                            setSaving(log.id);
-                                                                            await deleteLog(log.id);
-                                                                            setSaving(null);
-                                                                            setToast({ msg: 'Registro excluído.', type: 'success' });
-                                                                        }
-                                                                    }}>
-                                                                        <Trash2 size={14} color="var(--danger)" />
-                                                                    </button>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                            {/* Weight inputs */}
+                                            {hasAccess && (
+                                                <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
+                                                    <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6">Registrar Hoje</p>
+                                                    <div className="flex flex-col gap-4 flex-1">
+                                                        {sets.map((setDef, sIdx) => (
+                                                            <div key={sIdx} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                                                <div className="flex items-center gap-4">
+                                                                    <span className="w-16 text-sm font-bold text-slate-700">{setDef.label || `Série ${sIdx + 1}`}</span>
+                                                                    <span className="w-20 text-sm font-bold text-slate-400">× {setDef.reps} reps</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3">
+                                                                    <input
+                                                                        className="w-24 h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-slate-900 text-base"
+                                                                        type="number" min={0} step={0.5} placeholder="kg"
+                                                                        value={weights[slotKey]?.[sIdx] ?? ''}
+                                                                        onChange={(e) => {
+                                                                            const arr = [...(weights[slotKey] ?? Array(sets.length).fill(''))];
+                                                                            arr[sIdx] = e.target.value;
+                                                                            setWeights((prev) => ({ ...prev, [slotKey]: arr }));
+                                                                        }}
+                                                                    />
+                                                                    {setDef.notes && <span className="text-xs font-bold text-indigo-400 opacity-80 max-w-[120px] leading-tight">💬 {setDef.notes}</span>}
                                                                 </div>
                                                             </div>
-                                                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                                                {log.sets.map((s, i) => (
-                                                                    <span key={i} style={{ fontSize: '0.8rem', background: 'rgba(108,99,255,0.15)', padding: '3px 8px', borderRadius: 4 }}>{s.weight}kg</span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        className="mt-8 w-full flex items-center justify-center gap-2 bg-primary text-white py-4 rounded-xl font-extrabold hover:bg-primary/90 transition-colors active:scale-95 shadow-md shadow-primary/20"
+                                                        onClick={() => handleSaveLog(slotKey, exerciseId, sets)}
+                                                        disabled={saving === slotKey}
+                                                    >
+                                                        <Save size={18} /> {saving === slotKey ? 'Salvando...' : 'Salvar Registro'}
+                                                    </button>
                                                 </div>
+                                            )}
+
+                                            <div className="flex flex-col gap-8 h-full">
+                                                {/* Chart */}
+                                                {chartData.length > 0 && (
+                                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                                                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                            <TrendingUp size={16} className="text-primary" /> Evolução (kg)
+                                                        </p>
+                                                        <div className="h-48 w-full">
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <LineChart data={chartData}>
+                                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                                                    <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={10} />
+                                                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dx={-10} />
+                                                                    <Tooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#f8fafc', fontWeight: 700, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} itemStyle={{ fontWeight: 700 }} />
+                                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12, fontWeight: 700, paddingTop: 10 }} />
+                                                                    <Line type="monotone" dataKey="Você" stroke="#00AAFF" strokeWidth={3} dot={{ fill: '#00AAFF', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
+                                                                    {comparisonFriendId && friendName && (
+                                                                        <Line type="monotone" dataKey={friendName} stroke="#ff4757" strokeWidth={3} dot={{ fill: '#ff4757', r: 4, strokeWidth: 0 }} strokeDasharray="5 5" />
+                                                                    )}
+                                                                </LineChart>
+                                                            </ResponsiveContainer>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* History */}
+                                                {myLogs.length > 0 && (
+                                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                                                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">Histórico Recente</p>
+                                                        <div className="flex flex-col gap-3">
+                                                            {myLogs.slice().reverse().slice(0, 5).map((log) => (
+                                                                <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 transition-colors hover:border-slate-200">
+                                                                    <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
+                                                                        <span className="text-sm font-extrabold text-slate-700">{formatDate(log.date)}</span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-primary transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Carregar valores para hoje" onClick={() => {
+                                                                                const arr = Array(sets.length).fill('');
+                                                                                log.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
+                                                                                setWeights(prev => ({ ...prev, [slotKey]: arr }));
+                                                                                setToast({ msg: 'Valores carregados. Clique em Salvar para registrar hoje.', type: 'success' });
+                                                                            }}>
+                                                                                <Edit2 size={16} />
+                                                                            </button>
+                                                                            <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-red-500 transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Excluir este registro" onClick={async () => {
+                                                                                if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
+                                                                                    setSaving(log.id);
+                                                                                    await deleteLog(log.id);
+                                                                                    setSaving(null);
+                                                                                    setToast({ msg: 'Registro excluído.', type: 'success' });
+                                                                                }
+                                                                            }}>
+                                                                                <Trash2 size={16} />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                                                                        {log.sets.map((s, i) => (
+                                                                            <div key={i} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm text-xs font-bold">
+                                                                                <span className="text-slate-400">S{i + 1}</span>
+                                                                                <span className="text-slate-900">{s.weight}kg</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -404,8 +413,8 @@ export default function WorkoutDetailPage() {
                 <Modal title="🏁 Treino Finalizado!" onClose={() => setShowSummary(false)}
                     footer={
                         <>
-                            <button className="btn btn-ghost" onClick={() => setShowSummary(false)}>Fechar</button>
-                            <button className="btn btn-primary" onClick={() => { setShowSummary(false); router.push(project ? `/projects/${project.id}` : '/projects'); }}>
+                            <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors" onClick={() => setShowSummary(false)}>Fechar</button>
+                            <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors" onClick={() => { setShowSummary(false); router.push(project ? `/projects/${project.id}` : '/projects'); }}>
                                 Voltar ao Projeto
                             </button>
                         </>
@@ -423,6 +432,6 @@ export default function WorkoutDetailPage() {
                     </div>
                 </Modal>
             )}
-        </>
+        </div>
     );
 }

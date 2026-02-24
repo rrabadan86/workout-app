@@ -198,11 +198,11 @@ export default function ProjectsPage() {
     return (
         <>
             <Navbar />
-            <div className="container">
-                <div className="page-header">
+            <main className="flex-1 w-full max-w-[1000px] mx-auto px-6 lg:px-12 py-8">
+                <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
                         <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => router.push('/')} className="btn btn-ghost btn-sm" style={{ paddingLeft: 0 }}>
+                            <button onClick={() => router.push('/')} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm">
                                 ← Voltar ao Dashboard
                             </button>
                         </div>
@@ -210,20 +210,20 @@ export default function ProjectsPage() {
                         <p className="page-subtitle">{myProjects.length} projeto(s)</p>
                     </div>
                     <div style={{ alignSelf: 'flex-start', marginTop: 32, display: 'flex', gap: 10 }}>
-                        <button className="btn btn-secondary" onClick={() => setShowAIModal(true)} style={{ background: 'var(--primary)', color: 'white', border: 'none' }}>
+                        <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] shadow-lg shadow-[#C084FC]/30 px-6 py-4" onClick={() => setShowAIModal(true)} style={{ border: 'none' }}>
                             <Sparkles size={16} /> Gerar por IA
                         </button>
-                        <button className="btn btn-primary" onClick={openCreate}>
+                        <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={openCreate}>
                             <Plus size={16} /> Novo
                         </button>
                     </div>
                 </div>
 
                 {myProjects.length === 0 ? (
-                    <div className="empty-state">
-                        <FolderOpen size={48} color="var(--text-muted)" />
-                        <p>Nenhum projeto ainda. Crie seu primeiro projeto!</p>
-                        <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={openCreate}>
+                    <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
+                        <FolderOpen size={48} className="text-slate-300 mb-4" />
+                        <p className="text-slate-500 font-bold font-roboto">Nenhum projeto ainda. Crie seu primeiro projeto!</p>
+                        <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={openCreate}>
                             Criar projeto
                         </button>
                     </div>
@@ -235,14 +235,13 @@ export default function ProjectsPage() {
                             const workoutCount = store.workouts.filter((w) => w.projectId === p.id).length;
                             const isOwner = p.ownerId === userId;
                             return (
-                                <div key={p.id} className="item-card" style={{ cursor: 'default' }}>
-                                    <div className="stat-icon stat-icon-purple" style={{ width: 44, height: 44, flexShrink: 0 }}>
+                                <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white card-depth p-4 md:p-6 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all" style={{ cursor: 'default' }}>
+                                    <div className="size-12 rounded-xl flex items-center justify-center bg-[#C084FC] text-white shrink-0">
                                         <FolderOpen size={20} />
                                     </div>
-                                    <div className="item-card-info" style={{ flex: 1, cursor: 'pointer' }}
-                                        onClick={() => router.push(`/projects/${p.id}`)}>
+                                    <div className="flex-1 cursor-pointer" onClick={() => router.push(`/projects/${p.id}`)}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                            <span className="item-card-title">{p.name}</span>
+                                            <span className="item-card-title text-base sm:text-lg">{p.name}</span>
                                             {p.name.includes('✨') && (
                                                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#C084FC', background: '#C084FC22', borderRadius: 20, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     <Sparkles size={10} /> IA
@@ -252,8 +251,8 @@ export default function ProjectsPage() {
                                                 {st.dot} {st.label}
                                             </span>
                                         </div>
-                                        <div className="item-card-sub" style={{ marginTop: 4 }}>
-                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} · 🏋️ {workoutCount} treino(s)
+                                        <div className="item-card-sub text-slate-500 mt-2 text-xs">
+                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} <span className="mx-2">•</span> 🏋️ {workoutCount} treino(s)
                                         </div>
                                         {p.sharedWith.length > 0 && (
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -262,22 +261,22 @@ export default function ProjectsPage() {
                                             </div>
                                         )}
                                     </div>
-                                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                                         {isOwner && (
                                             <>
-                                                <button className="btn-icon" title="Compartilhar" onClick={() => setShowShareModal(p.id)}>
-                                                    <Share2 size={15} />
+                                                <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Compartilhar" onClick={() => setShowShareModal(p.id)}>
+                                                    <Share2 size={18} />
                                                 </button>
-                                                <button className="btn-icon" title="Editar" onClick={() => openEdit(p)}>
-                                                    <Pencil size={15} />
+                                                <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Editar" onClick={() => openEdit(p)}>
+                                                    <Pencil size={18} />
                                                 </button>
-                                                <button className="btn-icon" title="Excluir" style={{ color: 'var(--danger)' }} onClick={() => setDeleteTarget(p)}>
-                                                    <Trash2 size={15} />
+                                                <button className="p-2.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" title="Excluir" onClick={() => setDeleteTarget(p)}>
+                                                    <Trash2 size={18} />
                                                 </button>
                                             </>
                                         )}
-                                        <button className="btn-icon" onClick={() => router.push(`/projects/${p.id}`)}>
-                                            <ChevronRight size={16} />
+                                        <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors hidden sm:flex" onClick={() => router.push(`/projects/${p.id}`)}>
+                                            <ChevronRight size={20} />
                                         </button>
                                     </div>
                                 </div>
@@ -285,33 +284,33 @@ export default function ProjectsPage() {
                         })}
                     </div>
                 )}
-            </div>
+            </main>
 
             {/* Create / Edit Modal */}
             {showModal && (
                 <Modal title={editTarget ? 'Editar Projeto' : 'Novo Projeto'} onClose={() => setShowModal(false)}
                     footer={
-                        <>
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
-                            <button className="btn btn-primary" form="project-form" type="submit" disabled={saving}>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
+                            <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" form="project-form" type="submit" disabled={saving}>
                                 {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Projeto')}
                             </button>
-                        </>
+                        </div>
                     }
                 >
-                    <form id="project-form" onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <form id="project-form" onSubmit={handleSave} className="flex flex-col gap-5 mt-6">
                         <div className="field">
-                            <label>Nome do projeto *</label>
-                            <input className="input" placeholder="Ex: Projeto Hipertrofia" value={pName} onChange={(e) => setPName(e.target.value)} required />
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome do projeto *</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Projeto Hipertrofia" value={pName} onChange={(e) => setPName(e.target.value)} required />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="field">
-                                <label>Data de início *</label>
-                                <input className="input" type="date" value={pStart} onChange={(e) => setPStart(e.target.value)} required />
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de início *</label>
+                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={pStart} onChange={(e) => setPStart(e.target.value)} required />
                             </div>
                             <div className="field">
-                                <label>Data de término *</label>
-                                <input className="input" type="date" value={pEnd} onChange={(e) => setPEnd(e.target.value)} required min={pStart} />
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de término *</label>
+                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={pEnd} onChange={(e) => setPEnd(e.target.value)} required min={pStart} />
                             </div>
                         </div>
                     </form>
@@ -322,45 +321,45 @@ export default function ProjectsPage() {
             {showAIModal && (
                 <Modal title="✨ Novo Projeto por IA" onClose={() => setShowAIModal(false)}
                     footer={
-                        <>
+                        <div className="flex justify-end gap-3 mt-8 items-center">
                             {aiGenerating && (
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginRight: 'auto', display: 'flex', alignItems: 'center' }}>
+                                <span className="text-xs text-slate-500 font-roboto mr-auto flex items-center">
                                     Isso pode levar até 3 minutos...
                                 </span>
                             )}
-                            <button className="btn btn-ghost" onClick={() => setShowAIModal(false)} disabled={aiGenerating}>Cancelar</button>
-                            <button className="btn btn-primary" form="ai-form" type="submit" disabled={aiGenerating} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                {aiGenerating && <Loader2 className="spinner" size={16} />}
+                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowAIModal(false)} disabled={aiGenerating}>Cancelar</button>
+                            <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] hover:scale-[1.02] shadow-xl shadow-[#C084FC]/30 px-6 py-4 flex items-center gap-2" form="ai-form" type="submit" disabled={aiGenerating}>
+                                {aiGenerating && <Loader2 className="animate-spin" size={16} />}
                                 {aiGenerating ? 'Criando a mágica...' : 'Gerar Treino Mágico'}
                             </button>
-                        </>
+                        </div>
                     }
                 >
-                    <form id="ai-form" onSubmit={handleGenerateAI} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <form id="ai-form" onSubmit={handleGenerateAI} className="flex flex-col gap-5 mt-6">
                         <div className="field">
-                            <label>Qual o seu objetivo principal? *</label>
-                            <input className="input" placeholder="Ex: Hipertrofia, Emagrecimento, Força..." value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} required />
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Qual o seu objetivo principal? *</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Hipertrofia, Emagrecimento, Força..." value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} required />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="field">
-                                <label>Dias por semana *</label>
-                                <select className="input" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required>
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Dias por semana *</label>
+                                <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required>
                                     {[1, 2, 3, 4, 5, 6, 7].map(num => (
                                         <option key={num} value={num}>{num} dias</option>
                                     ))}
                                 </select>
                             </div>
                             <div className="field">
-                                <label>Nível de experiência *</label>
-                                <select className="input" value={aiExperience} onChange={(e) => setAiExperience(e.target.value)} required>
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nível de experiência *</label>
+                                <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiExperience} onChange={(e) => setAiExperience(e.target.value)} required>
                                     <option value="Iniciante">Iniciante</option>
                                     <option value="Intermediário">Intermediário</option>
                                     <option value="Avançado">Avançado</option>
                                 </select>
                             </div>
                             <div className="field">
-                                <label>Tempo por treino (aprox.) *</label>
-                                <select className="input" value={aiTime} onChange={(e) => setAiTime(e.target.value)} required>
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Tempo por treino (aprox.) *</label>
+                                <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiTime} onChange={(e) => setAiTime(e.target.value)} required>
                                     <option value="30">30 minutos</option>
                                     <option value="45">45 minutos</option>
                                     <option value="60">60 minutos</option>
@@ -370,8 +369,8 @@ export default function ProjectsPage() {
                             </div>
                         </div>
                         <div className="field">
-                            <label>Possui alguma limitação física ou preferência? (Opcional)</label>
-                            <input className="input" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Possui alguma limitação física ou preferência? (Opcional)</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
                         </div>
                         {store.projects.filter(p => p.ownerId === userId).length > 0 && (
                             <div className="field" style={{ marginTop: 8 }}>
@@ -394,12 +393,12 @@ export default function ProjectsPage() {
             {deleteTarget && (
                 <Modal title="Excluir Projeto" onClose={() => setDeleteTarget(null)}
                     footer={
-                        <>
-                            <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
-                            <button className="btn btn-danger" onClick={confirmDelete} disabled={saving}>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
+                            <button className="btn bg-rose-500 text-white hover:bg-rose-600 shadow-xl shadow-rose-500/30 px-6 py-4" onClick={confirmDelete} disabled={saving}>
                                 {saving ? 'Excluindo...' : 'Excluir'}
                             </button>
-                        </>
+                        </div>
                     }
                 >
                     <p style={{ color: 'var(--text-secondary)' }}>
@@ -417,25 +416,25 @@ export default function ProjectsPage() {
                     <Modal title={`Compartilhar — ${proj.name}`} onClose={() => { setShowShareModal(null); setShareEmail(''); setShareStatus(null); }}
                         footer={<button className="btn btn-ghost" onClick={() => { setShowShareModal(null); setShareEmail(''); setShareStatus(null); }}>Fechar</button>}
                     >
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div className="flex flex-col gap-6 mt-6">
                             {/* Email input */}
                             <div className="field">
-                                <label>Compartilhar por e-mail</label>
-                                <div style={{ display: 'flex', gap: 8 }}>
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Compartilhar por e-mail</label>
+                                <div className="flex flex-col sm:flex-row gap-3">
                                     <input
-                                        className="input"
+                                        className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all flex-1"
                                         type="email"
                                         placeholder="exemplo@email.com"
                                         value={shareEmail}
                                         onChange={(e) => { setShareEmail(e.target.value); setShareStatus(null); }}
                                         onKeyDown={(e) => e.key === 'Enter' && handleShareByEmail(proj.id)}
                                     />
-                                    <button className="btn btn-primary btn-sm" onClick={() => handleShareByEmail(proj.id)} disabled={!shareEmail.trim()}>
-                                        <Share2 size={14} /> Convidar
+                                    <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-3 shrink-0" onClick={() => handleShareByEmail(proj.id)} disabled={!shareEmail.trim()}>
+                                        <Share2 size={16} /> Convidar
                                     </button>
                                 </div>
                                 {shareStatus && (
-                                    <p style={{ fontSize: '0.82rem', marginTop: 6, color: shareStatus.ok ? '#22c55e' : 'var(--danger)' }}>
+                                    <p className={`text-xs mt-2 font-bold font-roboto ${shareStatus.ok ? 'text-emerald-500' : 'text-rose-500'}`}>
                                         {shareStatus.msg}
                                     </p>
                                 )}

@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen, Clock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Feed from '@/components/Feed';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { formatDate } from '@/lib/utils';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -18,108 +17,217 @@ export default function DashboardPage() {
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
-    if (!ready || !userId) return null;
-
     const user = store.users.find((u) => u.id === userId);
-    if (!user) return null;
+    const myProjects = store.projects.filter((p) => p.ownerId === userId || p.sharedWith.includes(userId || ''));
 
-    const isSupervisor = user.email === 'rodrigorabadan@gmail.com';
+    // Find active friends (just top 4 friends who logged recently)
+    const topActive = useMemo(() => {
+        if (!userId || !user) return [];
+        const counts: Record<string, number> = {};
+        store.feedEvents.forEach(e => {
+            if (e.eventType === 'WO_COMPLETED') counts[e.userId] = (counts[e.userId] || 0) + 1;
+        });
+        const allRelevantUsers = store.users.filter(u => user.friendIds?.includes(u.id) || u.id === user.id);
+        const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
+        return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
+    }, [store.feedEvents, store.users, user?.friendIds, user?.id, userId]);
 
-    const myProjects = store.projects.filter((p) => p.ownerId === userId || p.sharedWith.includes(userId));
-    const myStats = {
-        exercises: store.exercises.length,
-        projects: store.projects.filter((p) => p.ownerId === userId).length,
-        shared: store.projects.filter((p) => p.sharedWith.includes(userId)).length,
-        logs: store.logs.filter((l) => l.userId === userId).length,
+    const activeProject = myProjects.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+
+    // Other users to follow
+    const peopleToFollow = useMemo(() => {
+        if (!user) return [];
+        return store.users.filter(u => u.id !== user.id && !user.friendIds?.includes(u.id)).slice(0, 3);
+    }, [store.users, user]);
+
+    // Calculate progress
+    const progress = useMemo(() => {
+        if (!activeProject || !activeProject.startDate || !activeProject.endDate) return 0;
+        const start = new Date(activeProject.startDate).getTime();
+        const end = new Date(activeProject.endDate).getTime();
+        const now = new Date().getTime();
+
+        if (now >= end) return 100;
+        if (now <= start) return 0;
+        if (end <= start) return 100; // fallback just in case
+        return Math.round(((now - start) / (end - start)) * 100);
+    }, [activeProject]);
+
+    // Format Date helper
+    const formatDateSafe = (dateStr: string) => {
+        if (!dateStr) return '--';
+        try {
+            const [y, m, d] = dateStr.split('T')[0].split('-');
+            if (!y || !m || !d) return dateStr;
+            const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            return `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
+        } catch (e) {
+            return dateStr;
+        }
     };
 
-    const hour = new Date().getHours();
-    const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+    // RULES OF HOOKS: All hooks must be called before conditional returns
+    if (!ready || !userId) return null;
+    if (!user) return null;
 
     return (
         <>
             <Navbar />
-            <div className="container">
-                <div className="page-header" style={{ paddingTop: 40 }}>
-                    <div>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{greeting},</p>
-                        <h1 className="page-title">{user.name} 💪</h1>
-                    </div>
-                    <button className="btn btn-primary" onClick={() => router.push('/projects')}>
-                        <Dumbbell size={16} /> Iniciar Treino
-                    </button>
-                </div>
 
-                <div className="grid-2" style={{ marginBottom: 32 }}>
-                    {[
-                        { value: myStats.exercises, label: 'Exercícios cadastrados', icon: ListChecks, cls: 'stat-icon-purple', href: '/exercises', adminOnly: true },
-                        { value: myStats.projects, label: 'Meus projetos', icon: FolderOpen, cls: 'stat-icon-green', href: '/projects' },
-                        { value: myStats.shared, label: 'Projetos compartilhados', icon: Users, cls: 'stat-icon-pink', href: '/projects' },
-                        { value: myStats.logs, label: 'Registros de treino', icon: TrendingUp, cls: 'stat-icon-orange', href: '/compare' },
-                    ].filter(i => !i.adminOnly || isSupervisor).map(({ value, label, icon: Icon, cls, href }) => (
-                        <div key={label} className="stat-card" onClick={() => router.push(href)} style={{ cursor: 'pointer' }}>
-                            <div className={`stat-icon ${cls}`}><Icon size={22} /></div>
-                            <div>
-                                <div className="stat-value">{value}</div>
-                                <div className="stat-label">{label}</div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+            <main className="flex-1 w-full max-w-[1440px] mx-auto px-6 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Main Feed Column */}
+                <div className="lg:col-span-8 flex flex-col gap-10">
 
-                <div style={{ marginBottom: 32 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Projetos Recentes</h2>
-                        <a href="/projects" className="btn btn-ghost btn-sm">Ver todos <ChevronRight size={14} /></a>
-                    </div>
-                    {myProjects.length === 0 ? (
-                        <div className="card" style={{ textAlign: 'center', padding: '40px 24px' }}>
-                            <FolderOpen size={36} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-                            <p style={{ color: 'var(--text-secondary)' }}>Nenhum projeto ainda. Crie seu primeiro projeto!</p>
-                            <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => router.push('/projects')}>Criar projeto</button>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {myProjects.slice(0, 3).map((p) => (
-                                <div key={p.id} className="item-card" onClick={() => router.push(`/projects/${p.id}`)}>
-                                    <div className="stat-icon stat-icon-purple" style={{ width: 40, height: 40 }}><FolderOpen size={18} /></div>
-                                    <div className="item-card-info">
-                                        <div className="item-card-title">{p.name}</div>
-                                        <div className="item-card-sub">{store.workouts.filter((w) => w.projectId === p.id).length} treino(s)</div>
-                                    </div>
-                                    <ChevronRight size={18} color="var(--text-muted)" />
+                    {/* Active Now Section */}
+                    {topActive.length > 0 && (
+                        <section className="bg-white rounded-xl card-depth p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Active Now</h2>
+                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Amigos Mais Ativos</p>
                                 </div>
-                            ))}
+                                <a className="text-primary font-bold font-montserrat text-sm hover:underline cursor-pointer" onClick={() => router.push('/community')}>Ver Comunidade</a>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {topActive.map((u) => (
+                                    <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push('/community')}>
+                                        <div className="size-12 rounded-full story-ring shrink-0">
+                                            <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white text-primary flex items-center justify-center font-extrabold">
+                                                {u.name.charAt(0).toUpperCase()}
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-sm font-bold font-inter text-slate-900 uppercase tracking-tight truncate">{u.name}</span>
+                                            <span className="text-[10px] font-bold font-roboto text-primary truncate">{u.workoutsCount} treinos</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Recent Activity Section */}
+                    <section className="flex flex-col gap-8">
+                        <h2 className="text-3xl font-extrabold font-inter tracking-tight text-slate-900">Atividade Recente</h2>
+                        <Feed friendIds={user.friendIds || []} myId={userId} />
+                    </section>
+                </div>
+
+                {/* Sidebar Column */}
+                <aside className="lg:col-span-4 flex flex-col gap-8 h-full">
+
+                    {/* Active Project Widget */}
+                    <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col gap-8 soft-shadow shrink-0 relative overflow-hidden">
+                        {/* Decorative background element mimicking the dark theme project widget */}
+                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-3xl rounded-full pointer-events-none"></div>
+
+                        <div className="relative z-10">
+                            <h3 className="text-2xl font-extrabold font-inter mb-1">{activeProject ? 'Projeto Atual' : 'Nenhum Projeto'}</h3>
+                            <p className="text-slate-400 text-sm font-bold font-roboto">Resumo Diário</p>
+                        </div>
+
+                        {activeProject ? (
+                            <div className="flex items-center gap-6 relative z-10 cursor-pointer" onClick={() => router.push(`/projects/${activeProject.id}`)}>
+                                <div className="relative size-20 shrink-0 flex items-center justify-center">
+                                    <svg className="size-full -rotate-90" viewBox="0 0 36 36">
+                                        <circle className="stroke-slate-800" cx="18" cy="18" fill="none" r="16" strokeWidth="3"></circle>
+                                        <circle className="stroke-primary" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${progress}, 100`} strokeLinecap="round" strokeWidth="3"></circle>
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center text-center">
+                                        <span className="text-xl font-extrabold font-inter text-white leading-none">{progress}%</span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-3 flex-grow">
+                                    <div>
+                                        <p className="text-[10px] font-bold font-roboto text-slate-500 uppercase tracking-widest leading-none mb-1">Nome do Projeto</p>
+                                        <p className="text-lg font-bold font-inter leading-tight line-clamp-2">{activeProject.name}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-2 mt-1">
+                                        <div className="flex gap-4">
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest leading-none">Início</p>
+                                                <p className="text-xs font-bold font-roboto text-slate-200 leading-none">{formatDateSafe(activeProject.startDate)}</p>
+                                            </div>
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest leading-none">Fim</p>
+                                                <p className="text-xs font-bold font-roboto text-slate-200 leading-none">{formatDateSafe(activeProject.endDate)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="relative z-10 text-center py-4 text-slate-400 text-sm">
+                                Crie um projeto para agrupar seus treinos e acompanhar sua evolução.
+                            </div>
+                        )}
+
+                        <button className="relative z-10 w-full py-4 bg-white text-slate-900 rounded-xl font-extrabold font-montserrat hover:bg-primary hover:text-white transition-colors"
+                            onClick={() => router.push(activeProject ? `/projects/${activeProject.id}` : '/projects')}>
+                            {activeProject ? 'Ver Detalhes do Projeto' : 'Criar Novo Projeto'}
+                        </button>
+                    </div>
+
+                    {/* Quick Navigation Menu replacing the old icon grids */}
+                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col">
+                        <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
+                        <div className="flex flex-col gap-3">
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                                <div className="size-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><FolderOpen size={18} /></div>
+                                <span className="flex-1 text-left font-inter">Meus Projetos</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Projetos Compartilhados</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
+                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* People to Follow Widget */}
+                    {peopleToFollow.length > 0 && (
+                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col">
+                            <h3 className="text-xl font-extrabold font-inter mb-4 tracking-tight text-slate-900">Pessoas a Seguir</h3>
+                            <div className="flex flex-col gap-4">
+                                {peopleToFollow.map(u => (
+                                    <div key={u.id} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-primary shrink-0">
+                                                {u.name.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold font-inter text-sm text-slate-900">{u.name}</p>
+                                                <p className="text-slate-400 font-roboto text-xs">Membro FitSync</p>
+                                            </div>
+                                        </div>
+                                        <button className="size-10 bg-slate-50 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors" onClick={() => router.push('/community')}>
+                                            <span className="material-symbols-outlined font-bold">add</span>
+                                        </button>
+                                    </div>
+                                ))}
+
+                                <div className="flex items-center justify-center mt-2 border-t border-slate-50 pt-6">
+                                    <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold font-montserrat uppercase tracking-widest w-full text-center" onClick={() => router.push('/community')}>
+                                        Descobrir mais
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     )}
-                </div>
+                </aside>
+            </main>
 
-                {/* --- Feed Section --- */}
-                <div style={{ marginBottom: 40 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Atividade Recente</h2>
-                    </div>
-                    <Feed friendIds={user.friendIds || []} myId={userId} />
-                </div>
-
-                <div className="grid-3" style={{ marginBottom: 40 }}>
-                    {[
-                        { label: 'Meus Exercícios', sub: 'Gerencie sua biblioteca', href: '/exercises', icon: ListChecks, cls: 'stat-icon-purple', adminOnly: true },
-                        { label: 'Comparar Evolução', sub: 'Compare com amigos', href: '/compare', icon: BarChart2, cls: 'stat-icon-green' },
-                        { label: 'Projetos', sub: 'Crie e gerencie', href: '/projects', icon: FolderOpen, cls: 'stat-icon-pink' },
-                        { label: 'Comunidade', sub: 'Encontre amigos', href: '/community', icon: Users, cls: 'stat-icon-orange', hideOnDesktop: true },
-                        { label: 'Histórico', sub: 'Veja treinos passados', href: '/history', icon: Clock, cls: 'stat-icon-blue', hideOnDesktop: true },
-                    ].filter(i => !i.adminOnly || isSupervisor).map(({ label, sub, href, icon: Icon, cls, hideOnDesktop }) => (
-                        <a key={href} href={href} className={`item-card ${hideOnDesktop ? 'hide-on-desktop' : ''}`}>
-                            <div className={`stat-icon ${cls}`} style={{ width: 40, height: 40 }}><Icon size={18} /></div>
-                            <div className="item-card-info">
-                                <div className="item-card-title">{label}</div>
-                                <div className="item-card-sub">{sub}</div>
-                            </div>
-                            <ChevronRight size={16} color="var(--text-muted)" />
-                        </a>
-                    ))}
-                </div>
+            {/* Floating Action Button for Start Workout */}
+            <div className="fixed bottom-8 right-8 z-50">
+                <button className="flex items-center justify-center gap-2 bg-primary text-white px-8 py-5 rounded-full font-extrabold font-montserrat shadow-2xl shadow-primary/30 hover:scale-105 transition-transform text-sm tracking-wide" onClick={() => router.push('/projects')}>
+                    INICIAR TREINO
+                </button>
             </div>
         </>
     );

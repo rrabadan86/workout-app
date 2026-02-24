@@ -85,18 +85,18 @@ export default function CommunityPage() {
         const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
 
         return (
-            <div key={event.id} style={{ background: 'var(--glass)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="stat-icon stat-icon-green" style={{ width: 28, height: 28 }}><Dumbbell size={14} /></div>
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{workout.name}</div>
+            <div key={event.id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-3">
+                <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                        <div className="stat-icon stat-icon-green !size-8 rounded-lg"><Dumbbell size={14} /></div>
+                        <div className="font-bold text-sm text-slate-900">{workout.name}</div>
                     </div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{formattedDate}</span>
+                    <span className="text-xs font-bold text-slate-400">{formattedDate}</span>
                 </div>
 
                 {dayLogs.length > 0 && (
-                    <div style={{ marginTop: 10, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div className="mt-3 border-t border-slate-200 pt-3">
+                        <div className="flex flex-col gap-2">
                             {dayLogs.map((log) => {
                                 const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
                                 const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
@@ -114,16 +114,16 @@ export default function CommunityPage() {
                                 const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
 
                                 return (
-                                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '2px 0' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                            <span style={{ color: 'var(--text-secondary)' }}>{exName}</span>
+                                    <div key={log.id} className="flex justify-between items-center text-xs py-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-bold text-slate-500">{exName}</span>
                                             {skippedSets > 0 && (
-                                                <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
-                                                    faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
+                                                <span className="text-[10px] bg-red-100 text-red-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                    faltou {skippedSets}
                                                 </span>
                                             )}
                                         </div>
-                                        <span style={{ color: 'var(--accent-light)', fontWeight: 500, textAlign: 'right', paddingLeft: 12 }}>
+                                        <span className="text-primary font-bold text-right pl-3">
                                             {setsDisplay}
                                         </span>
                                     </div>
@@ -139,76 +139,67 @@ export default function CommunityPage() {
     return (
         <>
             <Navbar />
-            <div className="container">
-                <div style={{ marginBottom: 8, paddingTop: 32 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => router.push('/dashboard')} style={{ marginBottom: 12, paddingLeft: 0 }}>
+
+            <main className="flex-1 w-full max-w-[1000px] mx-auto px-6 lg:px-12 py-8">
+                <div className="mb-2 pt-8">
+                    <button className="text-sm font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1" onClick={() => router.push('/dashboard')}>
                         ← Voltar ao Dashboard
                     </button>
                 </div>
-                <div className="page-header" style={{ alignItems: 'center' }}>
+
+                <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="page-title">Comunidade</h1>
-                        <p className="page-subtitle">Encontre amigos para acompanhar</p>
+                        <h1 className="text-4xl font-extrabold font-inter tracking-tight text-slate-900">Comunidade</h1>
+                        <p className="text-sm font-bold font-montserrat text-slate-400 uppercase tracking-widest mt-2">Encontre amigos para acompanhar</p>
                     </div>
-                    <div className="stat-icon stat-icon-pink" style={{ width: 48, height: 48, borderRadius: '50%' }}>
-                        <Users size={24} />
+                    <div className="size-16 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center">
+                        <Users size={28} />
                     </div>
                 </div>
 
-                <div className="field" style={{ marginBottom: 32 }}>
-                    <div className="input" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px' }}>
-                        <Search size={18} color="var(--text-muted)" />
+                <div className="mb-8">
+                    <div className="flex items-center gap-3 bg-white card-depth border border-slate-100 rounded-xl px-4 py-3">
+                        <Search size={20} className="text-slate-400" />
                         <input
                             type="text"
                             placeholder="Buscar pelo nome..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            style={{
-                                border: 'none', background: 'transparent', color: 'inherit',
-                                outline: 'none', width: '100%', padding: '12px 0'
-                            }}
+                            className="border-none bg-transparent outline-none w-full text-slate-900 placeholder:text-slate-400 font-medium"
                         />
                     </div>
                 </div>
 
                 {otherUsers.length === 0 ? (
-                    <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}>
-                        <Users size={32} color="var(--text-muted)" style={{ marginBottom: 16 }} />
-                        <p style={{ color: 'var(--text-secondary)' }}>Nenhum usuário encontrado.</p>
+                    <div className="bg-white rounded-xl card-depth p-10 text-center flex flex-col items-center">
+                        <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">group_off</span>
+                        <p className="text-slate-500 font-bold mb-1">Nenhum usuário encontrado.</p>
+                        <p className="text-xs text-slate-400">Tente buscar por outro nome.</p>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div className="flex flex-col gap-4">
                         {otherUsers.map((u) => {
                             const isFollowing = myFriendIds.includes(u.id);
                             const isLoading = saving === u.id;
 
                             return (
-                                <div key={u.id} className="card animate-fade"
+                                <div key={u.id} className="bg-white rounded-xl card-depth p-4 flex items-center justify-between cursor-pointer border border-transparent hover:border-primary/20 transition-all group"
                                     onClick={() => setSelectedUser(u)}
-                                    style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'border-color 0.2s', border: '1px solid transparent' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.border = '1px solid var(--accent)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.border = '1px solid transparent'}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                        <div style={{
-                                            width: 44, height: 44, borderRadius: '50%',
-                                            background: 'var(--primary)', color: '#fff',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontWeight: 800, fontSize: '1.1rem'
-                                        }}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-primary shrink-0 text-lg group-hover:bg-primary/10 transition-colors">
                                             {u.name.charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>{u.name}</div>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Membro FitSync</div>
+                                            <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors">{u.name}</div>
+                                            <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5">Membro FitSync</div>
                                         </div>
                                     </div>
 
                                     <button
-                                        className={`btn ${isFollowing ? 'btn-ghost' : 'btn-primary'}`}
+                                        className={`btn font-montserrat ${isFollowing ? 'btn-ghost' : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02]'} !px-6 !py-3 w-40`}
                                         onClick={(e) => { e.stopPropagation(); toggleFollow(u.id); }}
                                         disabled={isLoading}
-                                        style={{ width: 140, display: 'flex', justifyContent: 'center' }}
                                     >
                                         {isLoading ? 'Aguarde...' : isFollowing ? (
                                             <><UserCheck size={16} /> Seguindo</>
@@ -221,43 +212,42 @@ export default function CommunityPage() {
                         })}
                     </div>
                 )}
-            </div>
+            </main>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
             {/* User Profile Modal */}
             {selectedUser && (
-                <Modal title="Perfil do Usuário" onClose={() => setSelectedUser(null)}
-                    footer={<button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setSelectedUser(null)}>Fechar</button>}
-                >
-                    <div style={{ textAlign: 'center', marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <div style={{
-                            width: 64, height: 64, borderRadius: '50%',
-                            background: 'var(--primary)', color: '#fff',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 800, fontSize: '1.8rem', marginBottom: 12
-                        }}>
-                            {selectedUser.name.charAt(0).toUpperCase()}
+                <div className="modal-overlay">
+                    <div className="modal animate-slide">
+                        <div className="text-center mb-8 flex flex-col items-center">
+                            <div className="size-20 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-3xl mb-4">
+                                {selectedUser.name.charAt(0).toUpperCase()}
+                            </div>
+                            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUser.name}</h2>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Membro FitSync</p>
                         </div>
-                        <h2 style={{ fontSize: '1.3rem', fontWeight: 800 }}>{selectedUser.name}</h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Membro FitSync</p>
-                    </div>
 
-                    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Activity size={16} color="var(--accent)" />
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>ATIVIDADE RECENTE (15 DIAS)</span>
-                    </div>
+                        <div className="mb-4 flex items-center gap-2">
+                            <Activity size={18} className="text-primary" />
+                            <span className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Atividade Recente (15 Dias)</span>
+                        </div>
 
-                    {getUserRecentActivity(selectedUser.id).length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '30px 20px', background: 'var(--sidebar)', borderRadius: 'var(--radius)' }}>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Nenhuma atividade registrada nos últimos 15 dias.</p>
+                        {getUserRecentActivity(selectedUser.id).length === 0 ? (
+                            <div className="text-center p-8 bg-slate-50 rounded-xl border border-slate-100">
+                                <p className="text-slate-500 font-bold text-sm">Nenhuma atividade registrada nos últimos 15 dias.</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                                {getUserRecentActivity(selectedUser.id).map(renderModalActivity)}
+                            </div>
+                        )}
+
+                        <div className="modal-footer mt-8 border-t border-slate-100 pt-6">
+                            <button className="btn btn-ghost w-full justify-center" onClick={() => setSelectedUser(null)}>Fechar</button>
                         </div>
-                    ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 400, overflowY: 'auto', paddingRight: 4 }}>
-                            {getUserRecentActivity(selectedUser.id).map(renderModalActivity)}
-                        </div>
-                    )}
-                </Modal>
+                    </div>
+                </div>
             )}
         </>
     );

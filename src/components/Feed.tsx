@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { FeedEvent, Kudo } from '@/lib/types';
 import { uid } from '@/lib/utils';
-import { Dumbbell, Heart, MessageCircle, Clock, ChevronRight } from 'lucide-react';
 
 function timeAgo(dateStr: string) {
     const d = new Date(dateStr);
@@ -23,32 +22,38 @@ function timeAgo(dateStr: string) {
     return `${diffDays}d atrás`;
 }
 
+function formatDuration(seconds?: number) {
+    if (!seconds) return '--:--';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export default function Feed({ friendIds, myId }: { friendIds: string[], myId: string }) {
     const { store, toggleKudo } = useStore();
     const router = useRouter();
 
-    // Include friends' events + my own events
     const allRelevantIds = [...friendIds, myId];
 
     const feedItems = useMemo(() => {
         return store.feedEvents
             .filter(e => allRelevantIds.includes(e.userId))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-            .slice(0, 20); // show last 20
+            .slice(0, 20);
     }, [store.feedEvents, allRelevantIds]);
 
     if (feedItems.length === 0) {
         return (
-            <div className="card" style={{ padding: '30px 20px', textAlign: 'center' }}>
-                <MessageCircle size={32} color="var(--text-muted)" style={{ marginBottom: 16 }} />
-                <p style={{ color: 'var(--text-secondary)' }}>Nenhuma atividade recente.</p>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 8 }}>Os treinos concluídos por você e seus amigos aparecerão aqui.</p>
+            <div className="bg-white rounded-xl card-depth p-8 text-center flex flex-col items-center justify-center h-48">
+                <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">forum</span>
+                <p className="text-slate-500 font-bold mb-1">Nenhuma atividade recente.</p>
+                <p className="text-xs text-slate-400">Os treinos concluídos por você e seus amigos aparecerão aqui.</p>
             </div>
         );
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="flex flex-col gap-6">
             {feedItems.map(event => {
                 const user = store.users.find(u => u.id === event.userId);
                 if (!user) return null;
@@ -56,54 +61,55 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
                 const eventKudos = store.kudos.filter(k => k.feedEventId === event.id);
                 const hasMyKudo = eventKudos.some(k => k.userId === myId);
 
-                let eventText = '';
-                let icon = <Dumbbell size={20} />;
-                let colorClass = 'stat-icon-purple';
+                let eventText = 'concluiu um treino';
+                let statsUI = null;
                 let actionOnClick: (() => void) | undefined;
-                let logsSummary: React.ReactNode = null;
 
                 if (event.eventType === 'WO_COMPLETED') {
                     const workout = store.workouts.find(w => w.id === event.referenceId);
                     const project = workout ? store.projects.find(p => p.id === workout.projectId) : null;
+
                     if (workout) {
-                        const durationText = event.duration ? ` em ${Math.floor(event.duration / 60)}m ${event.duration % 60}s` : '';
-                        eventText = project
-                            ? `concluiu o treino "${workout.name}" do projeto "${project.name}"${durationText}`
-                            : `concluiu o treino "${workout.name}"${durationText}`;
-                        icon = <Dumbbell size={20} />;
-                        colorClass = 'stat-icon-green';
+                        eventText = project ? `Treino "${workout.name}" • ${project.name}` : `Treino "${workout.name}"`;
+
                         if (project) {
                             actionOnClick = () => router.push(`/projects/${project.id}`);
                         }
 
-                        // Connect with workout_logs
-                        // Get the date of the event in YYYY-MM-DD format (local time)
                         const eventDateObj = new Date(event.createdAt);
                         const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
+                        const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
 
-                        // Find all logs for this user, this workout, on this specific date
-                        const dayLogs = store.logs.filter(l =>
-                            l.userId === event.userId &&
-                            l.workoutId === workout.id &&
-                            l.date === localDateStr
-                        );
+                        // Calculate total volume
+                        let totalVolume = 0;
+                        let exerciseCount = dayLogs.length;
 
-                        if (dayLogs.length > 0) {
-                            logsSummary = (
-                                <div style={{
-                                    marginTop: 10, padding: '10px 12px', background: 'var(--glass)',
-                                    border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)'
-                                }}>
-                                    <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                        O que foi feito:
-                                    </p>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        dayLogs.forEach(log => {
+                            log.sets.forEach(set => {
+                                totalVolume += set.weight || 0;
+                            });
+                        });
+
+                        statsUI = (
+                            <>
+                                <div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-xl p-6 mt-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Duração</span>
+                                        <span className="text-2xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Volume</span>
+                                        <span className="text-2xl font-extrabold text-slate-900">{totalVolume} <span className="text-primary text-sm font-bold tracking-normal">kg</span></span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Exercícios</span>
+                                        <span className="text-2xl font-extrabold text-slate-900">{exerciseCount}</span>
+                                    </div>
+                                </div>
+                                {dayLogs.length > 0 && (
+                                    <div className="mt-4 flex flex-col gap-2">
                                         {dayLogs.map((log) => {
                                             const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
-                                            const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
-                                            const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
-                                            const skippedSets = Math.max(0, plannedSets - log.sets.length);
-
                                             const groups: { count: number, weight: number }[] = [];
                                             for (const s of log.sets) {
                                                 if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
@@ -115,88 +121,50 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
                                             const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
 
                                             return (
-                                                <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '2px 0' }}>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                        <span style={{ color: 'var(--text-primary)' }}>{exName}</span>
-                                                        {skippedSets > 0 && (
-                                                            <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
-                                                                faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <span style={{ color: 'var(--accent-light)', fontWeight: 500, textAlign: 'right', paddingLeft: 12 }}>
-                                                        {setsDisplay}
-                                                    </span>
+                                                <div key={log.id} className="flex justify-between items-center text-sm py-0.5">
+                                                    <span className="text-slate-500 font-bold font-inter uppercase">{exName}</span>
+                                                    <span className="text-primary font-normal font-roboto">{setsDisplay}</span>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                </div>
-                            );
-                        }
-
-                    } else {
-                        eventText = `concluiu um treino`;
+                                )}
+                            </>
+                        );
                     }
                 }
 
                 return (
-                    <div key={event.id} className="card animate-fade" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {/* Header */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div className={`stat-icon ${colorClass}`} style={{ width: 44, height: 44, borderRadius: '50%' }}>
-                                    {icon}
+                    <div key={event.id} className="bg-white rounded-xl card-depth p-6 flex flex-col gap-6 animate-fade border border-transparent hover:border-slate-100 transition-colors">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 cursor-pointer" onClick={() => actionOnClick && actionOnClick()}>
+                                <div className="size-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
+                                    <span className="text-lg font-bold text-slate-600">{user.name.charAt(0).toUpperCase()}</span>
                                 </div>
                                 <div>
-                                    <div style={{ fontWeight: 700 }}>{user.id === myId ? 'Você' : user.name}</div>
-                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.4, marginTop: 2 }}>
-                                        {eventText}
-                                    </div>
+                                    <h4 className="text-lg font-bold font-inter text-slate-900 hover:text-primary transition-colors">{user.id === myId ? 'Você' : user.name}</h4>
+                                    <p className="text-slate-400 text-sm font-normal font-roboto">{timeAgo(event.createdAt)} • {eventText}</p>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                                <Clock size={12} />
-                                {timeAgo(event.createdAt)}
-                            </div>
+                            {actionOnClick && (
+                                <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto" onClick={actionOnClick}>
+                                    Mais detalhes
+                                </button>
+                            )}
                         </div>
 
-                        {logsSummary}
+                        {statsUI}
 
-                        <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }} />
-
-                        {/* Footer / Actions */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div className="flex items-center gap-4 pt-2">
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    toggleKudo({
-                                        id: uid(),
-                                        feedEventId: event.id,
-                                        userId: myId,
-                                        createdAt: new Date().toISOString()
-                                    });
+                                    toggleKudo({ id: uid(), feedEventId: event.id, userId: myId, createdAt: new Date().toISOString() });
                                 }}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: 6,
-                                    background: hasMyKudo ? 'rgba(255,101,132,0.15)' : 'transparent',
-                                    border: `1px solid ${hasMyKudo ? 'rgba(255,101,132,0.3)' : 'var(--glass-border)'}`,
-                                    padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
-                                    color: hasMyKudo ? '#ff6584' : 'var(--text-secondary)',
-                                    fontWeight: hasMyKudo ? 700 : 500,
-                                    transition: 'all 0.2s',
-                                    outline: 'none'
-                                }}
+                                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold font-montserrat transition-transform active:scale-95 bg-primary text-white hover:scale-[1.02] shadow-lg ${hasMyKudo ? 'shadow-primary/40' : 'shadow-primary/10'}`}
                             >
-                                <Heart size={16} fill={hasMyKudo ? 'currentColor' : 'none'} color={hasMyKudo ? 'currentColor' : 'var(--text-muted)'} />
-                                {eventKudos.length > 0 ? eventKudos.length : 'Kudos'}
+                                {eventKudos.length} {eventKudos.length === 1 ? 'curtida' : 'curtidas'}
                             </button>
-
-                            {actionOnClick && (
-                                <button className="btn btn-ghost btn-sm" onClick={actionOnClick} style={{ fontSize: '0.8rem', padding: '4px 8px' }}>
-                                    Ver Projeto <ChevronRight size={14} />
-                                </button>
-                            )}
                         </div>
                     </div>
                 );

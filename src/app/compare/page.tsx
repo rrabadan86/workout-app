@@ -55,31 +55,31 @@ export default function ComparePage() {
     return (
         <>
             <Navbar />
-            <div className="container">
-                <div style={{ marginBottom: 8, paddingTop: 32 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => router.push('/dashboard')} style={{ marginBottom: 12, paddingLeft: 0 }}>
+            <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 lg:px-12 py-8">
+                <div className="mb-4">
+                    <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/dashboard')}>
                         ← Voltar ao Dashboard
                     </button>
                 </div>
-                <div className="page-header">
+                <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
                         <h1 className="page-title">Comparar Evolução</h1>
                         <p className="page-subtitle">Veja seu progresso lado a lado com um amigo</p>
                     </div>
                 </div>
 
-                <div className="card" style={{ marginBottom: 32 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                        <div className="field">
-                            <label>Comparar com</label>
-                            <select className="input" value={friendId} onChange={(e) => { setFriendId(e.target.value); setWorkoutId(''); }}>
+                <div className="bg-white rounded-xl card-depth p-6 border border-slate-100 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Comparar com</label>
+                            <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={friendId} onChange={(e) => { setFriendId(e.target.value); setWorkoutId(''); }}>
                                 <option value="">Selecione um usuário</option>
                                 {otherUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                             </select>
                         </div>
-                        <div className="field">
-                            <label>Treino</label>
-                            <select className="input" value={workoutId} onChange={(e) => setWorkoutId(e.target.value)} disabled={!friendId}>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Treino</label>
+                            <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white disabled:opacity-50" value={workoutId} onChange={(e) => setWorkoutId(e.target.value)} disabled={!friendId}>
                                 <option value="">Selecione um treino</option>
                                 {availableWorkouts.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
@@ -88,21 +88,21 @@ export default function ComparePage() {
                 </div>
 
                 {workoutId && friendId && (
-                    <div style={{ display: 'flex', gap: 16, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#6c63ff' }} />
-                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{currentUser?.name} (você)</span>
+                    <div className="flex gap-4 md:gap-6 items-center flex-wrap mb-6 bg-slate-50 px-6 py-3 rounded-full border border-slate-200 w-fit mx-auto md:mx-0">
+                        <div className="flex items-center gap-2">
+                            <div className="size-2.5 rounded-full bg-primary" />
+                            <span className="text-sm font-bold font-inter text-slate-900">{currentUser?.name} <span className="text-slate-500 font-normal">(você)</span></span>
                         </div>
-                        <span className="vs-badge">VS</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff6584' }} />
-                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{friendUser?.name}</span>
+                        <span className="text-xs font-bold font-montserrat tracking-widest text-slate-400 uppercase">VS</span>
+                        <div className="flex items-center gap-2">
+                            <div className="size-2.5 rounded-full bg-rose-400" />
+                            <span className="text-sm font-bold font-inter text-slate-900">{friendUser?.name}</span>
                         </div>
                     </div>
                 )}
 
                 {workoutId && exercises.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, marginBottom: 40 }}>
+                    <div className="flex flex-col gap-8 mb-10">
                         {exercises.map(({ id: exId, name: exName }) => {
                             const data = buildChartData(exId);
                             const myLogs = store.logs.filter((l) => l.workoutId === workoutId && l.exerciseId === exId && l.userId === userId);
@@ -112,46 +112,48 @@ export default function ComparePage() {
                             const leader = myMax > frMax ? currentUser?.name : myMax < frMax ? friendUser?.name : 'Empate';
 
                             return (
-                                <div key={exId} className="compare-section">
-                                    <div className="compare-header">
-                                        <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>{exName}</h3>
+                                <div key={exId} className="bg-white rounded-xl card-depth p-6 md:p-8 border border-slate-100 flex flex-col gap-6">
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                        <h3 className="text-lg md:text-xl font-bold font-inter text-slate-900">{exName}</h3>
                                         {(myMax > 0 || frMax > 0) && (
-                                            <span className="badge badge-purple">🏆 {leader === 'Empate' ? 'Empate!' : `${leader} lidera`}</span>
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-montserrat tracking-widest uppercase ${leader === 'Empate' ? 'bg-slate-100 text-slate-600' : leader === currentUser?.name ? 'bg-primary/10 text-primary' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                🏆 {leader === 'Empate' ? 'Empate!' : `${leader} lidera`}
+                                            </span>
                                         )}
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 12, marginBottom: 16, alignItems: 'center' }}>
-                                        <div className="card card-sm" style={{ textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{currentUser?.name}</div>
-                                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#6c63ff' }}>{myMax > 0 ? `${myMax} kg` : '—'}</div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>máx registrado</div>
+                                    <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                                        <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-100 flex flex-col gap-1 items-center justify-center h-full">
+                                            <div className="text-xs font-roboto text-slate-500">{currentUser?.name}</div>
+                                            <div className="text-2xl font-black font-inter text-primary">{myMax > 0 ? `${myMax} kg` : '—'}</div>
+                                            <div className="text-[10px] uppercase tracking-widest font-montserrat text-slate-400">máx registrado</div>
                                         </div>
-                                        <span className="vs-badge" style={{ fontSize: '1rem', padding: '8px 14px' }}>VS</span>
-                                        <div className="card card-sm" style={{ textAlign: 'center' }}>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 4 }}>{friendUser?.name}</div>
-                                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ff6584' }}>{frMax > 0 ? `${frMax} kg` : '—'}</div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>máx registrado</div>
+                                        <span className="text-sm font-bold font-montserrat tracking-wider text-slate-300 uppercase px-2">VS</span>
+                                        <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-100 flex flex-col gap-1 items-center justify-center h-full">
+                                            <div className="text-xs font-roboto text-slate-500">{friendUser?.name}</div>
+                                            <div className="text-2xl font-black font-inter text-rose-400">{frMax > 0 ? `${frMax} kg` : '—'}</div>
+                                            <div className="text-[10px] uppercase tracking-widest font-montserrat text-slate-400">máx registrado</div>
                                         </div>
                                     </div>
 
                                     {data.length > 0 && (
-                                        <div className="chart-wrapper">
-                                            <ResponsiveContainer width="100%" height={220}>
-                                                <LineChart data={data}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                                    <XAxis dataKey="date" tick={{ fill: '#9999bb', fontSize: 11 }} axisLine={false} tickLine={false} />
-                                                    <YAxis tick={{ fill: '#9999bb', fontSize: 11 }} axisLine={false} tickLine={false} />
-                                                    <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#f0f0f8' }} />
-                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-                                                    <Line type="monotone" dataKey={currentUser?.name ?? 'Você'} stroke="#6c63ff" strokeWidth={2.5} dot={{ fill: '#6c63ff', r: 4 }} activeDot={{ r: 7 }} />
-                                                    <Line type="monotone" dataKey={friendUser?.name ?? 'Amigo'} stroke="#ff6584" strokeWidth={2.5} dot={{ fill: '#ff6584', r: 4 }} strokeDasharray="5 5" />
+                                        <div className="mt-4 pt-6 border-t border-slate-100">
+                                            <ResponsiveContainer width="100%" height={260}>
+                                                <LineChart data={data} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                                    <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'Roboto' }} axisLine={false} tickLine={false} tickMargin={12} />
+                                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 12, fontFamily: 'Roboto' }} axisLine={false} tickLine={false} tickMargin={12} />
+                                                    <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #f1f5f9', borderRadius: 12, color: '#0f172a', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} itemStyle={{ fontFamily: 'Inter', fontWeight: 600 }} labelStyle={{ fontFamily: 'Roboto', color: '#64748b', marginBottom: 4 }} />
+                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: 13, fontFamily: 'Roboto', paddingTop: 20 }} />
+                                                    <Line type="monotone" dataKey={currentUser?.name ?? 'Você'} stroke="#00AAFF" strokeWidth={3} dot={{ fill: '#00AAFF', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} animationDuration={1000} />
+                                                    <Line type="monotone" dataKey={friendUser?.name ?? 'Amigo'} stroke="#fb7185" strokeWidth={3} dot={{ fill: '#fb7185', r: 4, strokeWidth: 0 }} strokeDasharray="6 4" animationDuration={1000} />
                                                 </LineChart>
                                             </ResponsiveContainer>
                                         </div>
                                     )}
 
                                     {data.length === 0 && (
-                                        <div className="card" style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                                        <div className="bg-slate-50 rounded-xl p-8 text-center text-slate-500 font-roboto text-sm border border-slate-100">
                                             Nenhum registro ainda para este exercício.
                                         </div>
                                     )}
@@ -161,13 +163,13 @@ export default function ComparePage() {
                     </div>
                 ) : (
                     !workoutId && (
-                        <div className="empty-state">
-                            <BarChart2 size={48} color="var(--text-muted)" />
-                            <p>Selecione um usuário e um treino para ver a comparação.</p>
+                        <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
+                            <BarChart2 size={48} className="text-slate-300 mb-4" />
+                            <p className="text-slate-500 font-bold font-roboto">Selecione um usuário e um treino para ver a comparação.</p>
                         </div>
                     )
                 )}
-            </div>
+            </main>
         </>
     );
 }

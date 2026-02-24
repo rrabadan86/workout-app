@@ -86,32 +86,32 @@ export default function HistoryPage() {
     return (
         <>
             <Navbar />
-            <div className="container">
-                <div className="page-header" style={{ paddingTop: 40, alignItems: 'center' }}>
+            <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 lg:px-12 py-8">
+                <div className="mb-4">
+                    <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/dashboard')}>
+                        ← Voltar ao Dashboard
+                    </button>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => router.push('/')} className="btn btn-ghost btn-sm" style={{ paddingLeft: 0 }}>
-                                ← Voltar ao Dashboard
-                            </button>
-                        </div>
                         <h1 className="page-title">Histórico</h1>
                         <p className="page-subtitle">Seus treinos já realizados</p>
                     </div>
-                    <div className="stat-icon stat-icon-blue" style={{ width: 48, height: 48, borderRadius: '50%' }}>
+                    <div className="size-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary shrink-0">
                         <Clock size={24} />
                     </div>
                 </div>
 
                 {myHistory.length === 0 ? (
-                    <div className="empty-state">
-                        <Dumbbell size={48} color="var(--text-muted)" />
-                        <p>Nenhum treino finalizado ainda.</p>
-                        <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => router.push('/projects')}>
+                    <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
+                        <Dumbbell size={48} className="text-slate-300 mb-4" />
+                        <p className="text-slate-500 font-bold font-roboto">Nenhum treino finalizado ainda.</p>
+                        <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={() => router.push('/projects')}>
                             Ir para Projetos
                         </button>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 40 }}>
+                    <div className="flex flex-col gap-4 mb-10">
                         {myHistory.map(event => {
                             const workout = store.workouts.find(w => w.id === event.referenceId);
                             if (!workout) return null;
@@ -127,78 +127,76 @@ export default function HistoryPage() {
                             }, 0);
 
                             return (
-                                <div key={event.id} className="card animate-fade" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                            <div className="stat-icon stat-icon-green" style={{ width: 40, height: 40 }}>
-                                                <Dumbbell size={18} />
+                                <div key={event.id} className="bg-white rounded-xl card-depth p-5 md:p-6 border border-slate-100 flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <div className="flex gap-4 items-center">
+                                            <div className="size-10 md:size-12 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-500 shrink-0">
+                                                <Dumbbell size={20} />
                                             </div>
                                             <div>
-                                                <div style={{ fontWeight: 700, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div className="font-bold font-inter text-base md:text-lg text-slate-900 flex items-center gap-2 flex-wrap">
                                                     {workout.name}
-                                                    {isHidden && <span style={{ fontSize: '0.65rem', backgroundColor: 'var(--border)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: 4 }}>Privado</span>}
+                                                    {isHidden && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">Privado</span>}
                                                 </div>
-                                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
-                                                    {formattedDate} · {totalWeight} kg levantados {event.duration ? ` · ⏱️ ${Math.floor(event.duration / 60)}m ${event.duration % 60}s` : ''}
+                                                <div className="text-xs md:text-sm font-roboto text-slate-500 capitalize mt-0.5">
+                                                    {formattedDate} · <span className="font-medium text-slate-700">{totalWeight} kg</span> levantados {event.duration ? ` · ⏱️ ${Math.floor(event.duration / 60)}m ${event.duration % 60}s` : ''}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 6 }}>
+                                        <div className="flex gap-1 md:gap-2 shrink-0">
                                             <button
-                                                className="btn-icon"
+                                                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors focus:outline-none"
                                                 title={isHidden ? "Mostrar na comunidade" : "Ocultar da comunidade"}
                                                 onClick={() => toggleVisibility(event)}
                                                 disabled={saving}
                                             >
-                                                {isHidden ? <EyeOff size={18} color="var(--text-muted)" /> : <Eye size={18} color="var(--text-muted)" />}
+                                                {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
                                             </button>
                                             <button
-                                                className="btn-icon"
+                                                className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors focus:outline-none"
                                                 title="Excluir treino"
                                                 onClick={() => setDeleteTarget(event)}
                                                 disabled={saving}
                                             >
-                                                <Trash2 size={18} color="var(--danger)" />
+                                                <Trash2 size={18} />
                                             </button>
                                         </div>
                                     </div>
 
                                     {dayLogs.length > 0 && (
-                                        <div style={{ marginTop: 6, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                {dayLogs.map((log) => {
-                                                    const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
-                                                    const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
-                                                    const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
-                                                    const skippedSets = Math.max(0, plannedSets - log.sets.length);
+                                        <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                                            {dayLogs.map((log) => {
+                                                const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                                const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
+                                                const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
+                                                const skippedSets = Math.max(0, plannedSets - log.sets.length);
 
-                                                    const groups: { count: number, weight: number }[] = [];
-                                                    for (const s of log.sets) {
-                                                        if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                                            groups[groups.length - 1].count++;
-                                                        } else {
-                                                            groups.push({ count: 1, weight: s.weight });
-                                                        }
+                                                const groups: { count: number, weight: number }[] = [];
+                                                for (const s of log.sets) {
+                                                    if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                        groups[groups.length - 1].count++;
+                                                    } else {
+                                                        groups.push({ count: 1, weight: s.weight });
                                                     }
-                                                    const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+                                                }
+                                                const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
 
-                                                    return (
-                                                        <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', padding: '2px 0' }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                                <span style={{ color: 'var(--text-secondary)' }}>{exName}</span>
-                                                                {skippedSets > 0 && (
-                                                                    <span style={{ fontSize: '0.65rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '2px 6px', borderRadius: 4, fontWeight: 600 }}>
-                                                                        faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <span style={{ color: 'var(--accent-light)', fontWeight: 500, textAlign: 'right', paddingLeft: 12 }}>
-                                                                {setsDisplay}
-                                                            </span>
+                                                return (
+                                                    <div key={log.id} className="flex justify-between items-center text-[13px] md:text-sm font-roboto py-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="text-slate-600 truncate">{exName}</span>
+                                                            {skippedSets > 0 && (
+                                                                <span className="text-[10px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                    faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                        <span className="text-primary font-bold pl-3 text-right shrink-0">
+                                                            {setsDisplay}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -206,21 +204,21 @@ export default function HistoryPage() {
                         })}
                     </div>
                 )}
-            </div>
+            </main>
 
             {/* Delete Modal */}
             {deleteTarget && (
                 <Modal title="Excluir Treino Passado" onClose={() => setDeleteTarget(null)}
                     footer={
-                        <>
-                            <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
-                            <button className="btn btn-danger" onClick={confirmDelete} disabled={saving}>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
+                            <button className="btn bg-rose-500 text-white hover:bg-rose-600 shadow-xl shadow-rose-500/30 px-6 py-4" onClick={confirmDelete} disabled={saving}>
                                 {saving ? 'Excluindo...' : 'Excluir Definitivamente'}
                             </button>
-                        </>
+                        </div>
                     }
                 >
-                    <p style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-slate-500 font-roboto text-sm">
                         Tem certeza que deseja excluir as atividades deste dia? Esse registro sumirá do seu hitórico, dos gráficos e do feed da comunidade.
                     </p>
                 </Modal>
