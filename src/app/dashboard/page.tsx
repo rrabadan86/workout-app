@@ -89,7 +89,7 @@ export default function DashboardPage() {
                  */}
 
                 {/* Main Feed Column (Left Side on Desktop) */}
-                <div className="lg:col-span-8 flex flex-col gap-10 order-2 lg:order-none">
+                <div className="contents lg:col-span-8 lg:flex lg:flex-col lg:gap-10">
 
                     {/* Active Now Section (Order 2 on mobile) */}
                     {topActive.length > 0 && (
@@ -132,7 +132,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Sidebar Column (Right Side on Desktop) */}
-                <aside className="lg:col-span-4 flex flex-col gap-8 h-full order-1 lg:order-none content-start">
+                <aside className="contents lg:col-span-4 lg:flex lg:flex-col lg:gap-8 lg:h-full lg:content-start">
 
                     {/* Active Project Widget (Order 1 on mobile) */}
                     <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col gap-8 soft-shadow shrink-0 relative overflow-hidden order-1 lg:order-none">
