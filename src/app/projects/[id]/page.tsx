@@ -68,7 +68,7 @@ export default function ProjectDetailPage() {
             <Navbar />
             <main className="flex-1 w-full max-w-[1000px] mx-auto px-6 lg:px-12 py-8 text-center pt-20">
                 <FolderOpen size={48} className="text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-500 font-bold font-roboto">Projeto não encontrado.</p>
+                <p className="text-slate-500 font-bold font-roboto">Treino não encontrado.</p>
                 <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 mt-6 px-6 py-4" onClick={() => router.push('/projects')}>← Voltar</button>
             </main>
         </>
@@ -139,10 +139,10 @@ export default function ProjectDetailPage() {
         setSaving(true);
         if (editTarget) {
             await updateWorkout({ ...editTarget, name: wName, exercises: wExList });
-            setToast({ msg: 'Treino atualizado!', type: 'success' });
+            setToast({ msg: 'Sessão atualizada!', type: 'success' });
         } else {
             await addWorkout({ id: uid(), name: wName, ownerId: userId, projectId: id, exercises: wExList });
-            setToast({ msg: 'Treino criado!', type: 'success' });
+            setToast({ msg: 'Sessão criada!', type: 'success' });
         }
         setSaving(false);
         setShowModal(false);
@@ -154,7 +154,7 @@ export default function ProjectDetailPage() {
         await deleteWorkout(deleteTarget.id);
         setSaving(false);
         setDeleteTarget(null);
-        setToast({ msg: 'Treino excluído.', type: 'success' });
+        setToast({ msg: 'Sessão excluída.', type: 'success' });
     }
 
     return (
@@ -164,17 +164,17 @@ export default function ProjectDetailPage() {
                 {/* Header */}
                 <div className="mb-4">
                     <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/projects')}>
-                        ← Projetos
+                        ← Treinos
                     </button>
                 </div>
                 <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
                         <h1 className="page-title">{project.name}</h1>
-                        <p className="page-subtitle">{workouts.length} treino(s)</p>
+                        <p className="page-subtitle">{workouts.length} sessão(ões)</p>
                     </div>
                     {isOwner && (
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={openCreate}>
-                            <Plus size={16} /> Novo Treino
+                            <Plus size={16} /> Nova Sessão
                         </button>
                     )}
                 </div>
@@ -182,10 +182,10 @@ export default function ProjectDetailPage() {
                 {workouts.length === 0 ? (
                     <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
                         <Dumbbell size={48} className="text-slate-300 mb-4" />
-                        <p className="text-slate-500 font-bold font-roboto">Nenhum treino neste projeto ainda.</p>
+                        <p className="text-slate-500 font-bold font-roboto">Nenhuma sessão neste treino ainda.</p>
                         {isOwner && (
                             <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={openCreate}>
-                                Criar treino
+                                Criar sessão
                             </button>
                         )}
                     </div>
@@ -234,19 +234,19 @@ export default function ProjectDetailPage() {
 
             {/* Create / Edit Modal */}
             {showModal && (
-                <Modal title={editTarget ? 'Editar Treino' : 'Novo Treino'} onClose={() => setShowModal(false)}
+                <Modal title={editTarget ? 'Editar Sessão' : 'Nova Sessão'} onClose={() => setShowModal(false)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
                             <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" form="workout-form" type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Treino')}
+                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Sessão')}
                             </button>
                         </div>
                     }
                 >
                     <form id="workout-form" onSubmit={handleSave} className="flex flex-col gap-6 mt-6">
                         <div className="field">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome do treino *</label>
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome da sessão *</label>
                             <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Treino A – Peito e Tríceps" value={wName} onChange={(e) => setWName(e.target.value)} required />
                         </div>
                         <div className="w-full h-px bg-slate-100 my-2" />
@@ -319,7 +319,7 @@ export default function ProjectDetailPage() {
 
             {/* Delete Modal */}
             {deleteTarget && (
-                <Modal title="Excluir Treino" onClose={() => setDeleteTarget(null)}
+                <Modal title="Excluir Sessão" onClose={() => setDeleteTarget(null)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
@@ -330,7 +330,7 @@ export default function ProjectDetailPage() {
                     }
                 >
                     <p style={{ color: 'var(--text-secondary)' }}>
-                        Excluir <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong>? Os registros deste treino também serão apagados.
+                        Excluir <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong>? Os registros desta sessão também serão apagados.
                     </p>
                 </Modal>
             )}

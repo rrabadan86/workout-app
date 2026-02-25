@@ -77,14 +77,14 @@ export default function ProjectsPage() {
         try {
             if (editTarget) {
                 await updateProject({ ...editTarget, name: pName, startDate: pStart, endDate: pEnd });
-                setToast({ msg: 'Projeto atualizado!', type: 'success' });
+                setToast({ msg: 'Treino atualizado!', type: 'success' });
             } else {
                 await addProject({ id: uid(), name: pName, ownerId: userId, startDate: pStart, endDate: pEnd, sharedWith: [] });
-                setToast({ msg: 'Projeto criado!', type: 'success' });
+                setToast({ msg: 'Treino criado!', type: 'success' });
             }
             setShowModal(false);
         } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Erro ao salvar projeto';
+            const msg = err instanceof Error ? err.message : 'Erro ao salvar treino';
             setToast({ msg: `Erro: ${msg}`, type: 'error' });
         } finally {
             setSaving(false);
@@ -97,7 +97,7 @@ export default function ProjectsPage() {
         await deleteProject(deleteTarget.id);
         setSaving(false);
         setDeleteTarget(null);
-        setToast({ msg: 'Projeto excluído.', type: 'success' });
+        setToast({ msg: 'Treino excluído.', type: 'success' });
     }
 
     async function handleShareByEmail(projectId: string) {
@@ -115,11 +115,11 @@ export default function ProjectsPage() {
             }
             await updateProject({ ...proj, sharedWith: [...proj.sharedWith, foundUser.id] });
             setShareEmail('');
-            setShareStatus({ msg: `${foundUser.name} agora tem acesso ao projeto! ✅`, ok: true });
+            setShareStatus({ msg: `${foundUser.name} agora tem acesso ao treino! ✅`, ok: true });
         } else {
             // Simulate invite email (no real email service)
             setShareEmail('');
-            setShareStatus({ msg: `Convite enviado para ${email}. Assim que criar uma conta, terá acesso ao projeto. ✉ï¸`, ok: true });
+            setShareStatus({ msg: `Convite enviado para ${email}. Assim que criar uma conta, terá acesso ao treino. ✉️`, ok: true });
         }
     }
 
@@ -165,7 +165,7 @@ export default function ProjectsPage() {
 
             await addProject({
                 id: newProjectId,
-                name: `✨ ${data.projectName || `Projeto IA (${aiFocus})`}`,
+                name: `✨ ${data.projectName || `Sessão IA (${aiFocus})`}`,
                 ownerId: userId,
                 startDate: today,
                 endDate: endDate,
@@ -183,12 +183,12 @@ export default function ProjectsPage() {
                 });
             }
 
-            setToast({ msg: 'Projeto Especialista Gerado! 🚀', type: 'success' });
+            setToast({ msg: 'Sessão Especialista Gerada! 🚀', type: 'success' });
             setShowAIModal(false);
             setAiFocus('');
             setAiLimitations('');
         } catch (err: unknown) {
-            setToast({ msg: (err as Error).message || 'Falha ao gerar o projeto.', type: 'error' });
+            setToast({ msg: (err as Error).message || 'Falha ao gerar a sessão.', type: 'error' });
         } finally {
             setAiGenerating(false);
         }
@@ -206,15 +206,15 @@ export default function ProjectsPage() {
                                 ← Voltar ao Dashboard
                             </button>
                         </div>
-                        <h1 className="page-title">Projetos</h1>
-                        <p className="page-subtitle">{myProjects.length} projeto(s)</p>
+                        <h1 className="page-title">Sessões</h1>
+                        <p className="page-subtitle">{myProjects.length} sessão(ões)</p>
                     </div>
                     <div style={{ alignSelf: 'flex-start', marginTop: 32, display: 'flex', gap: 10 }}>
                         <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] shadow-lg shadow-[#C084FC]/30 px-6 py-4" onClick={() => setShowAIModal(true)} style={{ border: 'none' }}>
                             <Sparkles size={16} /> Gerar por IA
                         </button>
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={openCreate}>
-                            <Plus size={16} /> Novo
+                            <Plus size={16} /> Nova
                         </button>
                     </div>
                 </div>
@@ -222,9 +222,9 @@ export default function ProjectsPage() {
                 {myProjects.length === 0 ? (
                     <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
                         <FolderOpen size={48} className="text-slate-300 mb-4" />
-                        <p className="text-slate-500 font-bold font-roboto">Nenhum projeto ainda. Crie seu primeiro projeto!</p>
+                        <p className="text-slate-500 font-bold font-roboto">Nenhuma sessão ainda. Crie sua primeira sessão!</p>
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={openCreate}>
-                            Criar projeto
+                            Criar sessão
                         </button>
                     </div>
                 ) : (
@@ -252,7 +252,7 @@ export default function ProjectsPage() {
                                             </span>
                                         </div>
                                         <div className="item-card-sub text-slate-500 mt-2 text-xs">
-                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} <span className="mx-2">•</span> 🏋️ {workoutCount} treino(s)
+                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} <span className="mx-2">•</span> 🏋️ {workoutCount} sessão(ões)
                                         </div>
                                         {p.sharedWith.length > 0 && (
                                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
@@ -288,20 +288,20 @@ export default function ProjectsPage() {
 
             {/* Create / Edit Modal */}
             {showModal && (
-                <Modal title={editTarget ? 'Editar Projeto' : 'Novo Projeto'} onClose={() => setShowModal(false)}
+                <Modal title={editTarget ? 'Editar Sessão' : 'Nova Sessão'} onClose={() => setShowModal(false)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
                             <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" form="project-form" type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Projeto')}
+                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Sessão')}
                             </button>
                         </div>
                     }
                 >
                     <form id="project-form" onSubmit={handleSave} className="flex flex-col gap-5 mt-6">
                         <div className="field">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome do projeto *</label>
-                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Projeto Hipertrofia" value={pName} onChange={(e) => setPName(e.target.value)} required />
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome da sessão *</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Sessão de Hipertrofia" value={pName} onChange={(e) => setPName(e.target.value)} required />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="field">
@@ -319,7 +319,7 @@ export default function ProjectsPage() {
 
             {/* AI Generation Modal */}
             {showAIModal && (
-                <Modal title="✨ Novo Projeto por IA" onClose={() => setShowAIModal(false)}
+                <Modal title="✨ Nova Sessão por IA" onClose={() => setShowAIModal(false)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8 items-center">
                             {aiGenerating && (
@@ -329,8 +329,7 @@ export default function ProjectsPage() {
                             )}
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowAIModal(false)} disabled={aiGenerating}>Cancelar</button>
                             <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] hover:scale-[1.02] shadow-xl shadow-[#C084FC]/30 px-6 py-4 flex items-center gap-2" form="ai-form" type="submit" disabled={aiGenerating}>
-                                {aiGenerating && <Loader2 className="animate-spin" size={16} />}
-                                {aiGenerating ? 'Criando a mágica...' : 'Gerar Treino Mágico'}
+                                {aiGenerating ? 'Criando a mágica...' : 'Gerar Programa Mágico'}
                             </button>
                         </div>
                     }
@@ -358,7 +357,7 @@ export default function ProjectsPage() {
                                 </select>
                             </div>
                             <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Tempo por treino (aprox.) *</label>
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Tempo por sessão (aprox.) *</label>
                                 <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiTime} onChange={(e) => setAiTime(e.target.value)} required>
                                     <option value="30">30 minutos</option>
                                     <option value="45">45 minutos</option>
@@ -381,7 +380,7 @@ export default function ProjectsPage() {
                                         onChange={(e) => setAiUsePrevious(e.target.checked)}
                                         style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
                                     />
-                                    Evoluir a partir do meu projeto: &quot;{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}&quot;
+                                    Evoluir a partir do meu treino: &quot;{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}&quot;
                                 </label>
                             </div>
                         )}
@@ -391,7 +390,7 @@ export default function ProjectsPage() {
 
             {/* Delete Modal */}
             {deleteTarget && (
-                <Modal title="Excluir Projeto" onClose={() => setDeleteTarget(null)}
+                <Modal title="Excluir Treino" onClose={() => setDeleteTarget(null)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>
@@ -402,7 +401,7 @@ export default function ProjectsPage() {
                     }
                 >
                     <p style={{ color: 'var(--text-secondary)' }}>
-                        Excluir <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong>? Todos os treinos e registros deste projeto serão apagados.
+                        Excluir <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong>? Todas as sessões e registros deste treino serão apagados.
                     </p>
                 </Modal>
             )}

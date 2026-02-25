@@ -8,7 +8,7 @@ const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
 const NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/projects', label: 'Projetos' },
+    { href: '/projects', label: 'Treinos' },
     { href: '/compare', label: 'Comparar' },
     { href: '/history', label: 'Histórico' },
     { href: '/community', label: 'Comunidade' },

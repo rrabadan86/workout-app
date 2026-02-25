@@ -17,29 +17,29 @@ export async function POST(req: NextRequest) {
     // existingExercises is a list of object { id, name, muscle } to help the AI map exercises.
 
     const prompt = `Você é um personal trainer especialista e altamente técnico.
-Crie um projeto de Musculação para um usuário com as seguintes características:
+Crie um treino de Musculação para um usuário com as seguintes características:
 - Foco: ${focus}
 - Dias por semana: ${daysPerWeek}
-- Tempo máximo por treino: ${maxTimeMins} minutos
+- Tempo máximo por sessão: ${maxTimeMins} minutos
 - Nível de Experiência: ${experienceLevel}
 ${limitations ? `- Limitações ou restrições: ${limitations}` : ''}
-${lastProjectInfo ? `- Contexto do projeto anterior: ${lastProjectInfo}` : ''}
+${lastProjectInfo ? `- Contexto do treino anterior: ${lastProjectInfo}` : ''}
 
 Você tem a seguinte lista de exercícios disponíveis no banco de dados do aplicativo (Listados como 'ID | Nome | Músculo'):
 ${existingExercises.map((e: { id: string, name: string, muscle: string }) => `${e.id} | ${e.name} | ${e.muscle}`).join('\n')}
 
-Seu objetivo é montar um projeto que contenha de ${daysPerWeek} treinos diferentes (ex: Treino A, Treino B, etc).
-Cada treino deve conter uma lista de exercícios escolhidos ESTRITAMENTE da lista fornecida acima. A quantidade de exercícios e séries por treino deve respeitar o limite de tempo de ${maxTimeMins} minutos (assumindo descanso e execução).
+Seu objetivo é montar um programa de treinamento que contenha ${daysPerWeek} sessões diferentes (ex: Sessão A, Sessão B, etc).
+Cada sessão deve conter uma lista de exercícios escolhidos ESTRITAMENTE da lista fornecida acima. A quantidade de exercícios e séries por sessão deve respeitar o limite de tempo de ${maxTimeMins} minutos (assumindo descanso e execução).
 Você deve retornar os IDs exatos dos exercícios escolhidos.
 Para cada exercício, defina a quantidade de séries (sets) e as repetições (ex: 10, 12, ou "Até a falha").
 
 Responda APENAS com um JSON válido e sem formatação Markdown extra contendo a exata estrutura abaixo:
 
 {
-  "projectName": "Nome do Projeto Sugerido",
+  "projectName": "Nome do Treino Sugerido",
   "workouts": [
     {
-      "name": "Nome do Treino (Ex: Treino A - Peito e Tríceps)",
+      "name": "Nome da Sessão (Ex: Sessão A - Peito e Tríceps)",
       "order": 1,
       "exercises": [
         {
