@@ -52,7 +52,7 @@ export default function Navbar() {
             <div className="max-w-[1440px] mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/dashboard')}>
-                        <UFitLogo width={40} height={48} className="drop-shadow-sm -ml-2" />
+                        <UFitLogo width={40} height={40} className="drop-shadow-sm -ml-2" />
                         <h2 className="text-2xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-1px' }}>
                             <span className="text-blue-600">u</span><span className="text-cyan-500">Fit</span>
                         </h2>

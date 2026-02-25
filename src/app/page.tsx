@@ -263,9 +263,14 @@ export default function LoginPage() {
   return (
     <div className="auth-wrapper">
       <div className="auth-card animate-in fade-in zoom-in-95 duration-500">
-        <div className="auth-logo flex flex-col items-center">
-          <UFitLogo width={120} height={144} className="mb-2 hover:scale-105 transition-transform duration-500" />
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-montserrat mt-2">Registre. Evolua. Compare.</p>
+        <div className="auth-logo flex flex-col items-center mb-6">
+          <div className="flex items-center justify-center gap-3">
+            <UFitLogo width={64} height={64} className="hover:scale-105 transition-transform duration-500" />
+            <h2 className="text-5xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-1.5px' }}>
+              <span className="text-blue-600">u</span><span className="text-cyan-500">Fit</span>
+            </h2>
+          </div>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest font-montserrat mt-2">Registre. Evolua. Compare.</p>
         </div>
 
         {needsOnboarding ? (
