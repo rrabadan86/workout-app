@@ -81,8 +81,8 @@ export default function DashboardPage() {
                  * On mobile, grid items default to source order. We use order-{n} to re-arrange:
                  * 1. Active Project Widget (moved from aside)
                  * 2. Active Now (Amigos Mais Ativos)
-                 * 3. Quick Navigation Menu (Atalhos)
-                 * 4. People to Follow (Pessoas a Seguir)
+                 * 3. People to Follow (Pessoas a Seguir)
+                 * 4. Quick Navigation Menu (Atalhos)
                  * 5. Recent Activity (Feed)
                  * 
                  * On lg screens, we reset order (lg:order-none) because they are split into 2 columns.
@@ -186,31 +186,9 @@ export default function DashboardPage() {
                         </button>
                     </div>
 
-                    {/* Quick Navigation Menu (Atalhos) - Moved to Order 3 on mobile */}
-                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col order-3 lg:order-none">
-                        <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
-                        <div className="flex flex-col gap-3">
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
-                                <div className="size-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><FolderOpen size={18} /></div>
-                                <span className="flex-1 text-left font-inter">Meus Projetos</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
-                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Projetos Compartilhados</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
-                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* People to Follow Widget (Order 4 on mobile) */}
+                    {/* People to Follow Widget (Order 3 on mobile) */}
                     {peopleToFollow.length > 0 && (
-                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col order-4 lg:order-none">
+                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col order-3 lg:order-none">
                             <h3 className="text-xl font-extrabold font-inter mb-4 tracking-tight text-slate-900">Pessoas a Seguir</h3>
                             <div className="flex flex-col gap-4">
                                 {peopleToFollow.map(u => (
@@ -238,6 +216,28 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* Quick Navigation Menu (Atalhos) - Moved to Order 4 on mobile */}
+                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col order-4 lg:order-none">
+                        <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
+                        <div className="flex flex-col gap-3">
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                                <div className="size-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><FolderOpen size={18} /></div>
+                                <span className="flex-1 text-left font-inter">Meus Projetos</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Projetos Compartilhados</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
+                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                        </div>
+                    </div>
                 </aside>
             </main>
 
