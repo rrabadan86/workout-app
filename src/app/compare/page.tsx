@@ -19,9 +19,9 @@ export default function ComparePage() {
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
     if (!ready || !userId) return null;
 
-    const currentUser = store.users.find((u) => u.id === userId);
-    const friendUser = store.users.find((u) => u.id === friendId);
-    const sharedUsers = store.users.filter((u) => {
+    const currentUser = store.profiles.find((u) => u.id === userId);
+    const friendUser = store.profiles.find((u) => u.id === friendId);
+    const sharedUsers = store.profiles.filter((u) => {
         if (u.id === userId) return false;
         return store.projects.some((p) => {
             const myAccess = p.ownerId === userId || p.sharedWith.includes(userId);

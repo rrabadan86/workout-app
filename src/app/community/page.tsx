@@ -7,18 +7,18 @@ import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { Users, UserPlus, UserCheck, Search, Activity, Dumbbell } from 'lucide-react';
-import type { User, FeedEvent, WorkoutLog } from '@/lib/types';
+import type { Profile, FeedEvent, WorkoutLog } from '@/lib/types';
 import Modal from '@/components/Modal';
 
 export default function CommunityPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, updateUser } = useStore();
+    const { store, updateProfile } = useStore();
 
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
 
     useEffect(() => {
         if (ready && !userId) router.replace('/');
@@ -26,11 +26,11 @@ export default function CommunityPage() {
 
     if (!ready || !userId) return null;
 
-    const me = store.users.find(u => u.id === userId);
+    const me = store.profiles.find(u => u.id === userId);
     if (!me) return null;
 
     // Filter out myself and search by name
-    const otherUsers = store.users.filter(u =>
+    const otherUsers = store.profiles.filter(u =>
         u.id !== userId &&
         u.name.toLowerCase().includes(search.toLowerCase())
     );
@@ -50,8 +50,8 @@ export default function CommunityPage() {
         }
 
         try {
-            const updatedUser = { ...me, friendIds: newFriendIds };
-            await updateUser(updatedUser as import('@/lib/types').User);
+            const updatedProfile = { ...me, friendIds: newFriendIds };
+            await updateProfile(updatedProfile as import('@/lib/types').Profile);
 
             setSaving(null);
             setToast({

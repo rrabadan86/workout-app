@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store';
 
 const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/projects', label: 'Treinos' },
     { href: '/compare', label: 'Comparar' },
@@ -36,7 +36,7 @@ export default function Navbar() {
 
     if (!userId) return null;
 
-    const user = store.users.find((u) => u.id === userId);
+    const user = store.profiles.find((u) => u.id === userId);
     if (!user) return null;
 
     const isSupervisor = user.email === SUPERVISOR_EMAIL;
@@ -58,7 +58,7 @@ export default function Navbar() {
                     </div>
 
                     <nav className="hidden md:flex items-center gap-8">
-                        {NAV_ITEMS.map(({ href, label }) => {
+                        {BASE_NAV_ITEMS.map(({ href, label }) => {
                             const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
                             return (
                                 <a key={href} href={href}
@@ -67,6 +67,12 @@ export default function Navbar() {
                                 </a>
                             );
                         })}
+                        {user.role === 'personal' && (
+                            <a href="/students"
+                                className={`font-bold font-roboto text-sm transition-colors ${pathname.startsWith('/students') ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
+                                Alunos
+                            </a>
+                        )}
                     </nav>
                 </div>
 

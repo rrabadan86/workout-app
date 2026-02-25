@@ -37,7 +37,7 @@ export default function ExercisesPage() {
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
     if (!ready || !userId) return null;
-    const user = store.users.find((u) => u.id === userId);
+    const user = store.profiles.find((u) => u.id === userId);
     if (!user) return null;
     const isSupervisor = user.email === 'rodrigorabadan@gmail.com';
     if (!isSupervisor) {

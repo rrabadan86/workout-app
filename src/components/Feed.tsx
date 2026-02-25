@@ -55,7 +55,7 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
     return (
         <div className="flex flex-col gap-6">
             {feedItems.map(event => {
-                const user = store.users.find(u => u.id === event.userId);
+                const user = store.profiles.find(u => u.id === event.userId);
                 if (!user) return null;
 
                 const eventKudos = store.kudos.filter(k => k.feedEventId === event.id);

@@ -139,7 +139,7 @@ export default function WorkoutDetailPage() {
         ? workout.ownerId   // I'm a shared user → compare with owner
         : (projectSharedWith[0] ?? undefined); // I'm owner → compare with first shared user
     const friendName = comparisonFriendId
-        ? store.users.find((u) => u.id === comparisonFriendId)?.name ?? 'Amigo'
+        ? store.profiles.find((u) => u.id === comparisonFriendId)?.name ?? 'Amigo'
         : '';
 
     const hasAccess = workout.ownerId === userId || projectSharedWith.includes(userId);

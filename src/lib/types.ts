@@ -1,9 +1,27 @@
-export interface User {
+export interface Profile {
   id: string;
   name: string;
   email: string;
-  password: string;
-  friendIds: string[];
+  role: 'personal' | 'user';
+  onboarding_done: boolean;
+  friendIds?: string[];
+  created_at?: string;
+}
+
+export interface PersonalStudent {
+  id: string;
+  personal_id: string;
+  student_id: string;
+  status: 'active' | 'inactive';
+  linked_at: string;
+}
+
+export interface PendingPrescription {
+  id: string;
+  personal_id: string;
+  student_email: string;
+  project_id: string;
+  created_at: string;
 }
 
 export interface Exercise {
@@ -11,7 +29,7 @@ export interface Exercise {
   name: string;
   muscle: string;
   description: string;
-  createdBy: string; // userId
+  createdBy: string; // userId (profile.id)
 }
 
 export interface WorkoutSet {
@@ -29,17 +47,21 @@ export interface WorkoutExercise {
 export interface Project {
   id: string;
   name: string;
-  ownerId: string;
+  ownerId: string; // profile.id
   startDate: string; // ISO date
   endDate: string;   // ISO date
   sharedWith: string[]; // userIds
+  prescribed_to?: string | null;
+  prescribed_by?: string | null;
+  status?: 'active' | 'inactive';
+  is_evolution?: boolean;
 }
 
 // ─── Workout (belongs to a Project) ────────────────────────────────────────
 export interface Workout {
   id: string;
   name: string;
-  ownerId: string;
+  ownerId: string; // profile.id
   projectId: string; // parent project
   exercises: WorkoutExercise[];
   order?: number;    // display order within the project
@@ -76,7 +98,7 @@ export interface Kudo {
 }
 
 export interface AppStore {
-  users: User[];
+  profiles: Profile[];
   exercises: Exercise[];
   projects: Project[];
   workouts: Workout[];

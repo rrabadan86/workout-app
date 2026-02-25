@@ -3,9 +3,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { supabase } from './supabase';
-import type { AppStore, User, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo } from './types';
+import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo } from './types';
 
-const defaultStore: AppStore = { users: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [] };
+const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [] };
 
 // ─── Store Context ────────────────────────────────────────────────────────────
 interface StoreContextValue {
@@ -26,7 +26,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const refresh = useCallback(async () => {
         const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes] = await Promise.all([
-            supabase.from('users').select('*'),
+            supabase.from('profiles').select('*'),
             supabase.from('exercises').select('*'),
             supabase.from('projects').select('*'),
             supabase.from('workouts').select('*'),
@@ -35,7 +35,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             supabase.from('kudos').select('*'),
         ]);
         setStore({
-            users: (usersRes.data ?? []) as User[],
+            profiles: (usersRes.data ?? []) as Profile[],
             exercises: (exercisesRes.data ?? []) as Exercise[],
             projects: (projectsRes.data ?? []) as Project[],
             workouts: (workoutsRes.data ?? []) as Workout[],
@@ -59,15 +59,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 export function useStore() {
     const { store, loading, refresh } = useContext(StoreContext);
 
-    const addUser = useCallback(async (u: User) => {
-        await supabase.from('users').insert(u);
+    const addProfile = useCallback(async (u: Profile) => {
+        await supabase.from('profiles').insert(u);
         await refresh();
     }, [refresh]);
 
-    const updateUser = useCallback(async (u: User) => {
-        const { error } = await supabase.from('users').update(u).eq('id', u.id);
+    const updateProfile = useCallback(async (u: Profile) => {
+        const { error } = await supabase.from('profiles').update(u).eq('id', u.id);
         if (error) {
-            console.error('updateUser error:', error);
+            console.error('updateProfile error:', error);
             throw new Error(error.message);
         }
         await refresh();
@@ -176,7 +176,7 @@ export function useStore() {
 
     return {
         store, loading, refresh,
-        addUser, updateUser,
+        addProfile, updateProfile,
         addExercise, updateExercise, deleteExercise,
         addProject, updateProject, deleteProject,
         addWorkout, updateWorkout, deleteWorkout,

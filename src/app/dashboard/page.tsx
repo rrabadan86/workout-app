@@ -17,8 +17,29 @@ export default function DashboardPage() {
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
-    const user = store.users.find((u) => u.id === userId);
+    const user = store.profiles.find((u) => u.id === userId);
     const myProjects = store.projects.filter((p) => p.ownerId === userId || p.sharedWith.includes(userId || ''));
+
+    // "Friends" = people who share projects with me + my linked personal/students
+    const myFriendsIds = useMemo(() => {
+        if (!userId) return [];
+        const set = new Set<string>();
+        // 1. Shared projects
+        store.projects.forEach(p => {
+            if (p.ownerId === userId) {
+                p.sharedWith.forEach(id => set.add(id));
+            } else if (p.sharedWith.includes(userId)) {
+                set.add(p.ownerId);
+            }
+        });
+        // 2. Personal/Student links (this requires knowing who is linked - since store doesn't have `personal_students`, we can approximate by `projects.prescribed_to` and `projects.prescribed_by` for now, or just rely on projects like we did above, since a personal creates projects for them).
+        store.projects.forEach(p => {
+            if (p.prescribed_by === userId && p.prescribed_to) set.add(p.prescribed_to);
+            if (p.prescribed_to === userId && p.prescribed_by) set.add(p.prescribed_by);
+        });
+
+        return Array.from(set);
+    }, [store.projects, userId]);
 
     // Find active friends (just top 4 friends who logged recently)
     const topActive = useMemo(() => {
@@ -27,18 +48,18 @@ export default function DashboardPage() {
         store.feedEvents.forEach(e => {
             if (e.eventType === 'WO_COMPLETED') counts[e.userId] = (counts[e.userId] || 0) + 1;
         });
-        const allRelevantUsers = store.users.filter(u => user.friendIds?.includes(u.id) || u.id === user.id);
+        const allRelevantUsers = store.profiles.filter(u => myFriendsIds.includes(u.id) || u.id === user.id);
         const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
         return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
-    }, [store.feedEvents, store.users, user, userId]);
+    }, [store.feedEvents, store.profiles, user, userId, myFriendsIds]);
 
     const activeProject = myProjects.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 
     // Other users to follow
     const peopleToFollow = useMemo(() => {
         if (!user) return [];
-        return store.users.filter(u => u.id !== user.id && !user.friendIds?.includes(u.id)).slice(0, 3);
-    }, [store.users, user]);
+        return store.profiles.filter(u => u.id !== user.id && !myFriendsIds.includes(u.id)).slice(0, 3);
+    }, [store.profiles, user, myFriendsIds]);
 
     // Calculate progress
     const progress = useMemo(() => {
@@ -127,7 +148,7 @@ export default function DashboardPage() {
                     {/* Posts / Recent Activity Section (Order 6 on mobile) */}
                     <section className="flex flex-col gap-8 order-6 lg:order-none mt-2 lg:mt-0">
                         <h2 className="text-3xl font-extrabold font-inter tracking-tight text-slate-900">Atividade Recente</h2>
-                        <Feed friendIds={user.friendIds || []} myId={userId} />
+                        <Feed friendIds={myFriendsIds} myId={userId} />
                     </section>
                 </div>
 

@@ -9,7 +9,7 @@ import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
-import type { User } from '@/lib/types';
+import type { Profile } from '@/lib/types';
 
 const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
@@ -17,13 +17,14 @@ export default function AdminPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
     const { store, refresh } = useStore();
-    const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
-    const [resetTarget, setResetTarget] = useState<User | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<Profile | null>(null);
+    const [resetTarget, setResetTarget] = useState<Profile | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [saving, setSaving] = useState(false);
+    const [migrating, setMigrating] = useState(false);
 
-    const currentUser = store.users.find((u) => u.id === userId);
+    const currentUser = store.profiles.find((u) => u.id === userId);
     const isSupervisor = currentUser?.email === SUPERVISOR_EMAIL;
 
     useEffect(() => {
@@ -34,7 +35,7 @@ export default function AdminPage() {
 
     if (!ready || !userId || !isSupervisor) return null;
 
-    const otherUsers = store.users.filter((u) => u.email !== SUPERVISOR_EMAIL);
+    const otherUsers = store.profiles.filter((u) => u.email !== SUPERVISOR_EMAIL);
 
     async function confirmDelete() {
         if (!deleteTarget) return;
@@ -43,7 +44,7 @@ export default function AdminPage() {
         await supabase.from('workout_logs').delete().eq('"userId"', deleteTarget.id);
         await supabase.from('workouts').delete().eq('"ownerId"', deleteTarget.id);
         await supabase.from('exercises').delete().eq('"createdBy"', deleteTarget.id);
-        await supabase.from('users').delete().eq('id', deleteTarget.id);
+        await supabase.from('profiles').delete().eq('id', deleteTarget.id);
         setSaving(false);
         setDeleteTarget(null);
         setToast({ msg: `Usuário ${deleteTarget.name} excluído.`, type: 'success' });
@@ -53,12 +54,146 @@ export default function AdminPage() {
     async function confirmResetPassword() {
         if (!resetTarget || !newPassword.trim()) return;
         setSaving(true);
-        const { error } = await supabase.from('users').update({ password: newPassword.trim() }).eq('id', resetTarget.id);
+        const { error } = await supabase.from('profiles').update({ password: newPassword.trim() }).eq('id', resetTarget.id);
         setSaving(false);
         if (error) { setToast({ msg: 'Erro ao redefinir senha.', type: 'error' }); return; }
         setResetTarget(null);
         setNewPassword('');
         setToast({ msg: `Senha de ${resetTarget.name} redefinida com sucesso.`, type: 'success' });
+    }
+
+    async function migrateOldUserData() {
+        if (!confirm('Esta ação irá procurar na tabela antiga "users" por usuários com o mesmo e-mail dos novos "profiles" cadastrados via Google, e vai transferir os treinos (workouts) e exercícios (exercises) do ID antigo para o novo ID do Google. Tem certeza?')) return;
+
+        setMigrating(true);
+        try {
+            // 1. Fetch all old users
+            const { data: oldUsers, error: oldErrs } = await supabase.from('users').select('*');
+            if (oldErrs) throw new Error('Falha ao ler tabela antiga de users. A tabela ainda existe?');
+
+            // 2. Fetch all new profiles
+            const { data: newProfiles, error: newErrs } = await supabase.from('profiles').select('*');
+            if (newErrs) throw new Error('Falha ao ler profiles novos.');
+
+            if (!oldUsers || !newProfiles) return;
+            let migratedCount = 0;
+
+            // 3. Match and transfer
+            for (const profile of newProfiles) {
+                const oldUser = oldUsers.find(u => u.email.toLowerCase() === profile.email.toLowerCase() && u.id !== profile.id);
+                if (oldUser) {
+                    // Try to find if user already has workouts
+                    const { data: userWorkouts } = await supabase.from('workouts').select('id, projectId').eq('ownerId', oldUser.id);
+
+                    if (userWorkouts && userWorkouts.length > 0) {
+                        // Check if these workouts already have a project. In legacy, they probably don't.
+                        const orphanWorkouts = userWorkouts.filter(w => !w.projectId || w.projectId.trim() === '');
+
+                        let fallbackProjectId = null;
+                        if (orphanWorkouts.length > 0) {
+                            // Create a dummy project to hold old isolated sessions since the new UI needs a Project
+                            const { data: newProject } = await supabase.from('projects').insert({
+                                name: 'Histórico Antigo',
+                                description: 'Sessões resgatadas do banco de dados antigo antes da versão de Projetos.',
+                                ownerId: profile.id,
+                                startDate: new Date().toISOString(),
+                                // give it 10 years end date so it doesn't expire
+                                endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 10)).toISOString(),
+                                status: 'active',
+                                sharedWith: []
+                            }).select().single();
+
+                            if (newProject) fallbackProjectId = newProject.id;
+                        }
+
+                        // Transfer workouts
+                        if (fallbackProjectId) {
+                            const orphanIds = orphanWorkouts.map(w => w.id);
+                            const validIds = userWorkouts.filter(w => w.projectId && w.projectId.trim() !== '').map(w => w.id);
+
+                            if (orphanIds.length > 0) {
+                                await supabase.from('workouts').update({ ownerId: profile.id, projectId: fallbackProjectId }).in('id', orphanIds);
+                            }
+                            if (validIds.length > 0) {
+                                await supabase.from('workouts').update({ ownerId: profile.id }).in('id', validIds);
+                            }
+                        } else {
+                            await supabase.from('workouts').update({ ownerId: profile.id }).eq('ownerId', oldUser.id);
+                        }
+                    }
+
+                    // Transfer exercises
+                    await supabase.from('exercises').update({ createdBy: profile.id }).eq('createdBy', oldUser.id);
+                    // Transfer logs
+                    await supabase.from('workout_logs').update({ userId: profile.id }).eq('userId', oldUser.id);
+
+                    // Finally delete old legacy user row to prevent infinite remigrations
+                    await supabase.from('users').delete().eq('id', oldUser.id);
+
+                    migratedCount++;
+                }
+            }
+
+            setToast({ msg: `Transferidos dados de ${migratedCount} usuário(s) do sistema antigo para a conta Google.`, type: 'success' });
+        } catch (err: any) {
+            setToast({ msg: err.message || 'Erro ao migrar dados.', type: 'error' });
+        } finally {
+            setMigrating(false);
+            await refresh();
+        }
+    }
+
+    async function repairOrphanWorkouts() {
+        if (!confirm('Isso vai agrupar todos os treinos que não estão dentro de nenhum Projeto em um novo "Histórico Antigo". Confirmar?')) return;
+        setMigrating(true);
+        try {
+            // Fetch all workouts first
+            const { data: allWorkouts, error } = await supabase.from('workouts').select('id, ownerId, projectId');
+            if (error) throw new Error('Erro ao buscar todos os treinos.');
+
+            const orphans = allWorkouts?.filter(w => !w.projectId || w.projectId.trim() === '') || [];
+            if (orphans.length === 0) {
+                setToast({ msg: 'Nenhum treino órfão encontrado no sistema geral.', type: 'success' });
+                return;
+            }
+
+            // Group by owner
+            const ownerIds = Array.from(new Set(orphans.map(o => o.ownerId)));
+            let fixedCount = 0;
+
+            for (const ownerId of ownerIds) {
+                const userOrphans = orphans.filter(o => o.ownerId === ownerId);
+                const orphanIds = userOrphans.map(o => o.id);
+
+                if (orphanIds.length > 0) {
+                    // Create dummy project for this owner
+                    const { data: newProject } = await supabase.from('projects').insert({
+                        name: 'Histórico Antigo',
+                        description: 'Sessões resgatadas do banco de dados antigo antes da versão de Projetos.',
+                        ownerId: ownerId,
+                        startDate: new Date().toISOString(),
+                        endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 10)).toISOString(),
+                        status: 'active',
+                        sharedWith: []
+                    }).select().single();
+
+                    if (newProject) {
+                        const { error: updErr } = await supabase.from('workouts')
+                            .update({ projectId: newProject.id })
+                            .in('id', orphanIds);
+
+                        if (!updErr) fixedCount++;
+                    }
+                }
+            }
+
+            setToast({ msg: `${fixedCount} perfil(is) tiveram seus treinos órfãos resgatados.`, type: 'success' });
+        } catch (err: any) {
+            setToast({ msg: err.message || 'Erro ao reparar treinos.', type: 'error' });
+        } finally {
+            setMigrating(false);
+            await refresh();
+        }
     }
 
     return (
@@ -81,6 +216,34 @@ export default function AdminPage() {
                     </div>
                     <div className="size-12 rounded-xl flex items-center justify-center bg-[#C084FC]/10 text-[#C084FC] shrink-0">
                         <Users size={24} />
+                    </div>
+                </div>
+
+                {/* Database Migration Panel */}
+                <div className="bg-amber-50 rounded-xl p-6 border border-amber-200 mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h3 className="font-extrabold text-amber-900 mb-1 font-inter flex items-center gap-2">
+                            <span className="material-symbols-outlined font-bold">database</span>
+                            Migração de Dados (Contas Antigas)
+                        </h3>
+                        <p className="text-sm font-roboto text-amber-800">Se alguns treinos antigos sumiram após o login pelo Google, clique ao lado para transferir os registros do banco antigo (offline) para o seu novo ID Google.</p>
+                    </div>
+                    <div className="flex flex-col gap-3 shrink-0">
+                        <button
+                            className="btn bg-amber-600 text-white hover:bg-amber-700 shadow-md disabled:opacity-50 text-sm"
+                            onClick={migrateOldUserData}
+                            disabled={migrating}
+                        >
+                            {migrating ? 'Aguarde...' : 'Migrar Contas Antigas'}
+                        </button>
+                        <button
+                            className="btn bg-white border border-amber-300 text-amber-700 hover:bg-amber-100 shadow-sm disabled:opacity-50 text-sm"
+                            onClick={repairOrphanWorkouts}
+                            disabled={migrating}
+                            title="Use se você já migrou mas os treinos continuam desaparecidos."
+                        >
+                            Reparar Treinos Sumidos
+                        </button>
                     </div>
                 </div>
 
