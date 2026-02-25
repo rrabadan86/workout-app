@@ -100,9 +100,9 @@ export default function DashboardPage() {
                                                     {u.name.charAt(0).toUpperCase()}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col min-w-0">
-                                                <span className="text-sm font-bold font-inter text-slate-900 truncate" title={u.name}>{displayName}</span>
-                                                <span className="text-[10px] font-bold font-roboto text-primary truncate">{u.workoutsCount} treinos</span>
+                                            <div className="flex flex-col flex-1">
+                                                <span className="text-sm font-bold font-inter text-slate-900 leading-tight" title={u.name}>{displayName}</span>
+                                                <span className="text-[10px] font-bold font-roboto text-primary truncate mt-0.5">{u.workoutsCount} treinos</span>
                                             </div>
                                         </div>
                                     );
