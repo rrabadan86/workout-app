@@ -54,6 +54,7 @@ export default function ProjectsPage() {
     const [aiLimitations, setAiLimitations] = useState('');
     const [aiUsePrevious, setAiUsePrevious] = useState(false);
     const [aiGenerating, setAiGenerating] = useState(false);
+    const [aiPrescribeEmail, setAiPrescribeEmail] = useState('');
 
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'ativos' | 'inativos'>('ativos');
     const [filterCreator, setFilterCreator] = useState<string>('all'); // for User
@@ -256,13 +257,47 @@ export default function ProjectsPage() {
             future.setDate(future.getDate() + 30);
             const endDate = future.toISOString().slice(0, 10);
 
+            let prescribedTo: string | null = null;
+            let studentMsg = '';
+            if (currentUser?.role === 'personal' && aiPrescribeEmail) {
+                const emailToSearch = aiPrescribeEmail.trim().toLowerCase();
+                const studentAccount = store.profiles.find((u) => u.email.toLowerCase() === emailToSearch);
+                if (studentAccount) {
+                    prescribedTo = studentAccount.id;
+                    studentMsg = `Prescrito p/ ${studentAccount.name.split(' ')[0]}. `;
+                    const { data: linkMatch } = await supabase.from('personal_students')
+                        .select('*')
+                        .eq('personal_id', userId)
+                        .eq('student_id', studentAccount.id)
+                        .maybeSingle();
+
+                    if (!linkMatch) {
+                        await supabase.from('personal_students').insert({
+                            personal_id: userId,
+                            student_id: studentAccount.id,
+                            status: 'active'
+                        });
+                    }
+                } else {
+                    studentMsg = `Convite pendente p/ ${emailToSearch}. `;
+                    await supabase.from('pending_prescriptions').insert({
+                        personal_id: userId,
+                        student_email: emailToSearch,
+                        project_id: newProjectId
+                    });
+                }
+            }
+
             await addProject({
                 id: newProjectId,
                 name: `✨ ${data.projectName || `Sessão IA (${aiFocus})`}`,
                 ownerId: userId,
                 startDate: today,
                 endDate: endDate,
-                sharedWith: []
+                sharedWith: [],
+                prescribed_by: currentUser?.role === 'personal' && aiPrescribeEmail ? userId : null,
+                prescribed_to: prescribedTo,
+                status: 'active'
             });
 
             for (const w of (data.workouts || [])) {
@@ -276,10 +311,11 @@ export default function ProjectsPage() {
                 });
             }
 
-            setToast({ msg: 'Sessão Especialista Gerada! 🚀', type: 'success' });
+            setToast({ msg: `${studentMsg}Sessão Gerada! 🚀`, type: 'success' });
             setShowAIModal(false);
             setAiFocus('');
             setAiLimitations('');
+            setAiPrescribeEmail('');
         } catch (err: unknown) {
             setToast({ msg: (err as Error).message || 'Falha ao gerar a sessão.', type: 'error' });
         } finally {
@@ -373,8 +409,10 @@ export default function ProjectsPage() {
                                     </div>
                                     <div className="flex-1 cursor-pointer" onClick={() => router.push(`/projects/${p.id}`)}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                            <span className="item-card-title text-base sm:text-lg">{p.name}</span>
-                                            {p.name.includes('✨') && (
+                                            <span className="item-card-title text-base sm:text-lg">
+                                                {currentUser?.role !== 'personal' ? p.name.replace('✨ ', '').replace('✨', '') : p.name}
+                                            </span>
+                                            {p.name.includes('✨') && currentUser?.role === 'personal' && (
                                                 <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#C084FC', background: '#C084FC22', borderRadius: 20, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
                                                     <Sparkles size={10} /> IA
                                                 </span>
@@ -513,7 +551,7 @@ export default function ProjectsPage() {
 
             {/* AI Generation Modal */}
             {showAIModal && (
-                <Modal title="✨ Nova Sessão por IA" onClose={() => setShowAIModal(false)}
+                <Modal title="✨ Nova Sessão por IA" onClose={() => { setShowAIModal(false); setAiPrescribeEmail(''); }}
                     footer={
                         <div className="flex justify-end gap-3 mt-8 items-center">
                             {aiGenerating && (
@@ -565,6 +603,12 @@ export default function ProjectsPage() {
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Possui alguma limitação física ou preferência? (Opcional)</label>
                             <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
                         </div>
+                        {currentUser?.role === 'personal' && (
+                            <div className="field">
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (E-mail)</label>
+                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="email" placeholder="Opcional. Ex: aluno@email.com" value={aiPrescribeEmail} onChange={(e) => setAiPrescribeEmail(e.target.value)} />
+                            </div>
+                        )}
                         {store.projects.filter(p => p.ownerId === userId).length > 0 && (
                             <div className="field" style={{ marginTop: 8 }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 'normal', color: 'var(--text-secondary)' }}>

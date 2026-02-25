@@ -17,6 +17,7 @@ export default function ProjectDetailPage() {
     const id = params.id as string;
     const { userId, ready } = useAuth();
     const { store, addWorkout, updateWorkout, deleteWorkout } = useStore();
+    const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState<Workout | null>(null);
@@ -169,7 +170,9 @@ export default function ProjectDetailPage() {
                 </div>
                 <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
-                        <h1 className="page-title">{project.name}</h1>
+                        <h1 className="page-title">
+                            {currentUser?.role !== 'personal' ? project.name.replace('✨ ', '').replace('✨', '') : project.name}
+                        </h1>
                         <p className="page-subtitle">{workouts.length} sessão(ões)</p>
                     </div>
                     {isOwner && (

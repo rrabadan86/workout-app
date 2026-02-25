@@ -29,11 +29,15 @@ export default function CommunityPage() {
     const me = store.profiles.find(u => u.id === userId);
     if (!me) return null;
 
-    // Filter out myself and search by name
-    const otherUsers = store.profiles.filter(u =>
-        u.id !== userId &&
-        u.name.toLowerCase().includes(search.toLowerCase())
-    );
+    // Filter out myself and search by name, city, or state
+    const otherUsers = store.profiles.filter(u => {
+        if (u.id === userId) return false;
+        const s = search.toLowerCase();
+        const matchName = u.name.toLowerCase().includes(s);
+        const matchCity = u.city?.toLowerCase().includes(s);
+        const matchState = u.state?.toLowerCase().includes(s);
+        return matchName || matchCity || matchState;
+    });
 
     const myFriendIds = me.friendIds || [];
 
@@ -162,7 +166,7 @@ export default function CommunityPage() {
                         <Search size={20} className="text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar pelo nome..."
+                            placeholder="Buscar pelo nome, cidade ou estado..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="border-none bg-transparent outline-none w-full text-slate-900 placeholder:text-slate-400 font-medium"
@@ -191,8 +195,22 @@ export default function CommunityPage() {
                                             {u.name.charAt(0).toUpperCase()}
                                         </div>
                                         <div>
-                                            <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors">{u.name}</div>
-                                            <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5">Membro FitSync</div>
+                                            <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap">
+                                                {u.name}
+                                                {u.city && u.state && (
+                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                        📍 {u.city}, {u.state}
+                                                    </span>
+                                                )}
+                                                {u.role === 'personal' && u.cref && (
+                                                    <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide border border-sky-200">
+                                                        CREF: {u.cref}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5">
+                                                {u.role === 'personal' ? 'Personal Trainer' : 'Membro FitSync'}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -225,7 +243,21 @@ export default function CommunityPage() {
                                 {selectedUser.name.charAt(0).toUpperCase()}
                             </div>
                             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUser.name}</h2>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Membro FitSync</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                {selectedUser.role === 'personal' ? 'Personal Trainer' : 'Membro FitSync'}
+                            </p>
+                            <div className="flex gap-2 mt-3 flex-wrap justify-center">
+                                {selectedUser.city && selectedUser.state && (
+                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold uppercase tracking-wide">
+                                        📍 {selectedUser.city}, {selectedUser.state}
+                                    </span>
+                                )}
+                                {selectedUser.role === 'personal' && selectedUser.cref && (
+                                    <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-1 rounded-md font-bold uppercase tracking-wide border border-sky-200">
+                                        📋 CREF: {selectedUser.cref}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         <div className="mb-4 flex items-center gap-2">

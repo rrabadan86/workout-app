@@ -5,6 +5,9 @@ export interface Profile {
   role: 'personal' | 'user';
   onboarding_done: boolean;
   friendIds?: string[];
+  state?: string;
+  city?: string;
+  cref?: string;
   created_at?: string;
 }
 

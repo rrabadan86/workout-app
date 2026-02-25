@@ -81,19 +81,26 @@ export default function Navbar() {
                         <span className="material-symbols-outlined text-[20px]">logout</span>
                     </button>
                     <div
-                        className={`size-10 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none ${isSupervisor ? 'hover:bg-slate-300 transition-colors' : ''}`}
+                        className={`size-10 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none hover:bg-slate-300 transition-colors`}
                         title={user.name}
-                        onClick={() => isSupervisor && setShowUserMenu(!showUserMenu)}
+                        onClick={() => setShowUserMenu(!showUserMenu)}
                     >
                         {user.name.charAt(0).toUpperCase()}
                     </div>
-                    {showUserMenu && isSupervisor && (
+                    {showUserMenu && (
                         <div className="absolute top-[120%] right-0 bg-white border border-slate-100 shadow-xl rounded-2xl py-2 min-w-[160px] flex flex-col z-50 shadow-slate-200/50">
-                            <a href="/exercises" className={`px-5 py-3 text-sm font-bold transition-colors border-b border-slate-50 ${pathname.startsWith('/exercises') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
-                                Exercícios
-                            </a>
-                            <a href="/admin" className={`px-5 py-3 text-sm font-bold transition-colors ${pathname.startsWith('/admin') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
-                                Admin
+                            {isSupervisor && (
+                                <a href="/admin" className={`px-5 py-3 text-sm font-bold transition-colors border-b border-slate-50 ${pathname.startsWith('/admin') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
+                                    Admin
+                                </a>
+                            )}
+                            {isSupervisor && (
+                                <a href="/exercises" className={`px-5 py-3 text-sm font-bold transition-colors border-b border-slate-50 ${pathname.startsWith('/exercises') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
+                                    Exercícios
+                                </a>
+                            )}
+                            <a href="/profile" className={`px-5 py-3 text-sm font-bold transition-colors ${pathname.startsWith('/profile') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
+                                Perfil
                             </a>
                         </div>
                     )}

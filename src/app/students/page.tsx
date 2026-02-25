@@ -15,7 +15,7 @@ import type { Profile, Project, PendingPrescription, PersonalStudent } from '@/l
 export default function StudentsPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, refresh } = useStore();
+    const { store, refresh, loading } = useStore();
     const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [search, setSearch] = useState('');
@@ -30,16 +30,16 @@ export default function StudentsPage() {
     const [inviting, setInviting] = useState(false);
 
     useEffect(() => {
-        if (ready) {
+        if (ready && !loading) {
             if (!userId) {
                 router.replace('/');
-            } else if (currentUser?.role !== 'personal') {
+            } else if (currentUser && currentUser.role !== 'personal') {
                 router.replace('/dashboard');
-            } else {
+            } else if (currentUser && currentUser.role === 'personal') {
                 fetchStudentsData();
             }
         }
-    }, [ready, userId, currentUser, router, store.projects]); // re-fetch if projects change
+    }, [ready, loading, userId, currentUser, router, store.projects]); // re-fetch if projects change
 
     async function fetchStudentsData() {
         if (!userId) return;
@@ -149,7 +149,7 @@ export default function StudentsPage() {
         fetchStudentsData();
     }
 
-    if (!ready || !userId || currentUser?.role !== 'personal') return null;
+    if (!ready || loading || !userId || currentUser?.role !== 'personal') return null;
 
     const filteredStudents = students.filter(s => s.profile.name.toLowerCase().includes(search.toLowerCase()) || s.profile.email.toLowerCase().includes(search.toLowerCase()));
 

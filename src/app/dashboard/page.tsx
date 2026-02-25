@@ -179,7 +179,9 @@ export default function DashboardPage() {
                                 <div className="flex flex-col gap-3 flex-grow">
                                     <div>
                                         <p className="text-[10px] font-bold font-roboto text-slate-500 uppercase tracking-widest leading-none mb-1">Nome do Treino</p>
-                                        <p className="text-lg font-bold font-inter leading-tight line-clamp-2">{activeProject.name}</p>
+                                        <p className="text-lg font-bold font-inter leading-tight line-clamp-2">
+                                            {user?.role !== 'personal' ? activeProject.name.replace('✨ ', '').replace('✨', '') : activeProject.name}
+                                        </p>
                                     </div>
                                     <div className="flex flex-col gap-2 mt-1">
                                         <div className="flex gap-4">
