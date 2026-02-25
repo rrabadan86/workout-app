@@ -260,8 +260,8 @@ export default function WorkoutDetailPage() {
                                             <Dumbbell size={24} />
                                         </div>
                                         <div className="flex flex-col gap-1">
-                                            <h3 className="text-xl font-extrabold text-slate-900 leading-tight">{exName}</h3>
-                                            <p className="text-sm font-bold text-slate-500">
+                                            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">{exName}</h3>
+                                            <p className="text-xs font-bold text-slate-500">
                                                 {sets.length} séries · {repsSummary} reps
                                                 {lastLog && <span className="ml-2 text-primary">· Último: {Math.max(...lastLog.sets.map(s => s.weight))} kg</span>}
                                             </p>
