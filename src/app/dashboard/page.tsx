@@ -80,10 +80,10 @@ export default function DashboardPage() {
                  * MOBILE ORDERING LOGIC (Using Flex/Grid Order):
                  * On mobile, grid items default to source order. We use order-{n} to re-arrange:
                  * 1. Active Project Widget (moved from aside)
-                 * 2. Active Now (Amigos Mais Ativos)
-                 * 3. People to Follow (Pessoas a Seguir)
-                 * 4. Quick Navigation Menu (Atalhos)
-                 * 5. Recent Activity (Feed)
+                 * 2. Quick Navigation Menu (Atalhos)
+                 * 3. Active Now (Amigos Mais Ativos)
+                 * 4. People to Follow (Pessoas a Seguir)
+                 * 6. Recent Activity (Feed)
                  * 
                  * On lg screens, we reset order (lg:order-none) because they are split into 2 columns.
                  */}
@@ -93,7 +93,7 @@ export default function DashboardPage() {
 
                     {/* Active Now Section (Order 2 on mobile) */}
                     {topActive.length > 0 && (
-                        <section className="bg-white rounded-xl card-depth p-6 order-2 lg:order-none flex flex-col">
+                        <section className="bg-white rounded-xl card-depth p-6 order-3 lg:order-none flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Amigos Mais Ativos</h2>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
 
                     {/* People to Follow Widget (Order 3 on mobile) */}
                     {peopleToFollow.length > 0 && (
-                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col order-3 lg:order-none">
+                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col order-4 lg:order-none">
                             <h3 className="text-xl font-extrabold font-inter mb-4 tracking-tight text-slate-900">Pessoas a Seguir</h3>
                             <div className="flex flex-col gap-4">
                                 {peopleToFollow.map(u => (
@@ -217,8 +217,8 @@ export default function DashboardPage() {
                         </div>
                     )}
 
-                    {/* Quick Navigation Menu (Atalhos) - Moved to Order 4 on mobile */}
-                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col order-4 lg:order-none">
+                    {/* Quick Navigation Menu (Atalhos) - Moved to Order 2 on mobile */}
+                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col order-2 lg:order-none">
                         <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
                         <div className="flex flex-col gap-3">
                             <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
