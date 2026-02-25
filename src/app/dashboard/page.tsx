@@ -83,25 +83,30 @@ export default function DashboardPage() {
                         <section className="bg-white rounded-xl card-depth p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Active Now</h2>
-                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Amigos Mais Ativos</p>
+                                    <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Amigos Mais Ativos</h2>
+                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Últimos treinos concluídos</p>
                                 </div>
                                 <a className="text-primary font-bold font-montserrat text-sm hover:underline cursor-pointer" onClick={() => router.push('/community')}>Ver Comunidade</a>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {topActive.map((u) => (
-                                    <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push('/community')}>
-                                        <div className="size-12 rounded-full story-ring shrink-0">
-                                            <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white text-primary flex items-center justify-center font-extrabold">
-                                                {u.name.charAt(0).toUpperCase()}
+                                {topActive.map((u) => {
+                                    const parts = u.name.split(' ');
+                                    const displayName = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0];
+
+                                    return (
+                                        <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push('/community')}>
+                                            <div className="size-12 rounded-full story-ring shrink-0">
+                                                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white text-primary flex items-center justify-center font-extrabold text-lg">
+                                                    {u.name.charAt(0).toUpperCase()}
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-sm font-bold font-inter text-slate-900 truncate" title={u.name}>{displayName}</span>
+                                                <span className="text-[10px] font-bold font-roboto text-primary truncate">{u.workoutsCount} treinos</span>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-sm font-bold font-inter text-slate-900 uppercase tracking-tight truncate">{u.name}</span>
-                                            <span className="text-[10px] font-bold font-roboto text-primary truncate">{u.workoutsCount} treinos</span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
                     )}
