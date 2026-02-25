@@ -222,7 +222,7 @@ export default function DashboardPage() {
                                             </div>
                                             <div>
                                                 <p className="font-bold font-inter text-sm text-slate-900">{u.name}</p>
-                                                <p className="text-slate-400 font-roboto text-xs">Membro FitSync</p>
+                                                <p className="text-slate-400 font-roboto text-xs">Membro uFit</p>
                                             </div>
                                         </div>
                                         <button className="size-10 bg-slate-50 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors" onClick={() => router.push('/community')}>

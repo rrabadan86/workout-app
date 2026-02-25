@@ -28,6 +28,7 @@ export default function WorkoutDetailPage() {
     const [timerRunning, setTimerRunning] = useState(false);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
+    const [confirmingFinish, setConfirmingFinish] = useState(false);
     const [finalDuration, setFinalDuration] = useState(0);
     const startedAtRef = useRef<number | null>(null);
 
@@ -227,12 +228,12 @@ export default function WorkoutDetailPage() {
                                         <button className="btn btn-primary" onClick={startWorkout} style={{ padding: '12px 24px', fontSize: '1rem' }}>
                                             <Play size={18} fill="currentColor" /> Iniciar Cronômetro
                                         </button>
-                                        <button onClick={finishWorkout} className="btn btn-ghost" title="Finalizar e compartilhar sem cronômetro" style={{ border: '1px solid var(--glass-border)', padding: '12px 24px', fontSize: '1rem' }}>
+                                        <button onClick={() => setConfirmingFinish(true)} className="btn btn-ghost" title="Finalizar e compartilhar sem cronômetro" style={{ border: '1px solid var(--glass-border)', padding: '12px 24px', fontSize: '1rem' }}>
                                             <Square size={16} fill="currentColor" /> Finalizar
                                         </button>
                                     </div>
                                 ) : (
-                                    <button onClick={finishWorkout} className="btn" style={{ background: 'var(--danger)', color: 'white', padding: '12px 24px', fontSize: '1rem' }}>
+                                    <button onClick={() => setConfirmingFinish(true)} className="flex items-center gap-2 bg-rose-500 text-white font-bold hover:bg-rose-600 transition-colors shadow-md rounded-xl" style={{ padding: '12px 24px', fontSize: '1rem' }}>
                                         <Square size={18} fill="currentColor" /> Finalizar
                                     </button>
                                 )}
@@ -409,7 +410,84 @@ export default function WorkoutDetailPage() {
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
-            {/* Summary Modal */}
+            {/* Confirm Finish Modal */}
+            {confirmingFinish && (
+                <Modal title="Finalizar Sessão de Treino" onClose={() => setConfirmingFinish(false)}
+                    footer={
+                        <>
+                            <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full sm:w-auto" onClick={() => setConfirmingFinish(false)}>
+                                Continuar Treinando
+                            </button>
+                            <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors w-full sm:w-auto shadow-md" onClick={() => {
+                                setConfirmingFinish(false);
+                                finishWorkout();
+                            }}>
+                                Confirmar e Finalizar
+                            </button>
+                        </>
+                    }
+                >
+                    <div className="flex flex-col gap-5 py-2">
+                        <p className="text-slate-600 font-medium text-sm">Verifique o seu progresso de hoje antes de encerrar o treino definitivamente e lançá-lo no histórico.</p>
+
+                        {elapsedSeconds > 0 && (
+                            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-center justify-between shadow-sm">
+                                <span className="font-bold text-emerald-700 uppercase tracking-widest text-[10px] md:text-xs">Tempo de Treino</span>
+                                <span className="font-extrabold text-emerald-600 text-xl tabular-nums">{fmtTime(elapsedSeconds)}</span>
+                            </div>
+                        )}
+
+                        {(() => {
+                            const todayLogs = store.logs.filter(l => l.workoutId === id && l.userId === userId && l.date === today());
+                            if (todayLogs.length === 0) {
+                                return (
+                                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-6 text-center">
+                                        <Dumbbell size={24} className="text-slate-300 mx-auto mb-2" />
+                                        <p className="text-sm font-bold text-slate-500">Nenhuma série registrada hoje.</p>
+                                        <p className="text-xs text-slate-400 mt-1">Este treino será salvo no histórico sem peso/volume contabilizado.</p>
+                                    </div>
+                                );
+                            }
+
+                            let totalVolume = 0;
+                            let totalSets = 0;
+
+                            return (
+                                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-3 bg-slate-50 border-b border-slate-200">
+                                        <h4 className="font-extrabold text-slate-700 text-[10px] lg:text-xs uppercase tracking-wider text-center">Resumo de Séries Salvas</h4>
+                                    </div>
+                                    <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto no-scrollbar">
+                                        {todayLogs.map(log => {
+                                            const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                            const vol = log.sets.reduce((sum, s) => sum + (s.weight * s.reps), 0);
+                                            totalVolume += vol;
+                                            totalSets += log.sets.length;
+                                            return (
+                                                <div key={log.id} className="p-3 flex items-center justify-between text-xs md:text-sm">
+                                                    <span className="font-bold text-slate-700 flex items-center gap-2">
+                                                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md font-extrabold">{log.sets.length}x</span>
+                                                        <span className="truncate max-w-[150px] md:max-w-xs">{exName}</span>
+                                                    </span>
+                                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
+                                                        {vol} <span className="font-medium text-[10px]">kg vol.</span>
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="bg-slate-900 px-4 py-3 flex justify-between items-center text-white">
+                                        <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400">Total: {totalSets} Séries</span>
+                                        <span className="font-extrabold text-sm">{totalVolume} kg levantados</span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                </Modal>
+            )}
+
+            {/* Summary Modal (After Confirmation) */}
             {showSummary && (
                 <Modal title="🏁 Sessão Finalizada!" onClose={() => setShowSummary(false)}
                     footer={

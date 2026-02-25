@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
+import { UFitLogo } from '@/components/UFitLogo';
 
 const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
@@ -51,10 +52,10 @@ export default function Navbar() {
             <div className="max-w-[1440px] mx-auto flex items-center justify-between">
                 <div className="flex items-center gap-12">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/dashboard')}>
-                        <div className="size-10 bg-primary rounded-xl flex items-center justify-center text-white shrink-0">
-                            <span className="material-symbols-outlined font-bold">bolt</span>
-                        </div>
-                        <h2 className="text-2xl font-extrabold font-inter tracking-tight text-slate-900 uppercase">FitSync</h2>
+                        <UFitLogo width={40} height={48} className="drop-shadow-sm -ml-2" />
+                        <h2 className="text-2xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-1px' }}>
+                            <span className="text-blue-600">u</span><span className="text-cyan-500">Fit</span>
+                        </h2>
                     </div>
 
                     <nav className="hidden md:flex items-center gap-8">

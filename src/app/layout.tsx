@@ -9,7 +9,7 @@ const fontRoboto = Roboto({ weight: ['400', '500', '700'], subsets: ['latin'], v
 const fontMontserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' });
 
 export const metadata: Metadata = {
-  title: "FitSync — App de Treinos",
+  title: "uFit — App de Treinos",
   description: "Crie treinos, registre seu progresso e compare sua evolução com amigos.",
 };
 

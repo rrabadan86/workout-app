@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { getSession } from '@/lib/store';
+import { UFitLogo } from '@/components/UFitLogo';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
@@ -262,12 +263,9 @@ export default function LoginPage() {
   return (
     <div className="auth-wrapper">
       <div className="auth-card animate-in fade-in zoom-in-95 duration-500">
-        <div className="auth-logo">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-            <Dumbbell size={32} className="text-primary" />
-          </div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight font-montserrat">FitSync</h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-montserrat">Registre. Evolua. Compare.</p>
+        <div className="auth-logo flex flex-col items-center">
+          <UFitLogo width={120} height={144} className="mb-2 hover:scale-105 transition-transform duration-500" />
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-montserrat mt-2">Registre. Evolua. Compare.</p>
         </div>
 
         {needsOnboarding ? (

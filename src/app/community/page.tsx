@@ -209,7 +209,7 @@ export default function CommunityPage() {
                                                 )}
                                             </div>
                                             <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5">
-                                                {u.role === 'personal' ? 'Personal Trainer' : 'Membro FitSync'}
+                                                {u.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}
                                             </div>
                                         </div>
                                     </div>
@@ -244,7 +244,7 @@ export default function CommunityPage() {
                             </div>
                             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUser.name}</h2>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                {selectedUser.role === 'personal' ? 'Personal Trainer' : 'Membro FitSync'}
+                                {selectedUser.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}
                             </p>
                             <div className="flex gap-2 mt-3 flex-wrap justify-center">
                                 {selectedUser.city && selectedUser.state && (
