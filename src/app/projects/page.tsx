@@ -59,6 +59,7 @@ export default function ProjectsPage() {
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'ativos' | 'inativos'>('ativos');
     const [filterCreator, setFilterCreator] = useState<string>('all'); // for User
     const [filterStudent, setFilterStudent] = useState<string>('all'); // for Personal
+    const [filterShared, setFilterShared] = useState<'Todos' | 'Sim' | 'Não'>('Todos');
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
@@ -99,6 +100,13 @@ export default function ProjectsPage() {
             if (filterCreator === 'me' && p.ownerId !== userId) return false;
             if (filterCreator !== 'all' && filterCreator !== 'me' && p.prescribed_by !== filterCreator) return false;
         }
+
+        if (filterShared !== 'Todos') {
+            const isNotMine = p.ownerId !== userId && p.prescribed_by !== userId;
+            if (filterShared === 'Sim' && !isNotMine) return false;
+            if (filterShared === 'Não' && isNotMine) return false;
+        }
+
         return true;
     });
 
@@ -345,6 +353,12 @@ export default function ProjectsPage() {
                             <option value="Todos">Todos (Status)</option>
                             <option value="ativos">Ativos</option>
                             <option value="inativos">Inativos</option>
+                        </select>
+
+                        <select className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 shadow-sm outline-none" value={filterShared} onChange={e => setFilterShared(e.target.value as any)}>
+                            <option value="Todos">Compartilhado comigo?</option>
+                            <option value="Sim">Sim</option>
+                            <option value="Não">Não</option>
                         </select>
 
                         {currentUser?.role === 'personal' ? (
