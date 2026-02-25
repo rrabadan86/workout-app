@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -19,6 +20,19 @@ export default function Navbar() {
     const router = useRouter();
     const { userId, logout } = useAuth();
     const { store } = useStore();
+
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowUserMenu(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
 
     if (!userId) return null;
 
@@ -53,26 +67,30 @@ export default function Navbar() {
                                 </a>
                             );
                         })}
-                        {isSupervisor && (
-                            <a href="/exercises" className={`font-bold text-sm transition-colors ${pathname.startsWith('/exercises') ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
-                                Exercícios
-                            </a>
-                        )}
-                        {isSupervisor && (
-                            <a href="/admin" className={`font-bold text-sm transition-colors ${pathname.startsWith('/admin') ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
-                                Admin
-                            </a>
-                        )}
                     </nav>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 relative" ref={menuRef}>
                     <button className="size-10 flex items-center justify-center bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors shrink-0" onClick={handleLogout} title="Sair">
                         <span className="material-symbols-outlined text-[20px]">logout</span>
                     </button>
-                    <div className="size-10 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0" title={user.name}>
+                    <div
+                        className={`size-10 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none ${isSupervisor ? 'hover:bg-slate-300 transition-colors' : ''}`}
+                        title={user.name}
+                        onClick={() => isSupervisor && setShowUserMenu(!showUserMenu)}
+                    >
                         {user.name.charAt(0).toUpperCase()}
                     </div>
+                    {showUserMenu && isSupervisor && (
+                        <div className="absolute top-[120%] right-0 bg-white border border-slate-100 shadow-xl rounded-2xl py-2 min-w-[160px] flex flex-col z-50 shadow-slate-200/50">
+                            <a href="/exercises" className={`px-5 py-3 text-sm font-bold transition-colors border-b border-slate-50 ${pathname.startsWith('/exercises') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
+                                Exercícios
+                            </a>
+                            <a href="/admin" className={`px-5 py-3 text-sm font-bold transition-colors ${pathname.startsWith('/admin') ? 'text-primary bg-slate-50/50' : 'text-slate-600 hover:text-primary hover:bg-slate-50'}`} onClick={() => setShowUserMenu(false)}>
+                                Admin
+                            </a>
+                        </div>
+                    )}
                 </div>
             </div>
         </header>
