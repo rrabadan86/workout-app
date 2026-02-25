@@ -124,8 +124,8 @@ export default function DashboardPage() {
                         </section>
                     )}
 
-                    {/* Posts / Recent Activity Section (Order 5 on mobile) */}
-                    <section className="flex flex-col gap-8 order-5 lg:order-none mt-2 lg:mt-0">
+                    {/* Posts / Recent Activity Section (Order 6 on mobile) */}
+                    <section className="flex flex-col gap-8 order-6 lg:order-none mt-2 lg:mt-0">
                         <h2 className="text-3xl font-extrabold font-inter tracking-tight text-slate-900">Atividade Recente</h2>
                         <Feed friendIds={user.friendIds || []} myId={userId} />
                     </section>
