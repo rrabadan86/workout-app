@@ -75,12 +75,25 @@ export default function DashboardPage() {
             <Navbar />
 
             <main className="flex-1 w-full max-w-[1440px] mx-auto px-6 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Main Feed Column */}
-                <div className="lg:col-span-8 flex flex-col gap-10">
 
-                    {/* Active Now Section */}
+                {/* 
+                 * MOBILE ORDERING LOGIC (Using Flex/Grid Order):
+                 * On mobile, grid items default to source order. We use order-{n} to re-arrange:
+                 * 1. Active Project Widget (moved from aside)
+                 * 2. Active Now (Amigos Mais Ativos)
+                 * 3. People to Follow
+                 * 4. Recent Activity
+                 * 5. Quick Navigation Menu
+                 * 
+                 * On lg screens, we reset order (lg:order-none) because they are split into 2 columns.
+                 */}
+
+                {/* Main Feed Column (Left Side on Desktop) */}
+                <div className="lg:col-span-8 flex flex-col gap-10 order-2 lg:order-none">
+
+                    {/* Active Now Section (Order 2 on mobile) */}
                     {topActive.length > 0 && (
-                        <section className="bg-white rounded-xl card-depth p-6">
+                        <section className="bg-white rounded-xl card-depth p-6 order-2 lg:order-none flex flex-col">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Amigos Mais Ativos</h2>
@@ -111,18 +124,18 @@ export default function DashboardPage() {
                         </section>
                     )}
 
-                    {/* Recent Activity Section */}
-                    <section className="flex flex-col gap-8">
+                    {/* Posts / Recent Activity Section (Order 4 on mobile) */}
+                    <section className="flex flex-col gap-8 order-4 lg:order-none mt-2 lg:mt-0">
                         <h2 className="text-3xl font-extrabold font-inter tracking-tight text-slate-900">Atividade Recente</h2>
                         <Feed friendIds={user.friendIds || []} myId={userId} />
                     </section>
                 </div>
 
-                {/* Sidebar Column */}
-                <aside className="lg:col-span-4 flex flex-col gap-8 h-full">
+                {/* Sidebar Column (Right Side on Desktop) */}
+                <aside className="lg:col-span-4 flex flex-col gap-8 h-full order-1 lg:order-none content-start">
 
-                    {/* Active Project Widget */}
-                    <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col gap-8 soft-shadow shrink-0 relative overflow-hidden">
+                    {/* Active Project Widget (Order 1 on mobile) */}
+                    <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col gap-8 soft-shadow shrink-0 relative overflow-hidden order-1 lg:order-none">
                         {/* Decorative background element mimicking the dark theme project widget */}
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-3xl rounded-full pointer-events-none"></div>
 
@@ -173,31 +186,9 @@ export default function DashboardPage() {
                         </button>
                     </div>
 
-                    {/* Quick Navigation Menu replacing the old icon grids */}
-                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col">
-                        <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
-                        <div className="flex flex-col gap-3">
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
-                                <div className="size-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><FolderOpen size={18} /></div>
-                                <span className="flex-1 text-left font-inter">Meus Projetos</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
-                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Projetos Compartilhados</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
-                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* People to Follow Widget */}
+                    {/* People to Follow Widget (Order 3 on mobile) */}
                     {peopleToFollow.length > 0 && (
-                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col">
+                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col order-3 lg:order-none">
                             <h3 className="text-xl font-extrabold font-inter mb-4 tracking-tight text-slate-900">Pessoas a Seguir</h3>
                             <div className="flex flex-col gap-4">
                                 {peopleToFollow.map(u => (
@@ -225,6 +216,28 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* Quick Navigation Menu replacing the old icon grids (Order 5 on mobile) */}
+                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col order-5 lg:order-none">
+                        <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
+                        <div className="flex flex-col gap-3">
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                                <div className="size-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><FolderOpen size={18} /></div>
+                                <span className="flex-1 text-left font-inter">Meus Projetos</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Projetos Compartilhados</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
+                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
+                        </div>
+                    </div>
                 </aside>
             </main>
 
