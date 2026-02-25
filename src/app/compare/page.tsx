@@ -21,7 +21,14 @@ export default function ComparePage() {
 
     const currentUser = store.users.find((u) => u.id === userId);
     const friendUser = store.users.find((u) => u.id === friendId);
-    const otherUsers = store.users.filter((u) => u.id !== userId);
+    const sharedUsers = store.users.filter((u) => {
+        if (u.id === userId) return false;
+        return store.projects.some((p) => {
+            const myAccess = p.ownerId === userId || p.sharedWith.includes(userId);
+            const theirAccess = p.ownerId === u.id || p.sharedWith.includes(u.id);
+            return myAccess && theirAccess;
+        });
+    });
 
     const availableWorkouts = !friendId ? [] : store.workouts.filter((w) => {
         const proj = store.projects.find((p) => p.id === w.projectId);
@@ -72,9 +79,15 @@ export default function ComparePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Comparar com</label>
-                            <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={friendId} onChange={(e) => { setFriendId(e.target.value); setWorkoutId(''); }}>
-                                <option value="">Selecione um usuário</option>
-                                {otherUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                            <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white disabled:opacity-50" value={friendId} onChange={(e) => { setFriendId(e.target.value); setWorkoutId(''); }} disabled={sharedUsers.length === 0}>
+                                {sharedUsers.length === 0 ? (
+                                    <option value="">Nenhum amigo. Compartilhe um treino!</option>
+                                ) : (
+                                    <>
+                                        <option value="">Selecione um usuário</option>
+                                        {sharedUsers.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                    </>
+                                )}
                             </select>
                         </div>
                         <div className="flex flex-col gap-1.5">
