@@ -10,12 +10,14 @@ const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], work
 // ─── Store Context ────────────────────────────────────────────────────────────
 interface StoreContextValue {
     store: AppStore;
+    setStore: React.Dispatch<React.SetStateAction<AppStore>>;
     loading: boolean;
     refresh: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextValue>({
     store: defaultStore,
+    setStore: () => { },
     loading: true,
     refresh: async () => { },
 });
@@ -49,7 +51,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     useEffect(() => { refresh(); }, [refresh]);
 
     return (
-        <StoreContext.Provider value={{ store, loading, refresh }}>
+        <StoreContext.Provider value={{ store, setStore, loading, refresh }}>
             {children}
         </StoreContext.Provider>
     );
@@ -57,7 +59,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
 // ─── useStore hook ────────────────────────────────────────────────────────────
 export function useStore() {
-    const { store, loading, refresh } = useContext(StoreContext);
+    const { store, setStore, loading, refresh } = useContext(StoreContext);
 
     const addProfile = useCallback(async (u: Profile) => {
         await supabase.from('profiles').insert(u);
@@ -116,63 +118,64 @@ export function useStore() {
 
     // ─── Workouts ─────────────────────────────────────────────────────────
     const addWorkout = useCallback(async (w: Workout) => {
+        setStore(prev => ({ ...prev, workouts: [...prev.workouts, w] }));
         await supabase.from('workouts').insert(w);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const updateWorkout = useCallback(async (w: Workout) => {
+        setStore(prev => ({ ...prev, workouts: prev.workouts.map(x => x.id === w.id ? w : x) }));
         await supabase.from('workouts').update(w).eq('id', w.id);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const deleteWorkout = useCallback(async (id: string) => {
+        setStore(prev => ({ ...prev, workouts: prev.workouts.filter(x => x.id !== id), logs: prev.logs.filter(x => x.workoutId !== id) }));
         await supabase.from('workout_logs').delete().eq('"workoutId"', id);
         await supabase.from('workouts').delete().eq('id', id);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const updateLog = useCallback(async (l: WorkoutLog) => {
+        setStore(prev => ({ ...prev, logs: prev.logs.map(log => log.id === l.id ? l : log) }));
         await supabase.from('workout_logs').update(l).eq('id', l.id);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const deleteLog = useCallback(async (id: string) => {
+        setStore(prev => ({ ...prev, logs: prev.logs.filter(log => log.id !== id) }));
         await supabase.from('workout_logs').delete().eq('id', id);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const addLog = useCallback(async (l: WorkoutLog) => {
+        setStore(prev => ({ ...prev, logs: [...prev.logs, l] }));
         await supabase.from('workout_logs').insert(l);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     // ─── Feed & Kudos ─────────────────────────────────────────────────────
     const addFeedEvent = useCallback(async (f: FeedEvent) => {
+        setStore(prev => ({ ...prev, feedEvents: [...prev.feedEvents, f] }));
         await supabase.from('feed_events').insert(f);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const updateFeedEvent = useCallback(async (f: FeedEvent) => {
+        setStore(prev => ({ ...prev, feedEvents: prev.feedEvents.map(x => x.id === f.id ? f : x) }));
         await supabase.from('feed_events').update(f).eq('id', f.id);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const deleteFeedEvent = useCallback(async (id: string) => {
+        setStore(prev => ({ ...prev, feedEvents: prev.feedEvents.filter(x => x.id !== id), kudos: prev.kudos.filter(k => k.feedEventId !== id) }));
         await supabase.from('kudos').delete().eq('feedEventId', id);
         await supabase.from('feed_events').delete().eq('id', id);
-        await refresh();
-    }, [refresh]);
+    }, [setStore]);
 
     const toggleKudo = useCallback(async (kudo: Kudo) => {
         // Check if kudo from this user already exists on this event
         const existing = store.kudos.find(k => k.feedEventId === kudo.feedEventId && k.userId === kudo.userId);
         if (existing) {
+            setStore(prev => ({ ...prev, kudos: prev.kudos.filter(x => x.id !== existing.id) }));
             await supabase.from('kudos').delete().eq('id', existing.id);
         } else {
+            setStore(prev => ({ ...prev, kudos: [...prev.kudos, kudo] }));
             await supabase.from('kudos').insert(kudo);
         }
-        await refresh();
-    }, [refresh, store.kudos]);
+    }, [store.kudos, setStore]);
 
     return {
         store, loading, refresh,
