@@ -463,14 +463,18 @@ export default function WorkoutDetailPage() {
                                             const vol = log.sets.reduce((sum, s) => sum + (s.weight * s.reps), 0);
                                             totalVolume += vol;
                                             totalSets += log.sets.length;
+
+                                            // Formatar pesos de cada série separados por barra
+                                            const weightsStr = log.sets.map(s => `${s.weight} kg`).join(' / ');
+
                                             return (
                                                 <div key={log.id} className="p-3 flex items-center justify-between text-xs md:text-sm">
                                                     <span className="font-bold text-slate-700 flex items-center gap-2">
                                                         <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md font-extrabold">{log.sets.length}x</span>
                                                         <span className="truncate max-w-[150px] md:max-w-xs">{exName}</span>
                                                     </span>
-                                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
-                                                        {vol} <span className="font-medium text-[10px]">kg vol.</span>
+                                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md text-right max-w-[140px] truncate" title={weightsStr}>
+                                                        {weightsStr}
                                                     </span>
                                                 </div>
                                             );
