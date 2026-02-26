@@ -132,12 +132,7 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
 
             statsUI = (
                 <>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4 mt-1 relative">
-                        {isShared && (
-                            <div className="absolute top-2 right-2 text-[8px] sm:text-[10px] bg-emerald-100 text-emerald-600 font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md">
-                                Compartilhado
-                            </div>
-                        )}
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4 mt-1">
                         <div className="flex flex-col">
                             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Duração</span>
                             <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
@@ -147,7 +142,14 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
                             <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
+                                {isShared && (
+                                    <span className="text-[8px] sm:text-[10px] bg-emerald-100 text-emerald-600 font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md">
+                                        Compartilhado
+                                    </span>
+                                )}
+                            </div>
                             <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formattedPercentage}</span>
                         </div>
                     </div>
