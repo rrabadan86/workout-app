@@ -26,6 +26,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Novos campos
+  const [sex, setSex] = useState<'M' | 'F' | 'outro' | ''>('');
+  const [birthDate, setBirthDate] = useState('');
   const [stateUF, setStateUF] = useState('');
   const [city, setCity] = useState('');
   const [cref, setCref] = useState('');
@@ -92,7 +94,8 @@ export default function LoginPage() {
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
             email: user.email,
             role: newRole,
-            onboarding_done
+            onboarding_done,
+            photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null
           };
 
           const { error } = await supabase.from('profiles').insert(newProfile);
@@ -131,6 +134,10 @@ export default function LoginPage() {
           setNeedsOnboarding(true);
           setLoading(false);
         } else if (profile) {
+          const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+          if (googleAvatar && profile.photo_url !== googleAvatar) {
+            await supabase.from('profiles').update({ photo_url: googleAvatar }).eq('id', user.id);
+          }
           await refresh(); // Load the newly created profile data before navigating
           login(user.id);
           router.push('/dashboard');
@@ -194,7 +201,9 @@ export default function LoginPage() {
           role: role,
           state: stateUF,
           city,
-          cref: role === 'personal' ? cref.trim() : null
+          cref: role === 'personal' ? cref.trim() : null,
+          sex,
+          birth_date: birthDate
         }
       }
     });
@@ -217,7 +226,10 @@ export default function LoginPage() {
         onboarding_done: true,
         state: stateUF,
         city: city,
-        cref: role === 'personal' ? cref.trim() : null
+        cref: role === 'personal' ? cref.trim() : null,
+        sex: (sex as any) || null,
+        birth_date: birthDate || null,
+        photo_url: null
       };
 
       const { error: pErr } = await supabase.from('profiles').upsert(newProfile);
@@ -296,7 +308,7 @@ export default function LoginPage() {
               </button>
               <button
                 className={`tab-btn flex-1 py-2 text-sm font-bold rounded-lg transition-colors ${isRegistering ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                onClick={() => { setIsRegistering(true); setEmail(''); setPassword(''); setName(''); setStateUF(''); setCity(''); setCref(''); }}
+                onClick={() => { setIsRegistering(true); setEmail(''); setPassword(''); setName(''); setStateUF(''); setCity(''); setCref(''); setSex(''); setBirthDate(''); }}
               >
                 Criar Conta
               </button>
@@ -352,6 +364,33 @@ export default function LoginPage() {
                     <option value="user">💪 Aluno (Padrão)</option>
                     <option value="personal">📋 Personal Trainer / Coach</option>
                   </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="field">
+                    <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Sexo</label>
+                    <select
+                      required
+                      className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all cursor-pointer"
+                      value={sex}
+                      onChange={(e) => setSex(e.target.value as any)}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Feminino</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de Nasc.</label>
+                    <input
+                      type="date"
+                      required
+                      className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

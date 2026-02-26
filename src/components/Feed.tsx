@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -23,10 +23,11 @@ function timeAgo(dateStr: string) {
 }
 
 function formatDuration(seconds?: number) {
-    if (!seconds) return '--:--';
-    const m = Math.floor(seconds / 60);
+    if (!seconds) return '--:--:--';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 export default function Feed({ friendIds, myId }: { friendIds: string[], myId: string }) {
@@ -54,62 +55,120 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
 
     return (
         <div className="flex flex-col gap-6">
-            {feedItems.map(event => {
-                const user = store.profiles.find(u => u.id === event.userId);
-                if (!user) return null;
+            {feedItems.map(event => (
+                <FeedItemCard key={event.id} event={event} myId={myId} />
+            ))}
+        </div>
+    );
+}
 
-                const eventKudos = store.kudos.filter(k => k.feedEventId === event.id);
-                const hasMyKudo = eventKudos.some(k => k.userId === myId);
+function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
+    const { store, toggleKudo } = useStore();
+    const router = useRouter();
+    const [isExpanded, setIsExpanded] = useState(false);
 
-                let eventText = 'concluiu um treino';
-                let statsUI = null;
-                let actionOnClick: (() => void) | undefined;
+    const user = store.profiles.find(u => u.id === event.userId);
+    if (!user) return null;
 
-                if (event.eventType === 'WO_COMPLETED') {
-                    const workout = store.workouts.find(w => w.id === event.referenceId);
-                    const project = workout ? store.projects.find(p => p.id === workout.projectId) : null;
+    const eventKudos = store.kudos.filter(k => k.feedEventId === event.id);
+    const hasMyKudo = eventKudos.some(k => k.userId === myId);
 
-                    if (workout) {
-                        eventText = project ? `Treino "${workout.name}" • ${project.name}` : `Treino "${workout.name}"`;
+    let eventText = 'concluiu um treino';
+    let statsUI = null;
+    let actionOnClick: (() => void) | undefined;
+    let isShared = false;
 
-                        if (project) {
-                            actionOnClick = () => router.push(`/projects/${project.id}`);
-                        }
+    if (event.eventType === 'WO_COMPLETED') {
+        const workout = store.workouts.find(w => w.id === event.referenceId);
+        const project = workout ? store.projects.find(p => p.id === workout.projectId) : null;
 
-                        const eventDateObj = new Date(event.createdAt);
-                        const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
-                        const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
+        if (workout) {
+            isShared = project ? (project.sharedWith.length > 0 || !!project.prescribed_by || !!project.prescribed_to) : false;
+            eventText = project ? `Treino "${workout.name}" • ${project.name}` : `Treino "${workout.name}"`;
 
-                        // Calculate total volume
-                        let totalVolume = 0;
-                        const exerciseCount = dayLogs.length;
+            if (project) {
+                actionOnClick = () => router.push(`/projects/${project.id}`);
+            }
 
-                        dayLogs.forEach(log => {
-                            log.sets.forEach(set => {
-                                totalVolume += set.weight || 0;
-                            });
-                        });
+            const eventDateObj = new Date(event.createdAt);
+            const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
+            const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
 
-                        statsUI = (
-                            <>
-                                <div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-xl p-6 mt-4">
-                                    <div className="flex flex-col">
-                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Duração</span>
-                                        <span className="text-2xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Volume</span>
-                                        <span className="text-2xl font-extrabold text-slate-900">{totalVolume} <span className="text-primary text-sm font-bold tracking-normal">kg</span></span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Exercícios</span>
-                                        <span className="text-2xl font-extrabold text-slate-900">{exerciseCount}</span>
-                                    </div>
-                                </div>
-                                {dayLogs.length > 0 && (
-                                    <div className="mt-4 flex flex-col gap-2">
-                                        {dayLogs.map((log) => {
-                                            const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+            // Calculate total volume
+            let totalVolume = 0;
+
+            const renderItems: { id: string; exId: string; plannedSets: number; log?: any; isExtra?: boolean }[] = [];
+            const availableLogs = [...dayLogs];
+
+            workout.exercises.forEach((planned, idx) => {
+                const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
+                let log = undefined;
+                if (logIdx !== -1) {
+                    log = availableLogs[logIdx];
+                    availableLogs.splice(logIdx, 1);
+                }
+                renderItems.push({
+                    id: `planned-${idx}-${planned.exerciseId}`,
+                    exId: planned.exerciseId,
+                    plannedSets: planned.sets.length,
+                    log
+                });
+            });
+
+            availableLogs.forEach((log, idx) => {
+                renderItems.push({
+                    id: `extra-${idx}-${log.id}`,
+                    exId: log.exerciseId,
+                    plannedSets: 0,
+                    log,
+                    isExtra: true
+                });
+            });
+
+            const totalExercises = renderItems.length;
+            const completedExercises = renderItems.filter(item => item.log && item.log.sets.length > 0).length;
+            const completionPercentage = totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0;
+            const formattedPercentage = completionPercentage.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
+
+            statsUI = (
+                <>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4 mt-1 relative">
+                        {isShared && (
+                            <div className="absolute top-2 right-2 text-[8px] sm:text-[10px] bg-emerald-100 text-emerald-600 font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md">
+                                Compartilhado
+                            </div>
+                        )}
+                        <div className="flex flex-col">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Duração</span>
+                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Exercícios</span>
+                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
+                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formattedPercentage}</span>
+                        </div>
+                    </div>
+                    {renderItems.length > 0 && (
+                        <div className="mt-2 flex flex-col items-center">
+                            <button className="text-[10px] text-primary font-bold uppercase tracking-widest hover:underline py-1" onClick={() => setIsExpanded(!isExpanded)}>
+                                {isExpanded ? 'Ocultar Exercícios' : `Ver Exercícios (${totalExercises})`}
+                            </button>
+
+                            {isExpanded && (
+                                <div className="mt-2 flex flex-col gap-2 w-full animate-fade">
+                                    {renderItems.map((item) => {
+                                        const exName = store.exercises.find(e => e.id === item.exId)?.name || 'Exercício';
+                                        const log = item.log;
+
+                                        const plannedSets = item.plannedSets;
+                                        const completedSets = log ? log.sets.length : 0;
+                                        const skippedSets = Math.max(0, plannedSets - completedSets);
+
+                                        let setsDisplay = '';
+                                        if (log && log.sets.length > 0) {
                                             const groups: { count: number, weight: number }[] = [];
                                             for (const s of log.sets) {
                                                 if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
@@ -118,57 +177,75 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
                                                     groups.push({ count: 1, weight: s.weight });
                                                 }
                                             }
-                                            const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+                                            setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+                                        } else {
+                                            setsDisplay = '-';
+                                        }
 
-                                            return (
-                                                <div key={log.id} className="flex justify-between items-center text-sm py-0.5">
-                                                    <span className="text-slate-500 font-bold font-inter uppercase">{exName}</span>
-                                                    <span className="text-primary font-normal font-roboto">{setsDisplay}</span>
+                                        return (
+                                            <div key={item.id} className="flex justify-between items-center text-sm py-1 border-b border-slate-50 last:border-0 pl-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className={`font-bold font-inter uppercase ${!log ? 'text-slate-300 line-through' : 'text-slate-500'}`}>{exName}</span>
+                                                    {log && skippedSets > 0 && (
+                                                        <span className="text-[10px] bg-red-100 text-red-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                            faltou {skippedSets}
+                                                        </span>
+                                                    )}
+                                                    {!log && (
+                                                        <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                            não feito
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </>
-                        );
-                    }
-                }
-
-                return (
-                    <div key={event.id} className="bg-white rounded-xl card-depth p-6 flex flex-col gap-6 animate-fade border border-transparent hover:border-slate-100 transition-colors">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 cursor-pointer" onClick={() => actionOnClick && actionOnClick()}>
-                                <div className="size-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
-                                    <span className="text-lg font-bold text-slate-600">{user.name.charAt(0).toUpperCase()}</span>
+                                                <span className="text-primary font-normal font-roboto text-right">{setsDisplay}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div>
-                                    <h4 className="text-lg font-bold font-inter text-slate-900 hover:text-primary transition-colors">{user.id === myId ? 'Você' : user.name}</h4>
-                                    <p className="text-slate-400 text-sm font-normal font-roboto">{timeAgo(event.createdAt)} • {eventText}</p>
-                                </div>
-                            </div>
-                            {actionOnClick && (
-                                <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto" onClick={actionOnClick}>
-                                    Mais detalhes
-                                </button>
                             )}
                         </div>
+                    )}
+                </>
+            );
+        }
+    }
 
-                        {statsUI}
-
-                        <div className="flex items-center gap-4 pt-2">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleKudo({ id: uid(), feedEventId: event.id, userId: myId, createdAt: new Date().toISOString() });
-                                }}
-                                className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold font-montserrat transition-transform active:scale-95 bg-primary text-white hover:scale-[1.02] shadow-lg ${hasMyKudo ? 'shadow-primary/40' : 'shadow-primary/10'}`}
-                            >
-                                {eventKudos.length} {eventKudos.length === 1 ? 'curtida' : 'curtidas'}
-                            </button>
-                        </div>
+    return (
+        <div key={event.id} className="bg-white rounded-xl card-depth p-4 md:p-5 flex flex-col gap-4 animate-fade border border-transparent hover:border-slate-100 transition-colors">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => actionOnClick && actionOnClick()}>
+                    <div className={`size-10 rounded-full overflow-hidden ${user.photo_url ? 'bg-transparent' : 'bg-slate-200'} flex items-center justify-center shrink-0`}>
+                        {user.photo_url ? (
+                            <img src={user.photo_url} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-base font-bold text-slate-600">{user.name.charAt(0).toUpperCase()}</span>
+                        )}
                     </div>
-                );
-            })}
+                    <div>
+                        <h4 className="text-base font-bold font-inter text-slate-900 hover:text-primary transition-colors">{user.id === myId ? 'Você' : user.name}</h4>
+                        <p className="text-slate-400 text-xs font-normal font-roboto">{timeAgo(event.createdAt)} • {eventText}</p>
+                    </div>
+                </div>
+                {actionOnClick && (
+                    <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto" onClick={actionOnClick}>
+                        Mais detalhes
+                    </button>
+                )}
+            </div>
+
+            {statsUI}
+
+            <div className="flex items-center gap-3 pt-1">
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleKudo({ id: uid(), feedEventId: event.id, userId: myId, createdAt: new Date().toISOString() });
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold font-montserrat transition-transform active:scale-95 bg-primary text-white hover:scale-[1.02] shadow-sm ${hasMyKudo ? 'shadow-primary/40' : 'shadow-primary/10'}`}
+                >
+                    {eventKudos.length} {eventKudos.length === 1 ? 'curtida' : 'curtidas'}
+                </button>
+            </div>
         </div>
     );
 }

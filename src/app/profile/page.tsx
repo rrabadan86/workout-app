@@ -19,6 +19,9 @@ export default function ProfilePage() {
     const [city, setCity] = useState('');
     const [cref, setCref] = useState('');
     const [role, setRole] = useState<'user' | 'personal'>('user');
+    const [sex, setSex] = useState<'M' | 'F' | 'outro' | ''>('');
+    const [birthDate, setBirthDate] = useState('');
+    const [photoUrl, setPhotoUrl] = useState('');
 
     const [ufs, setUfs] = useState<{ id: number, sigla: string, nome: string }[]>([]);
     const [cities, setCities] = useState<{ id: number, nome: string }[]>([]);
@@ -40,6 +43,9 @@ export default function ProfilePage() {
             setCity(me.city || '');
             setCref(me.cref || '');
             setRole(me.role);
+            setSex(me.sex || '');
+            setBirthDate(me.birth_date || '');
+            setPhotoUrl(me.photo_url || '');
         }
     }, [me]);
 
@@ -79,7 +85,10 @@ export default function ProfilePage() {
                 name: name.trim(),
                 state: stateUF,
                 city: city,
-                cref: role === 'personal' ? cref.trim() : me.cref
+                cref: role === 'personal' ? cref.trim() : me.cref,
+                sex,
+                birth_date: birthDate,
+                photo_url: photoUrl.trim()
             };
             // @ts-ignore
             await updateProfile(updatedProfile);
@@ -107,8 +116,12 @@ export default function ProfilePage() {
                         <h1 className="text-4xl font-extrabold font-inter tracking-tight text-slate-900">Meu Perfil</h1>
                         <p className="text-sm font-bold font-montserrat text-slate-400 uppercase tracking-widest mt-2">Gerencie suas informações</p>
                     </div>
-                    <div className="size-16 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center">
-                        <UserCircle size={28} />
+                    <div className="relative size-20 rounded-full bg-indigo-100 text-indigo-500 flex items-center justify-center overflow-hidden border-4 border-white shadow-md shrink-0">
+                        {photoUrl ? (
+                            <img src={photoUrl} alt="Foto de Perfil" className="w-full h-full object-cover" />
+                        ) : (
+                            <UserCircle size={40} />
+                        )}
                     </div>
                 </div>
 
@@ -133,6 +146,17 @@ export default function ProfilePage() {
                                 className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="field">
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">URL da Foto de Perfil (Opcional)</label>
+                            <input
+                                type="url"
+                                className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all"
+                                placeholder="https://..."
+                                value={photoUrl}
+                                onChange={(e) => setPhotoUrl(e.target.value)}
                             />
                         </div>
 
@@ -161,6 +185,33 @@ export default function ProfilePage() {
                                     <option value="">Selecione...</option>
                                     {cities.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
                                 </select>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="field">
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Sexo</label>
+                                <select
+                                    required
+                                    className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all cursor-pointer"
+                                    value={sex}
+                                    onChange={(e) => setSex(e.target.value as any)}
+                                >
+                                    <option value="">Selecione...</option>
+                                    <option value="M">Masculino</option>
+                                    <option value="F">Feminino</option>
+                                    <option value="outro">Outro/Prefiro não dizer</option>
+                                </select>
+                            </div>
+                            <div className="field">
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de Nascimento</label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all"
+                                    value={birthDate}
+                                    onChange={(e) => setBirthDate(e.target.value)}
+                                />
                             </div>
                         </div>
 

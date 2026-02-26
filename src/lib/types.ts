@@ -8,6 +8,9 @@ export interface Profile {
   state?: string;
   city?: string;
   cref?: string;
+  sex?: 'M' | 'F' | 'outro';
+  birth_date?: string;
+  photo_url?: string;
   created_at?: string;
 }
 

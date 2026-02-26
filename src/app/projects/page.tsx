@@ -55,13 +55,25 @@ export default function ProjectsPage() {
     const [aiUsePrevious, setAiUsePrevious] = useState(false);
     const [aiGenerating, setAiGenerating] = useState(false);
     const [aiPrescribeEmail, setAiPrescribeEmail] = useState('');
+    const [aiStart, setAiStart] = useState('');
+    const [aiEnd, setAiEnd] = useState('');
+    const [showAiStudentDropdown, setShowAiStudentDropdown] = useState(false);
+    const [showPStudentDropdown, setShowPStudentDropdown] = useState(false);
 
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'ativos' | 'inativos'>('ativos');
     const [filterCreator, setFilterCreator] = useState<string>('all'); // for User
     const [filterStudent, setFilterStudent] = useState<string>('all'); // for Personal
     const [filterShared, setFilterShared] = useState<'Todos' | 'Sim' | 'Não'>('Todos');
+    const [linkedStudentIds, setLinkedStudentIds] = useState<string[]>([]);
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
+
+    useEffect(() => {
+        if (!userId || currentUser?.role !== 'personal') return;
+        supabase.from('personal_students').select('student_id').eq('personal_id', userId).eq('status', 'active').then(({ data }) => {
+            if (data) setLinkedStudentIds(data.map(d => d.student_id));
+        });
+    }, [userId, currentUser?.role]);
 
     // Auto-update status to inactive if end_date < today
     useEffect(() => {
@@ -112,8 +124,27 @@ export default function ProjectsPage() {
 
     // Extract unique personals for filters
     const uniquePersonals = Array.from(new Set(store.projects.filter(p => p.prescribed_to === userId && p.prescribed_by).map(p => p.prescribed_by as string)));
-    // Extract unique students for filters
-    const uniqueStudents = Array.from(new Set(store.projects.filter(p => p.prescribed_by === userId && p.prescribed_to).map(p => p.prescribed_to as string)));
+    // Extract unique students for filters (combine previously prescribed + currently active linked students)
+    const uniqueStudents = Array.from(new Set([
+        ...store.projects.filter(p => p.prescribed_by === userId && p.prescribed_to).map(p => p.prescribed_to as string),
+        ...linkedStudentIds
+    ]));
+
+    function openAIModal() {
+        setAiFocus('');
+        setAiLimitations('');
+        setAiPrescribeEmail('');
+
+        const today = new Date().toISOString().slice(0, 10);
+        const future = new Date();
+        future.setDate(future.getDate() + 30);
+        const end = future.toISOString().slice(0, 10);
+
+        setAiStart(today);
+        setAiEnd(end);
+
+        setShowAIModal(true);
+    }
 
     function openCreate() {
         setEditTarget(null);
@@ -260,10 +291,6 @@ export default function ProjectsPage() {
             if (!res.ok) throw new Error(data.error || 'Erro na IA');
 
             const newProjectId = uid();
-            const today = new Date().toISOString().slice(0, 10);
-            const future = new Date();
-            future.setDate(future.getDate() + 30);
-            const endDate = future.toISOString().slice(0, 10);
 
             let prescribedTo: string | null = null;
             let studentMsg = '';
@@ -300,8 +327,8 @@ export default function ProjectsPage() {
                 id: newProjectId,
                 name: `✨ ${data.projectName || `Sessão IA (${aiFocus})`}`,
                 ownerId: userId,
-                startDate: today,
-                endDate: endDate,
+                startDate: aiStart || new Date().toISOString().slice(0, 10),
+                endDate: aiEnd || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
                 sharedWith: [],
                 prescribed_by: currentUser?.role === 'personal' && aiPrescribeEmail ? userId : null,
                 prescribed_to: prescribedTo,
@@ -382,7 +409,7 @@ export default function ProjectsPage() {
                     </div>
 
                     <div style={{ alignSelf: 'flex-start', marginTop: 12, display: 'flex', gap: 10 }}>
-                        <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] shadow-lg shadow-[#C084FC]/30 px-6 py-4" onClick={() => setShowAIModal(true)} style={{ border: 'none' }}>
+                        <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] shadow-lg shadow-[#C084FC]/30 px-6 py-4" onClick={openAIModal} style={{ border: 'none' }}>
                             <Sparkles size={16} /> Gerar por IA
                         </button>
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={openCreate}>
@@ -531,9 +558,47 @@ export default function ProjectsPage() {
                         {!editTarget && (
                             <>
                                 {currentUser?.role === 'personal' && (
-                                    <div className="field">
-                                        <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (E-mail)</label>
-                                        <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="email" placeholder="Opcional. Ex: aluno@email.com" value={pPrescribeEmail} onChange={(e) => setPPrescribeEmail(e.target.value)} />
+                                    <div className="field relative">
+                                        <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (Informe o nome do aluno ou e-mail caso não tenha histórico com você)</label>
+                                        <input
+                                            className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white"
+                                            type="text"
+                                            placeholder="Opcional. Ex: aluno@email.com"
+                                            value={pPrescribeEmail}
+                                            onChange={(e) => {
+                                                setPPrescribeEmail(e.target.value);
+                                                setShowPStudentDropdown(true);
+                                            }}
+                                            onFocus={() => setShowPStudentDropdown(true)}
+                                            onBlur={() => setTimeout(() => setShowPStudentDropdown(false), 200)}
+                                        />
+                                        {showPStudentDropdown && pPrescribeEmail && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-auto" style={{ top: '100%', left: 0 }}>
+                                                {(() => {
+                                                    const search = pPrescribeEmail.toLowerCase();
+                                                    const filtered = uniqueStudents
+                                                        .map(id => store.profiles.find(u => u.id === id))
+                                                        .filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
+
+                                                    if (filtered.length === 0) return null;
+
+                                                    return filtered.map(u => (
+                                                        <div
+                                                            key={u!.id}
+                                                            className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
+                                                            onMouseDown={(e) => {
+                                                                e.preventDefault(); // prevent blur before click registers
+                                                                setPPrescribeEmail(u!.email);
+                                                                setShowPStudentDropdown(false);
+                                                            }}
+                                                        >
+                                                            <span className="text-sm font-bold text-slate-800">{u!.name}</span>
+                                                            <span className="text-xs text-slate-500">{u!.email}</span>
+                                                        </div>
+                                                    ));
+                                                })()}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 <div className="field">
@@ -613,14 +678,65 @@ export default function ProjectsPage() {
                                 </select>
                             </div>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="field">
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de início *</label>
+                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={aiStart} onChange={(e) => setAiStart(e.target.value)} required />
+                            </div>
+                            <div className="field">
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de término *</label>
+                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={aiEnd} onChange={(e) => setAiEnd(e.target.value)} required min={aiStart} />
+                            </div>
+                        </div>
+
                         <div className="field">
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Possui alguma limitação física ou preferência? (Opcional)</label>
                             <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
                         </div>
                         {currentUser?.role === 'personal' && (
-                            <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (E-mail)</label>
-                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="email" placeholder="Opcional. Ex: aluno@email.com" value={aiPrescribeEmail} onChange={(e) => setAiPrescribeEmail(e.target.value)} />
+                            <div className="field relative">
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (Informe o nome do aluno ou e-mail caso não tenha histórico com você)</label>
+                                <input
+                                    className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white"
+                                    type="text"
+                                    placeholder="Opcional. Ex: aluno@email.com"
+                                    value={aiPrescribeEmail}
+                                    onChange={(e) => {
+                                        setAiPrescribeEmail(e.target.value);
+                                        setShowAiStudentDropdown(true);
+                                    }}
+                                    onFocus={() => setShowAiStudentDropdown(true)}
+                                    // SetTimeout isn't needed here if we use onMouseDown on the items, but let's keep it safe
+                                    onBlur={() => setTimeout(() => setShowAiStudentDropdown(false), 200)}
+                                />
+                                {showAiStudentDropdown && aiPrescribeEmail && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-auto" style={{ top: '100%', left: 0 }}>
+                                        {(() => {
+                                            const search = aiPrescribeEmail.toLowerCase();
+                                            const filtered = uniqueStudents
+                                                .map(id => store.profiles.find(u => u.id === id))
+                                                .filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
+
+                                            if (filtered.length === 0) return null;
+
+                                            return filtered.map(u => (
+                                                <div
+                                                    key={u!.id}
+                                                    className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault(); // prevent blur
+                                                        setAiPrescribeEmail(u!.email);
+                                                        setShowAiStudentDropdown(false);
+                                                    }}
+                                                >
+                                                    <span className="text-sm font-bold text-slate-800">{u!.name}</span>
+                                                    <span className="text-xs text-slate-500">{u!.email}</span>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {store.projects.filter(p => p.ownerId === userId).length > 0 && (

@@ -15,7 +15,11 @@ export default function CommunityPage() {
     const { userId, ready } = useAuth();
     const { store, updateProfile } = useStore();
 
-    const [search, setSearch] = useState('');
+    const [searchName, setSearchName] = useState('');
+    const [searchCity, setSearchCity] = useState('');
+    const [searchState, setSearchState] = useState('');
+    const [filterRole, setFilterRole] = useState<'all' | 'personal' | 'user'>('all');
+
     const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
@@ -29,14 +33,19 @@ export default function CommunityPage() {
     const me = store.profiles.find(u => u.id === userId);
     if (!me) return null;
 
-    // Filter out myself and search by name, city, or state
+    // Filter out myself and apply search filters
     const otherUsers = store.profiles.filter(u => {
         if (u.id === userId) return false;
-        const s = search.toLowerCase();
-        const matchName = u.name.toLowerCase().includes(s);
-        const matchCity = u.city?.toLowerCase().includes(s);
-        const matchState = u.state?.toLowerCase().includes(s);
-        return matchName || matchCity || matchState;
+
+        const nameMatch = u.name.toLowerCase().includes(searchName.toLowerCase());
+        const cityMatch = searchCity ? u.city?.toLowerCase().includes(searchCity.toLowerCase()) : true;
+        const stateMatch = searchState ? u.state?.toLowerCase() === searchState.toLowerCase() : true;
+
+        let roleMatch = true;
+        if (filterRole === 'personal') roleMatch = u.role === 'personal';
+        if (filterRole === 'user') roleMatch = u.role === 'user';
+
+        return nameMatch && cityMatch && stateMatch && roleMatch;
     });
 
     const myFriendIds = me.friendIds || [];
@@ -98,44 +107,88 @@ export default function CommunityPage() {
                     <span className="text-xs font-bold text-slate-400">{formattedDate}</span>
                 </div>
 
-                {dayLogs.length > 0 && (
-                    <div className="mt-3 border-t border-slate-200 pt-3">
-                        <div className="flex flex-col gap-2">
-                            {dayLogs.map((log) => {
-                                const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
-                                const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
-                                const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
-                                const skippedSets = Math.max(0, plannedSets - log.sets.length);
+                {(() => {
+                    const renderItems: { id: string; exId: string; plannedSets: number; log?: any; isExtra?: boolean }[] = [];
+                    const availableLogs = [...dayLogs];
 
-                                const groups: { count: number, weight: number }[] = [];
-                                for (const s of log.sets) {
-                                    if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                        groups[groups.length - 1].count++;
+                    workout.exercises.forEach((planned, idx) => {
+                        const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
+                        let log = undefined;
+                        if (logIdx !== -1) {
+                            log = availableLogs[logIdx];
+                            availableLogs.splice(logIdx, 1);
+                        }
+                        renderItems.push({
+                            id: `planned-${idx}-${planned.exerciseId}`,
+                            exId: planned.exerciseId,
+                            plannedSets: planned.sets.length,
+                            log
+                        });
+                    });
+
+                    availableLogs.forEach((log, idx) => {
+                        renderItems.push({
+                            id: `extra-${idx}-${log.id}`,
+                            exId: log.exerciseId,
+                            plannedSets: 0,
+                            log,
+                            isExtra: true
+                        });
+                    });
+
+                    if (renderItems.length === 0) return null;
+
+                    return (
+                        <div className="mt-3 border-t border-slate-200 pt-3">
+                            <div className="flex flex-col gap-2">
+                                {renderItems.map((item) => {
+                                    const log = item.log;
+                                    const exId = item.exId;
+                                    const exName = store.exercises.find(e => e.id === exId)?.name || 'Exercício';
+                                    const plannedSets = item.plannedSets;
+                                    const completedSets = log ? log.sets.length : 0;
+                                    const skippedSets = Math.max(0, plannedSets - completedSets);
+
+                                    let setsDisplay = '';
+                                    if (log && log.sets.length > 0) {
+                                        const groups: { count: number, weight: number }[] = [];
+                                        for (const s of log.sets) {
+                                            if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                groups[groups.length - 1].count++;
+                                            } else {
+                                                groups.push({ count: 1, weight: s.weight });
+                                            }
+                                        }
+                                        setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
                                     } else {
-                                        groups.push({ count: 1, weight: s.weight });
+                                        setsDisplay = '-';
                                     }
-                                }
-                                const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
 
-                                return (
-                                    <div key={log.id} className="flex justify-between items-center text-xs py-1">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-bold text-slate-500">{exName}</span>
-                                            {skippedSets > 0 && (
-                                                <span className="text-[10px] bg-red-100 text-red-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
-                                                    faltou {skippedSets}
-                                                </span>
-                                            )}
+                                    return (
+                                        <div key={item.id} className="flex justify-between items-center text-xs py-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className={`font-bold ${!log ? 'text-slate-300 line-through' : 'text-slate-500'}`}>{exName}</span>
+                                                {log && skippedSets > 0 && (
+                                                    <span className="text-[10px] bg-red-100 text-red-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                        faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
+                                                    </span>
+                                                )}
+                                                {!log && (
+                                                    <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                        não feito
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-primary font-bold text-right pl-3">
+                                                {setsDisplay}
+                                            </span>
                                         </div>
-                                        <span className="text-primary font-bold text-right pl-3">
-                                            {setsDisplay}
-                                        </span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         );
     }
@@ -161,16 +214,84 @@ export default function CommunityPage() {
                     </div>
                 </div>
 
-                <div className="mb-8">
+                <div className="mb-8 flex flex-col gap-3">
                     <div className="flex items-center gap-3 bg-white card-depth border border-slate-100 rounded-xl px-4 py-3">
                         <Search size={20} className="text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Buscar pelo nome, cidade ou estado..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Buscar pelo nome..."
+                            value={searchName}
+                            onChange={(e) => setSearchName(e.target.value)}
                             className="border-none bg-transparent outline-none w-full text-slate-900 placeholder:text-slate-400 font-medium"
                         />
+                    </div>
+
+                    <div className="flex flex-col md:flex-row gap-3">
+                        <div className="flex-1 flex gap-3">
+                            <select
+                                value={searchState}
+                                onChange={(e) => setSearchState(e.target.value)}
+                                className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 outline-none w-[100px] sm:w-[120px]"
+                            >
+                                <option value="">UF</option>
+                                <option value="AC">AC</option>
+                                <option value="AL">AL</option>
+                                <option value="AP">AP</option>
+                                <option value="AM">AM</option>
+                                <option value="BA">BA</option>
+                                <option value="CE">CE</option>
+                                <option value="DF">DF</option>
+                                <option value="ES">ES</option>
+                                <option value="GO">GO</option>
+                                <option value="MA">MA</option>
+                                <option value="MT">MT</option>
+                                <option value="MS">MS</option>
+                                <option value="MG">MG</option>
+                                <option value="PA">PA</option>
+                                <option value="PB">PB</option>
+                                <option value="PR">PR</option>
+                                <option value="PE">PE</option>
+                                <option value="PI">PI</option>
+                                <option value="RJ">RJ</option>
+                                <option value="RN">RN</option>
+                                <option value="RS">RS</option>
+                                <option value="RO">RO</option>
+                                <option value="RR">RR</option>
+                                <option value="SC">SC</option>
+                                <option value="SP">SP</option>
+                                <option value="SE">SE</option>
+                                <option value="TO">TO</option>
+                            </select>
+
+                            <input
+                                type="text"
+                                placeholder="Cidade..."
+                                value={searchCity}
+                                onChange={(e) => setSearchCity(e.target.value)}
+                                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 outline-none"
+                            />
+                        </div>
+
+                        <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 font-roboto self-start md:self-auto w-full md:w-auto">
+                            <button
+                                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterRole === 'all' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                onClick={() => setFilterRole('all')}
+                            >
+                                Todos
+                            </button>
+                            <button
+                                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterRole === 'personal' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                onClick={() => setFilterRole('personal')}
+                            >
+                                Personais
+                            </button>
+                            <button
+                                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterRole === 'user' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                onClick={() => setFilterRole('user')}
+                            >
+                                Alunos
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -191,8 +312,12 @@ export default function CommunityPage() {
                                     onClick={() => setSelectedUser(u)}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-primary shrink-0 text-lg group-hover:bg-primary/10 transition-colors">
-                                            {u.name.charAt(0).toUpperCase()}
+                                        <div className={`size-12 rounded-full ${u.photo_url ? 'bg-transparent' : 'bg-slate-100 group-hover:bg-primary/10 transition-colors'} overflow-hidden flex items-center justify-center font-extrabold text-primary shrink-0 text-lg`}>
+                                            {u.photo_url ? (
+                                                <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                u.name.charAt(0).toUpperCase()
+                                            )}
                                         </div>
                                         <div>
                                             <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap">
@@ -239,8 +364,12 @@ export default function CommunityPage() {
                 <div className="modal-overlay">
                     <div className="modal animate-slide">
                         <div className="text-center mb-8 flex flex-col items-center">
-                            <div className="size-20 rounded-full bg-primary/10 text-primary flex items-center justify-center font-extrabold text-3xl mb-4">
-                                {selectedUser.name.charAt(0).toUpperCase()}
+                            <div className={`size-20 rounded-full overflow-hidden ${selectedUser.photo_url ? 'bg-transparent' : 'bg-primary/10 text-primary'} flex items-center justify-center font-extrabold text-3xl mb-4`}>
+                                {selectedUser.photo_url ? (
+                                    <img src={selectedUser.photo_url} alt={selectedUser.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    selectedUser.name.charAt(0).toUpperCase()
+                                )}
                             </div>
                             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUser.name}</h2>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">

@@ -11,9 +11,10 @@ const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 const BASE_NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/projects', label: 'Treinos' },
-    { href: '/compare', label: 'Comparar' },
+    // "Alunos" is injected dynamically for personal trainers later
     { href: '/history', label: 'Histórico' },
     { href: '/community', label: 'Comunidade' },
+    { href: '/compare', label: 'Comparar' },
 ];
 
 export default function Navbar() {
@@ -61,6 +62,23 @@ export default function Navbar() {
                     <nav className="hidden md:flex items-center gap-8">
                         {BASE_NAV_ITEMS.map(({ href, label }) => {
                             const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
+
+                            // Inject "Alunos" right after "Treinos"
+                            if (href === '/history' && user.role === 'personal') {
+                                return (
+                                    <span key={href} className="flex items-center gap-8">
+                                        <a href="/students"
+                                            className={`font-bold font-roboto text-sm transition-colors ${pathname.startsWith('/students') ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
+                                            Alunos
+                                        </a>
+                                        <a href={href}
+                                            className={`font-bold font-roboto text-sm transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
+                                            {label}
+                                        </a>
+                                    </span>
+                                );
+                            }
+
                             return (
                                 <a key={href} href={href}
                                     className={`font-bold font-roboto text-sm transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
@@ -68,12 +86,6 @@ export default function Navbar() {
                                 </a>
                             );
                         })}
-                        {user.role === 'personal' && (
-                            <a href="/students"
-                                className={`font-bold font-roboto text-sm transition-colors ${pathname.startsWith('/students') ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
-                                Alunos
-                            </a>
-                        )}
                     </nav>
                 </div>
 
@@ -82,11 +94,15 @@ export default function Navbar() {
                         <span className="material-symbols-outlined text-[20px]">logout</span>
                     </button>
                     <div
-                        className={`size-10 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none hover:bg-slate-300 transition-colors`}
+                        className={`size-10 rounded-xl ${user.photo_url ? 'bg-transparent hover:opacity-80' : 'bg-slate-200 hover:bg-slate-300'} overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none transition-all`}
                         title={user.name}
                         onClick={() => setShowUserMenu(!showUserMenu)}
                     >
-                        {user.name.charAt(0).toUpperCase()}
+                        {user.photo_url ? (
+                            <img src={user.photo_url} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                            user.name.charAt(0).toUpperCase()
+                        )}
                     </div>
                     {showUserMenu && (
                         <div className="absolute top-[120%] right-0 bg-white border border-slate-100 shadow-xl rounded-2xl py-2 min-w-[160px] flex flex-col z-50 shadow-slate-200/50">

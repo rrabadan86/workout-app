@@ -163,42 +163,87 @@ export default function HistoryPage() {
                                         </div>
                                     </div>
 
-                                    {dayLogs.length > 0 && (
-                                        <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                                            {dayLogs.map((log) => {
-                                                const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
-                                                const plannedExercise = workout.exercises.find(ex => ex.exerciseId === log.exerciseId);
-                                                const plannedSets = plannedExercise ? plannedExercise.sets.length : log.sets.length;
-                                                const skippedSets = Math.max(0, plannedSets - log.sets.length);
+                                    {(() => {
+                                        const renderItems: { id: string; exId: string; plannedSets: number; log?: any; isExtra?: boolean }[] = [];
+                                        const availableLogs = [...dayLogs];
 
-                                                const groups: { count: number, weight: number }[] = [];
-                                                for (const s of log.sets) {
-                                                    if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                                        groups[groups.length - 1].count++;
+                                        workout.exercises.forEach((planned, idx) => {
+                                            const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
+                                            let log = undefined;
+                                            if (logIdx !== -1) {
+                                                log = availableLogs[logIdx];
+                                                availableLogs.splice(logIdx, 1);
+                                            }
+                                            renderItems.push({
+                                                id: `planned-${idx}-${planned.exerciseId}`,
+                                                exId: planned.exerciseId,
+                                                plannedSets: planned.sets.length,
+                                                log
+                                            });
+                                        });
+
+                                        availableLogs.forEach((log, idx) => {
+                                            renderItems.push({
+                                                id: `extra-${idx}-${log.id}`,
+                                                exId: log.exerciseId,
+                                                plannedSets: 0,
+                                                log,
+                                                isExtra: true
+                                            });
+                                        });
+
+                                        if (renderItems.length === 0) return null;
+
+                                        return (
+                                            <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                                                {renderItems.map((item) => {
+                                                    const log = item.log;
+                                                    const plannedSets = item.plannedSets;
+                                                    const completedSets = log ? log.sets.length : 0;
+                                                    const exId = item.exId;
+
+                                                    const exName = store.exercises.find(e => e.id === exId)?.name || 'Exercício';
+                                                    const skippedSets = Math.max(0, plannedSets - completedSets);
+
+                                                    let setsDisplay = '';
+                                                    if (log && log.sets.length > 0) {
+                                                        const groups: { count: number, weight: number }[] = [];
+                                                        for (const s of log.sets) {
+                                                            if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                                groups[groups.length - 1].count++;
+                                                            } else {
+                                                                groups.push({ count: 1, weight: s.weight });
+                                                            }
+                                                        }
+                                                        setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
                                                     } else {
-                                                        groups.push({ count: 1, weight: s.weight });
+                                                        setsDisplay = '-';
                                                     }
-                                                }
-                                                const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
 
-                                                return (
-                                                    <div key={log.id} className="flex justify-between items-center text-[13px] md:text-sm font-roboto py-1">
-                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                            <span className="text-slate-600 truncate">{exName}</span>
-                                                            {skippedSets > 0 && (
-                                                                <span className="text-[10px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                                    faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
-                                                                </span>
-                                                            )}
+                                                    return (
+                                                        <div key={item.id} className="flex justify-between items-center text-[13px] md:text-sm font-roboto py-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className={`truncate ${!log ? 'text-slate-300 line-through' : 'text-slate-600'}`}>{exName}</span>
+                                                                {log && skippedSets > 0 && (
+                                                                    <span className="text-[10px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                        faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
+                                                                    </span>
+                                                                )}
+                                                                {!log && (
+                                                                    <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                        não feito
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-primary font-bold pl-3 text-right shrink-0">
+                                                                {setsDisplay}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-primary font-bold pl-3 text-right shrink-0">
-                                                            {setsDisplay}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             );
                         })}

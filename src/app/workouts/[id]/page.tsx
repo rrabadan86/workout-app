@@ -245,29 +245,29 @@ export default function WorkoutDetailPage() {
 
                         return (
                             <div key={slotKey} className="bg-white rounded-2xl card-depth overflow-hidden animate-fade transition-all">
-                                <div className="p-6 md:p-8 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors" onClick={() => setExpanded(isOpen ? null : slotKey)}>
-                                    <div className="flex items-center gap-5">
-                                        <div className="size-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                            <Dumbbell size={24} />
+                                <div className="p-4 md:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors" onClick={() => setExpanded(isOpen ? null : slotKey)}>
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                            <Dumbbell size={20} />
                                         </div>
-                                        <div className="flex flex-col gap-1">
-                                            <h3 className="text-base sm:text-lg font-extrabold text-slate-900 leading-tight">{exName}</h3>
-                                            <p className="text-xs font-bold text-slate-500">
+                                        <div className="flex flex-col">
+                                            <h3 className="text-base font-extrabold text-slate-900 leading-tight">{exName}</h3>
+                                            <p className="text-[11px] font-bold text-slate-500 mt-1">
                                                 {sets.length} séries · {repsSummary} reps
                                                 {lastLog && <span className="ml-2 text-primary">· Último: {Math.max(...lastLog.sets.map(s => s.weight))} kg</span>}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="hidden sm:block">
-                                        {isOpen ? <ChevronUp className="text-slate-400" size={24} /> : <ChevronDown className="text-slate-400" size={24} />}
+                                        {isOpen ? <ChevronUp className="text-slate-400" size={20} /> : <ChevronDown className="text-slate-400" size={20} />}
                                     </div>
-                                    <div className="sm:hidden flex justify-center w-full">
-                                        {isOpen ? <ChevronUp className="text-slate-400" size={24} /> : <ChevronDown className="text-slate-400" size={24} />}
+                                    <div className="sm:hidden flex justify-center w-full mt-1">
+                                        {isOpen ? <ChevronUp className="text-slate-400" size={20} /> : <ChevronDown className="text-slate-400" size={20} />}
                                     </div>
                                 </div>
 
                                 {isOpen && (
-                                    <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-8">
+                                    <div className="p-4 md:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-6">
                                         {/* Friend comparison */}
                                         {lastFriendLog && (
                                             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
@@ -285,9 +285,9 @@ export default function WorkoutDetailPage() {
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                                             {/* Weight inputs */}
                                             {hasAccess && (
-                                                <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
-                                                    <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6">Registrar Hoje</p>
-                                                    <div className="flex flex-col gap-4 flex-1">
+                                                <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
+                                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Registrar Hoje</p>
+                                                    <div className="flex flex-col gap-3 flex-1">
                                                         {sets.map((setDef, sIdx) => (
                                                             <div key={sIdx} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                                                                 <div className="flex items-center gap-4">
@@ -320,36 +320,12 @@ export default function WorkoutDetailPage() {
                                                 </div>
                                             )}
 
-                                            <div className="flex flex-col gap-8 h-full">
-                                                {/* Chart */}
-                                                {chartData.length > 0 && (
-                                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex-1">
-                                                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                                            <TrendingUp size={16} className="text-primary" /> Evolução (kg)
-                                                        </p>
-                                                        <div className="h-48 w-full">
-                                                            <ResponsiveContainer width="100%" height="100%">
-                                                                <LineChart data={chartData}>
-                                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                                                    <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={10} />
-                                                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dx={-10} />
-                                                                    <Tooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#f8fafc', fontWeight: 700, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} itemStyle={{ fontWeight: 700 }} />
-                                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12, fontWeight: 700, paddingTop: 10 }} />
-                                                                    <Line type="monotone" dataKey="Você" stroke="#00AAFF" strokeWidth={3} dot={{ fill: '#00AAFF', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
-                                                                    {comparisonFriendId && friendName && (
-                                                                        <Line type="monotone" dataKey={friendName} stroke="#ff4757" strokeWidth={3} dot={{ fill: '#ff4757', r: 4, strokeWidth: 0 }} strokeDasharray="5 5" />
-                                                                    )}
-                                                                </LineChart>
-                                                            </ResponsiveContainer>
-                                                        </div>
-                                                    </div>
-                                                )}
-
+                                            <div className="flex flex-col gap-5 h-full">
                                                 {/* History */}
                                                 {myLogs.length > 0 && (
-                                                    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex-1">
-                                                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4">Histórico Recente</p>
-                                                        <div className="flex flex-col gap-3">
+                                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                                                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Histórico Recente</p>
+                                                        <div className="flex flex-col gap-2">
                                                             {myLogs.slice().reverse().slice(0, 5).map((log) => (
                                                                 <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 transition-colors hover:border-slate-200">
                                                                     <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
@@ -385,6 +361,30 @@ export default function WorkoutDetailPage() {
                                                                     </div>
                                                                 </div>
                                                             ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Chart */}
+                                                {chartData.length > 0 && (
+                                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                                                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                            <TrendingUp size={14} className="text-primary" /> Evolução (kg)
+                                                        </p>
+                                                        <div className="h-48 w-full">
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <LineChart data={chartData}>
+                                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                                                                    <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={10} />
+                                                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dx={-10} />
+                                                                    <Tooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#f8fafc', fontWeight: 700, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} itemStyle={{ fontWeight: 700 }} />
+                                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12, fontWeight: 700, paddingTop: 10 }} />
+                                                                    <Line type="monotone" dataKey="Você" stroke="#00AAFF" strokeWidth={3} dot={{ fill: '#00AAFF', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
+                                                                    {comparisonFriendId && friendName && (
+                                                                        <Line type="monotone" dataKey={friendName} stroke="#ff4757" strokeWidth={3} dot={{ fill: '#ff4757', r: 4, strokeWidth: 0 }} strokeDasharray="5 5" />
+                                                                    )}
+                                                                </LineChart>
+                                                            </ResponsiveContainer>
                                                         </div>
                                                     </div>
                                                 )}

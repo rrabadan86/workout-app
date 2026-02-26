@@ -18,7 +18,11 @@ export default function DashboardPage() {
     }, [ready, userId, router]);
 
     const user = store.profiles.find((u) => u.id === userId);
-    const myProjects = store.projects.filter((p) => p.ownerId === userId || p.sharedWith.includes(userId || ''));
+    const myProjects = store.projects.filter((p) =>
+        p.ownerId === userId ||
+        p.sharedWith.includes(userId || '') ||
+        p.prescribed_to === userId
+    );
 
     // "Friends" = people who share projects with me + my linked personal/students
     const myFriendsIds = useMemo(() => {
@@ -53,7 +57,9 @@ export default function DashboardPage() {
         return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
     }, [store.feedEvents, store.profiles, user, userId, myFriendsIds]);
 
-    const activeProject = myProjects.sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+    const activeProject = myProjects
+        .filter(p => !p.prescribed_to || p.prescribed_to === userId) // Only projects for me
+        .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 
     // Other users to follow
     const peopleToFollow = useMemo(() => {
@@ -131,7 +137,11 @@ export default function DashboardPage() {
                                         <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push('/community')}>
                                             <div className="size-12 rounded-full story-ring shrink-0">
                                                 <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white text-primary flex items-center justify-center font-extrabold text-lg">
-                                                    {u.name.charAt(0).toUpperCase()}
+                                                    {u.photo_url ? (
+                                                        <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        u.name.charAt(0).toUpperCase()
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="flex flex-col flex-1">
@@ -217,8 +227,12 @@ export default function DashboardPage() {
                                 {peopleToFollow.map(u => (
                                     <div key={u.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center font-extrabold text-primary shrink-0">
-                                                {u.name.charAt(0).toUpperCase()}
+                                            <div className={`size-12 rounded-full ${u.photo_url ? 'bg-transparent' : 'bg-slate-100'} overflow-hidden flex items-center justify-center font-extrabold text-primary shrink-0`}>
+                                                {u.photo_url ? (
+                                                    <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    u.name.charAt(0).toUpperCase()
+                                                )}
                                             </div>
                                             <div>
                                                 <p className="font-bold font-inter text-sm text-slate-900">{u.name}</p>

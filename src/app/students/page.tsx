@@ -234,8 +234,12 @@ export default function StudentsPage() {
                                             <div key={s.profile.id} className="bg-white rounded-xl card-depth p-5 border border-slate-100 flex flex-col gap-4 hover:shadow-lg transition-shadow">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex items-center gap-3 w-full overflow-hidden">
-                                                        <div className={`size-12 rounded-full flex items-center justify-center font-extrabold text-white shrink-0 ${isActiveStatus ? 'bg-primary' : 'bg-slate-300'}`}>
-                                                            {s.profile.name.charAt(0).toUpperCase()}
+                                                        <div className={`size-12 rounded-full overflow-hidden flex items-center justify-center font-extrabold text-white shrink-0 ${!s.profile.photo_url && (isActiveStatus ? 'bg-primary' : 'bg-slate-300')}`}>
+                                                            {s.profile.photo_url ? (
+                                                                <img src={s.profile.photo_url} alt={s.profile.name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                s.profile.name.charAt(0).toUpperCase()
+                                                            )}
                                                         </div>
                                                         <div className="overflow-hidden">
                                                             <h3 className="font-extrabold font-inter text-slate-900 text-base truncate" title={s.profile.name}>
