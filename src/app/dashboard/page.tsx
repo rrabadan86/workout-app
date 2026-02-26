@@ -263,14 +263,14 @@ export default function DashboardPage() {
                                 <span className="flex-1 text-left font-inter">Meus Treinos</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
                                 <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Treinos Compartilhados</span>
+                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/community')}>
                                 <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
+                                <span className="flex-1 text-left font-inter leading-tight">Comunidade</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
                         </div>
