@@ -395,7 +395,7 @@ export default function WorkoutDetailPage() {
                                 onClick={startWorkout}
                                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white rounded-full font-extrabold text-lg tracking-wide hover:bg-emerald-600 transition-colors shadow-md shadow-emerald-500/20"
                             >
-                                <Play size={20} fill="currentColor" /> Iniciar Sessão de Treino
+                                <Timer size={20} className="stroke-[2.5]" /> 00:00 • Iniciar Treino
                             </button>
                         ) : !timerRunning ? (
                             <>
