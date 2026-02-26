@@ -29,6 +29,7 @@ export default function WorkoutDetailPage() {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [showSummary, setShowSummary] = useState(false);
     const [confirmingFinish, setConfirmingFinish] = useState(false);
+    const [isFinished, setIsFinished] = useState(false);
     const [finalDuration, setFinalDuration] = useState(0);
     const startedAtRef = useRef<number | null>(null);
 
@@ -56,12 +57,23 @@ export default function WorkoutDetailPage() {
     }
 
     async function finishWorkout() {
+        const finalSecs = elapsedSeconds;
         setTimerRunning(false);
-        setFinalDuration(elapsedSeconds);
+        setFinalDuration(finalSecs);
         setShowSummary(true);
-        localStorage.removeItem(`fitsync_active_${id}`);
+        setIsFinished(true); // Impede que o useEffect ressalve o localStorage
+
+        // Zera UI
         setElapsedSeconds(0);
         startedAtRef.current = null;
+        setWeights((prev) => {
+            const next = { ...prev };
+            Object.keys(next).forEach(k => next[k] = Array(next[k].length).fill(''));
+            return next;
+        });
+
+        localStorage.removeItem(`fitsync_active_${id}`);
+
         if (workout) {
             await addFeedEvent({
                 id: uid(),
@@ -69,7 +81,7 @@ export default function WorkoutDetailPage() {
                 eventType: 'WO_COMPLETED',
                 referenceId: workout.id,
                 createdAt: new Date().toISOString(),
-                duration: elapsedSeconds > 0 ? elapsedSeconds : undefined
+                duration: finalSecs > 0 ? finalSecs : undefined
             });
         }
     }
@@ -117,13 +129,13 @@ export default function WorkoutDetailPage() {
     }, [id, workout?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        if (!workout || !loadedStorage) return;
+        if (!workout || !loadedStorage || isFinished) return;
         localStorage.setItem(`fitsync_active_${id}`, JSON.stringify({
             timerRunning,
             startedAt: startedAtRef.current,
             weights
         }));
-    }, [id, workout?.id, timerRunning, weights, loadedStorage]);
+    }, [id, workout?.id, timerRunning, weights, loadedStorage, isFinished]);
 
     if (!ready || !userId) return null;
 
