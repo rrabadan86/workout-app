@@ -399,7 +399,10 @@ export default function WorkoutDetailPage() {
                                     <Timer size={20} className="stroke-[2.5]" /> 00:00
                                 </button>
                                 <button
-                                    onClick={() => setConfirmingFinish(true)}
+                                    onClick={() => {
+                                        setTimerRunning(false);
+                                        setConfirmingFinish(true);
+                                    }}
                                     className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-rose-500 text-white rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-rose-600 transition-colors shadow-md shadow-rose-500/20 flex-1"
                                 >
                                     <Square size={16} fill="currentColor" className="mt-0.5" /> Finalizar
@@ -411,7 +414,10 @@ export default function WorkoutDetailPage() {
                                     <Timer size={24} className="stroke-[2.5]" /> {fmtTime(elapsedSeconds)}
                                 </div>
                                 <button
-                                    onClick={() => setConfirmingFinish(true)}
+                                    onClick={() => {
+                                        setTimerRunning(false);
+                                        setConfirmingFinish(true);
+                                    }}
                                     className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-rose-500 text-white rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-rose-600 transition-colors shadow-md shadow-rose-500/20 flex-1"
                                 >
                                     <Square size={16} fill="currentColor" className="mt-0.5" /> Finalizar
@@ -427,7 +433,12 @@ export default function WorkoutDetailPage() {
                 <Modal title="Finalizar Sessão de Treino" onClose={() => setConfirmingFinish(false)}
                     footer={
                         <>
-                            <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full sm:w-auto" onClick={() => setConfirmingFinish(false)}>
+                            <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full sm:w-auto" onClick={() => {
+                                setConfirmingFinish(false);
+                                if (startedAtRef.current && elapsedSeconds > 0) {
+                                    setTimerRunning(true); // Retoma o cronômetro caso estivesse rodando
+                                }
+                            }}>
                                 Continuar Treinando
                             </button>
                             <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors w-full sm:w-auto shadow-md" onClick={() => {
