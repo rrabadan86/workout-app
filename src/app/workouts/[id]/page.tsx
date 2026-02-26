@@ -60,6 +60,8 @@ export default function WorkoutDetailPage() {
         setFinalDuration(elapsedSeconds);
         setShowSummary(true);
         localStorage.removeItem(`fitsync_active_${id}`);
+        setElapsedSeconds(0);
+        startedAtRef.current = null;
         if (workout) {
             await addFeedEvent({
                 id: uid(),
