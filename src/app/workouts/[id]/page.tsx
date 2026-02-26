@@ -214,31 +214,7 @@ export default function WorkoutDetailPage() {
                             <p className="page-subtitle" style={{ marginTop: 0 }}>{workout.exercises.length} EXERCÍCIO(S)</p>
                         </div>
 
-                        {/* Timer Box */}
-                        {hasAccess && (
-                            <div className="flex items-center gap-3">
-                                {timerRunning && (
-                                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-5 py-3 rounded-2xl text-emerald-600 font-extrabold text-xl tabular-nums tracking-wider shadow-sm">
-                                        <Timer size={24} />
-                                        {fmtTime(elapsedSeconds)}
-                                    </div>
-                                )}
-                                {!timerRunning ? (
-                                    <div className="flex items-center gap-3">
-                                        <button className="btn btn-primary" onClick={startWorkout} style={{ padding: '12px 24px', fontSize: '1rem' }}>
-                                            <Play size={18} fill="currentColor" /> Iniciar Cronômetro
-                                        </button>
-                                        <button onClick={() => setConfirmingFinish(true)} className="btn btn-ghost" title="Finalizar e compartilhar sem cronômetro" style={{ border: '1px solid var(--glass-border)', padding: '12px 24px', fontSize: '1rem' }}>
-                                            <Square size={16} fill="currentColor" /> Finalizar
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button onClick={() => setConfirmingFinish(true)} className="flex items-center gap-2 bg-rose-500 text-white font-bold hover:bg-rose-600 transition-colors shadow-md rounded-xl" style={{ padding: '12px 24px', fontSize: '1rem' }}>
-                                        <Square size={18} fill="currentColor" /> Finalizar
-                                    </button>
-                                )}
-                            </div>
-                        )}
+                        {/* Os botões do Timer saíram do Header e foram pro Footer Flutuante */}
                     </div>
                 </div>
 
@@ -409,6 +385,42 @@ export default function WorkoutDetailPage() {
             </div>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+
+            {/* Sticky Floating Action Bar */}
+            {hasAccess && (
+                <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40">
+                    <div className="max-w-[600px] mx-auto flex items-center justify-center gap-3 md:gap-4">
+                        {!timerRunning ? (
+                            <>
+                                <button
+                                    onClick={startWorkout}
+                                    className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-emerald-100 transition-colors flex-1"
+                                >
+                                    <Timer size={20} className="stroke-[2.5]" /> 00:00
+                                </button>
+                                <button
+                                    onClick={() => setConfirmingFinish(true)}
+                                    className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-rose-500 text-white rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-rose-600 transition-colors shadow-md shadow-rose-500/20 flex-1"
+                                >
+                                    <Square size={16} fill="currentColor" className="mt-0.5" /> Finalizar
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full font-extrabold text-xl md:text-2xl tracking-wide flex-1 tabular-nums transition-all">
+                                    <Timer size={24} className="stroke-[2.5]" /> {fmtTime(elapsedSeconds)}
+                                </div>
+                                <button
+                                    onClick={() => setConfirmingFinish(true)}
+                                    className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-rose-500 text-white rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-rose-600 transition-colors shadow-md shadow-rose-500/20 flex-1"
+                                >
+                                    <Square size={16} fill="currentColor" className="mt-0.5" /> Finalizar
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Confirm Finish Modal */}
             {confirmingFinish && (
