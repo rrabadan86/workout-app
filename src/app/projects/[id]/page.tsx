@@ -214,7 +214,6 @@ export default function ProjectDetailPage() {
         <>
             <Navbar />
             <main className="flex-1 w-full max-w-[1000px] mx-auto px-6 lg:px-12 py-8">
-                {/* Header */}
                 <div className="mb-4">
                     <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/projects')}>
                         ← Treinos
@@ -251,58 +250,62 @@ export default function ProjectDetailPage() {
                             const completedCount = getCompletedCount(w.id);
                             const completionPct = getCompletionPercentage(w.id);
                             return (
-                                <div key={w.id} className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 bg-white card-depth p-3 md:p-4 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all">
-                                    {isOwner && (
-                                        <div className="flex flex-row sm:flex-col gap-1 shrink-0 sm:mr-2">
-                                            <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-                                                onClick={() => moveWorkout(idx, -1)} disabled={idx === 0} title="Mover para cima">
-                                                <ArrowUp size={14} />
-                                            </button>
-                                            <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-                                                onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1} title="Mover para baixo">
-                                                <ArrowDown size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    <div className="size-10 rounded-xl flex items-center justify-center bg-emerald-500 text-white shrink-0">
-                                        <Dumbbell size={18} />
-                                    </div>
+                                <div key={w.id} className="bg-white card-depth p-3 md:p-4 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all">
 
-                                    {/* Conteúdo: 3 linhas no mobile */}
-                                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/workouts/${w.id}`)}>
-                                        {/* Linha 1: nome completo */}
-                                        <p className="item-card-title text-base font-extrabold font-inter text-slate-900">
-                                            {w.name}
-                                        </p>
-                                        {/* Linha 2: exercícios + ícones de ação */}
-                                        <div className="flex items-center justify-between mt-0.5">
-                                            <span className="item-card-sub text-slate-500 text-[11px]">{exCount} exercício(s)</span>
-                                            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                                                {isOwner && (
-                                                    <>
-                                                        <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" onClick={() => openEdit(w)}><Pencil size={14} /></button>
-                                                        <button className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" onClick={() => setDeleteTarget(w)}><Trash2 size={14} /></button>
-                                                    </>
-                                                )}
-                                                <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors" onClick={() => router.push(`/workouts/${w.id}`)}>
-                                                    <ChevronRight size={15} />
+                                    {/* Linha 1: setas + ícone + nome */}
+                                    <div className="flex items-center gap-2">
+                                        {isOwner && (
+                                            <div className="flex flex-col gap-0.5 shrink-0">
+                                                <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20"
+                                                    onClick={() => moveWorkout(idx, -1)} disabled={idx === 0}>
+                                                    <ArrowUp size={14} />
+                                                </button>
+                                                <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20"
+                                                    onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1}>
+                                                    <ArrowDown size={14} />
                                                 </button>
                                             </div>
-                                        </div>
-                                        {/* Linha 3: badges */}
-                                        {completedCount > 0 && (
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
-                                                    Realizado {completedCount}x
-                                                </span>
-                                                {completionPct && (
-                                                    <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
-                                                        {completionPct} executado
-                                                    </span>
-                                                )}
-                                            </div>
                                         )}
+                                        <div className="size-10 rounded-xl flex items-center justify-center bg-emerald-500 text-white shrink-0">
+                                            <Dumbbell size={18} />
+                                        </div>
+                                        <p
+                                            className="flex-1 item-card-title text-base font-extrabold font-inter text-slate-900 cursor-pointer"
+                                            onClick={() => router.push(`/workouts/${w.id}`)}
+                                        >
+                                            {w.name}
+                                        </p>
                                     </div>
+
+                                    {/* Linha 2: exercícios + ícones de ação */}
+                                    <div className="flex items-center justify-between mt-1.5 pl-[3.25rem]">
+                                        <span className="text-slate-500 text-[11px] font-roboto">{exCount} exercício(s)</span>
+                                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                            {isOwner && (
+                                                <>
+                                                    <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" onClick={() => openEdit(w)}><Pencil size={14} /></button>
+                                                    <button className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" onClick={() => setDeleteTarget(w)}><Trash2 size={14} /></button>
+                                                </>
+                                            )}
+                                            <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors" onClick={() => router.push(`/workouts/${w.id}`)}>
+                                                <ChevronRight size={15} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Linha 3: badges */}
+                                    {completedCount > 0 && (
+                                        <div className="flex items-center gap-2 mt-1.5 pl-[3.25rem]">
+                                            <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
+                                                Realizado {completedCount}x
+                                            </span>
+                                            {completionPct && (
+                                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
+                                                    {completionPct} executado
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -348,11 +351,11 @@ export default function ProjectDetailPage() {
                                         <div className="flex items-center gap-3">
                                             <div className="flex flex-col gap-1">
                                                 <button type="button" onClick={() => moveEx(exIdx, -1)} disabled={exIdx === 0}
-                                                    className="p-0.5 rounded-sm hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400">
+                                                    className="p-0.5 rounded-sm hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-30">
                                                     <ArrowUp size={14} />
                                                 </button>
                                                 <button type="button" onClick={() => moveEx(exIdx, 1)} disabled={exIdx === wExList.length - 1}
-                                                    className="p-0.5 rounded-sm hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400">
+                                                    className="p-0.5 rounded-sm hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-30">
                                                     <ArrowDown size={14} />
                                                 </button>
                                             </div>
