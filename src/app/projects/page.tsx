@@ -325,7 +325,7 @@ export default function ProjectsPage() {
 
             await addProject({
                 id: newProjectId,
-                name: `✨ ${data.projectName || `Sessão IA (${aiFocus})`}`,
+                name: `✨ ${data.projectName || `Treino IA (${aiFocus})`}`,
                 ownerId: userId,
                 startDate: aiStart || new Date().toISOString().slice(0, 10),
                 endDate: aiEnd || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
@@ -346,13 +346,13 @@ export default function ProjectsPage() {
                 });
             }
 
-            setToast({ msg: `${studentMsg}Sessão Gerada! 🚀`, type: 'success' });
+            setToast({ msg: `${studentMsg}Treino Gerado! 🚀`, type: 'success' });
             setShowAIModal(false);
             setAiFocus('');
             setAiLimitations('');
             setAiPrescribeEmail('');
         } catch (err: unknown) {
-            setToast({ msg: (err as Error).message || 'Falha ao gerar a sessão.', type: 'error' });
+            setToast({ msg: (err as Error).message || 'Falha ao gerar treino.', type: 'error' });
         } finally {
             setAiGenerating(false);
         }
@@ -370,8 +370,8 @@ export default function ProjectsPage() {
                                 ← Voltar ao Dashboard
                             </button>
                         </div>
-                        <h1 className="page-title">Sessões</h1>
-                        <p className="page-subtitle">{myProjects.length} sessão(ões)</p>
+                        <h1 className="page-title">Treinos</h1>
+                        <p className="page-subtitle">{myProjects.length} treino(s)</p>
                     </div>
 
                     {/* Filters */}
@@ -421,9 +421,9 @@ export default function ProjectsPage() {
                 {myProjects.length === 0 ? (
                     <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
                         <FolderOpen size={48} className="text-slate-300 mb-4" />
-                        <p className="text-slate-500 font-bold font-roboto">Nenhuma sessão ainda. Crie sua primeira sessão!</p>
+                        <p className="text-slate-500 font-bold font-roboto">Nenhum treino criado. Crie agora!</p>
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={openCreate}>
-                            Criar sessão
+                            Criar treino
                         </button>
                     </div>
                 ) : (
@@ -468,7 +468,7 @@ export default function ProjectsPage() {
                                             )}
                                         </div>
                                         <div className="item-card-sub text-slate-500 mt-2 text-xs">
-                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} <span className="mx-2">•</span> 🏋️ {workoutCount} sessão(ões)
+                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} <span className="mx-2">•</span> 🏋️ {workoutCount} treino(s)
                                         </div>
                                         {p.prescribed_by && p.prescribed_to === userId && (
                                             <div style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: 4, fontWeight: 'bold' }}>
@@ -518,20 +518,20 @@ export default function ProjectsPage() {
 
             {/* Create / Edit Modal */}
             {showModal && (
-                <Modal title={editTarget ? 'Editar Sessão' : 'Nova Sessão'} onClose={() => setShowModal(false)}
+                <Modal title={editTarget ? 'Editar Treino' : 'Novo treino'} onClose={() => setShowModal(false)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</button>
                             <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" form="project-form" type="submit" disabled={saving}>
-                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Sessão')}
+                                {saving ? 'Salvando...' : (editTarget ? 'Salvar' : 'Criar Treino')}
                             </button>
                         </div>
                     }
                 >
                     <form id="project-form" onSubmit={handleSave} className="flex flex-col gap-5 mt-6">
                         <div className="field">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome da sessão *</label>
-                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Sessão de Hipertrofia" value={pName} onChange={(e) => setPName(e.target.value)} required />
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nome do Treino *</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Treino de Hipertrofia" value={pName} onChange={(e) => setPName(e.target.value)} required />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="field">
@@ -630,7 +630,7 @@ export default function ProjectsPage() {
 
             {/* AI Generation Modal */}
             {showAIModal && (
-                <Modal title="✨ Nova Sessão por IA" onClose={() => { setShowAIModal(false); setAiPrescribeEmail(''); }}
+                <Modal title="✨ Novo treino por IA" onClose={() => { setShowAIModal(false); setAiPrescribeEmail(''); }}
                     footer={
                         <div className="flex justify-end gap-3 mt-8 items-center">
                             {aiGenerating && (
@@ -668,7 +668,7 @@ export default function ProjectsPage() {
                                 </select>
                             </div>
                             <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Tempo por sessão (aprox.) *</label>
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Duração do treino (aprox.) *</label>
                                 <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiTime} onChange={(e) => setAiTime(e.target.value)} required>
                                     <option value="30">30 minutos</option>
                                     <option value="45">45 minutos</option>
@@ -769,7 +769,7 @@ export default function ProjectsPage() {
                     }
                 >
                     <p style={{ color: 'var(--text-secondary)' }}>
-                        Excluir <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong>? Todas as sessões e registros deste treino serão apagados.
+                        Excluir <strong style={{ color: 'var(--text-primary)' }}>{deleteTarget.name}</strong>? Todos os registros deste treino serão apagados.
                     </p>
                 </Modal>
             )}

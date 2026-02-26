@@ -124,7 +124,7 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Amigos Mais Ativos</h2>
-                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Últimas sessões concluídas</p>
+                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Quantida de treinos realizados nos últimos 15 dias</p>
                                 </div>
                                 <a className="text-primary font-bold font-montserrat text-sm hover:underline cursor-pointer" onClick={() => router.push('/community')}>Ver Comunidade</a>
                             </div>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="flex flex-col flex-1">
                                                 <span className="text-sm font-bold font-inter text-slate-900 leading-tight" title={u.name}>{displayName}</span>
-                                                <span className="text-[10px] font-bold font-roboto text-primary truncate mt-0.5">{u.workoutsCount} sessões</span>
+                                                <span className="text-[10px] font-bold font-roboto text-primary truncate mt-0.5">{u.workoutsCount} treinos</span>
                                             </div>
                                         </div>
                                     );
@@ -209,7 +209,7 @@ export default function DashboardPage() {
                             </div>
                         ) : (
                             <div className="relative z-10 text-center py-4 text-slate-400 text-sm">
-                                Crie um treino para agrupar suas sessões e acompanhar sua evolução.
+                                Crie um treino para agrupar seus exercícios e acompanhar sua evolução.
                             </div>
                         )}
 
@@ -270,7 +270,7 @@ export default function DashboardPage() {
                             </button>
                             <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
                                 <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Sessões</span>
+                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
                         </div>
@@ -281,7 +281,7 @@ export default function DashboardPage() {
             {/* Floating Action Button for Start Workout */}
             <div className="fixed bottom-8 right-8 z-50">
                 <button className="flex items-center justify-center gap-2 bg-primary text-white px-8 py-5 rounded-full font-extrabold font-montserrat shadow-2xl shadow-primary/30 hover:scale-105 transition-transform text-sm tracking-wide" onClick={() => router.push('/projects')}>
-                    INICIAR SESSÃO
+                    INICIAR TREINO
                 </button>
             </div>
         </>
