@@ -297,19 +297,19 @@ export default function ProjectDetailPage() {
                                         <div className="item-card-title text-base flex w-full items-center gap-2">
                                             {w.name}
                                         </div>
-                                        <div className="flex items-center gap-3 mt-1">
-                                            <div className="item-card-sub text-slate-500 text-[11px]">{exCount} exercício(s)</div>
+                                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                                            <div className="item-card-sub text-slate-500 text-[11px] mr-1">{exCount} exercício(s)</div>
                                             {getCompletedCount(w.id) > 0 && (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200">
+                                                <>
+                                                    <div className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
                                                         Realizado {getCompletedCount(w.id)}x
                                                     </div>
                                                     {getCompletionPercentage(w.id) && (
-                                                        <div className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200">
+                                                        <div className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
                                                             {getCompletionPercentage(w.id)} executado
                                                         </div>
                                                     )}
-                                                </div>
+                                                </>
                                             )}
                                         </div>
                                     </div>
