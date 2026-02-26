@@ -390,19 +390,23 @@ export default function WorkoutDetailPage() {
             {hasAccess && (
                 <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40">
                     <div className="max-w-[600px] mx-auto flex items-center justify-center gap-3 md:gap-4">
-                        {!timerRunning ? (
+                        {!timerRunning && elapsedSeconds === 0 ? (
+                            <button
+                                onClick={startWorkout}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white rounded-full font-extrabold text-lg tracking-wide hover:bg-emerald-600 transition-colors shadow-md shadow-emerald-500/20"
+                            >
+                                <Play size={20} fill="currentColor" /> Iniciar Sessão de Treino
+                            </button>
+                        ) : !timerRunning ? (
                             <>
                                 <button
-                                    onClick={startWorkout}
+                                    onClick={() => setTimerRunning(true)}
                                     className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-emerald-100 transition-colors flex-1"
                                 >
-                                    <Timer size={20} className="stroke-[2.5]" /> 00:00
+                                    <Play size={20} fill="currentColor" /> Retomar
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setTimerRunning(false);
-                                        setConfirmingFinish(true);
-                                    }}
+                                    onClick={() => setConfirmingFinish(true)}
                                     className="flex items-center justify-center gap-2 px-6 md:px-8 py-3.5 bg-rose-500 text-white rounded-full font-extrabold text-base md:text-lg tracking-wide hover:bg-rose-600 transition-colors shadow-md shadow-rose-500/20 flex-1"
                                 >
                                     <Square size={16} fill="currentColor" className="mt-0.5" /> Finalizar
