@@ -471,9 +471,9 @@ export default function WorkoutDetailPage() {
                                                 <div key={log.id} className="p-3 flex items-center justify-between text-xs md:text-sm">
                                                     <span className="font-bold text-slate-700 flex items-center gap-2">
                                                         <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md font-extrabold">{log.sets.length}x</span>
-                                                        <span className="truncate max-w-[150px] md:max-w-xs">{exName}</span>
+                                                        <span className="truncate max-w-[130px] md:max-w-[200px]">{exName}</span>
                                                     </span>
-                                                    <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md text-right max-w-[140px] truncate" title={weightsStr}>
+                                                    <span className="text-[10px] md:text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-md text-right max-w-[180px] md:max-w-[250px] truncate" title={weightsStr}>
                                                         {weightsStr}
                                                     </span>
                                                 </div>
