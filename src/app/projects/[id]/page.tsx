@@ -36,14 +36,10 @@ export default function ProjectDetailPage() {
         .filter((w) => w.projectId === id)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-    // Local ordering state (array of workout ids in display order)
     const [orderedIds, setOrderedIds] = useState<string[]>([]);
-    // Sync orderedIds when workouts change
     const wIdsStr = workouts.map((w) => w.id).join(',');
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setOrderedIds(wIdsStr ? wIdsStr.split(',') : []);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [wIdsStr]);
     const orderedWorkouts = orderedIds
         .map((wid) => workouts.find((w) => w.id === wid))
@@ -55,7 +51,6 @@ export default function ProjectDetailPage() {
         if (swapIdx < 0 || swapIdx >= newIds.length) return;
         [newIds[idx], newIds[swapIdx]] = [newIds[swapIdx], newIds[idx]];
         setOrderedIds(newIds);
-        // Persist order to DB
         await Promise.all(newIds.map((wid, i) => {
             const w = workouts.find((x) => x.id === wid);
             if (!w) return Promise.resolve();
@@ -63,70 +58,51 @@ export default function ProjectDetailPage() {
         }));
     }
 
-    // Helper to count completed sessions
     const getCompletedCount = useCallback((workoutId: string) => {
         if (!project || !userId) return 0;
-
         let targetUserId = userId;
-        // If I am a personal and I prescribed this project, track the student's progress
         if (project.prescribed_by === userId && project.prescribed_to) {
             targetUserId = project.prescribed_to;
         }
-
         const projectStart = new Date(project.startDate).getTime();
         const projectEnd = new Date(project.endDate).getTime();
-        // Add one day to end date to ensure the whole last day is included
         const endDayBoundary = projectEnd + (24 * 60 * 60 * 1000);
-
         return store.feedEvents.filter(e => {
             if (e.userId !== targetUserId) return false;
             if (e.eventType !== 'WO_COMPLETED') return false;
             if (e.referenceId !== workoutId) return false;
-
             const eventTime = new Date(e.createdAt).getTime();
             return eventTime >= projectStart && eventTime <= endDayBoundary;
         }).length;
     }, [project, userId, store.feedEvents]);
 
-    // Helper to compute overall completion percentage for a given session
     const getCompletionPercentage = useCallback((workoutId: string) => {
         if (!project || !userId) return null;
-
         let targetUserId = userId;
         if (project.prescribed_by === userId && project.prescribed_to) {
             targetUserId = project.prescribed_to;
         }
-
         const projectStart = new Date(project.startDate).getTime();
         const projectEnd = new Date(project.endDate).getTime();
         const endDayBoundary = projectEnd + (24 * 60 * 60 * 1000);
-
         const completions = store.feedEvents.filter(e => {
             if (e.userId !== targetUserId) return false;
             if (e.eventType !== 'WO_COMPLETED') return false;
             if (e.referenceId !== workoutId) return false;
-
             const eventTime = new Date(e.createdAt).getTime();
             return eventTime >= projectStart && eventTime <= endDayBoundary;
         });
-
         if (completions.length === 0) return null;
-
         const w = store.workouts.find(wk => wk.id === workoutId);
         if (!w || w.exercises.length === 0) return null;
-
         const totalPlannedExercises = w.exercises.length * completions.length;
         let totalCompletedExercises = 0;
-
         completions.forEach(event => {
             const eventDateObj = new Date(event.createdAt);
             const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
             const dayLogs = store.logs.filter(l => l.userId === targetUserId && l.workoutId === workoutId && l.date === localDateStr);
-
-            // To prevent double counting repeated exercises incorrectly, we count how many planned exercises have at least 1 set logged
             const availableLogs = [...dayLogs];
             let completedInThisSession = 0;
-
             w.exercises.forEach(planned => {
                 const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
                 if (logIdx !== -1) {
@@ -137,10 +113,8 @@ export default function ProjectDetailPage() {
             });
             totalCompletedExercises += completedInThisSession;
         });
-
         const pct = (totalCompletedExercises / totalPlannedExercises) * 100;
         return pct.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
-
     }, [project, userId, store.feedEvents, store.logs, store.workouts]);
 
     if (!ready || !userId) return null;
@@ -157,7 +131,6 @@ export default function ProjectDetailPage() {
 
     const isOwner = project.ownerId === userId;
 
-    // ─── Set management ───────────────────────────────────────────────────────
     function addExToList() {
         if (!selEx) return;
         setWExList((prev) => [...prev, { exerciseId: selEx, sets: [{ reps: 10, label: '', notes: '' }] }]);
@@ -203,7 +176,6 @@ export default function ProjectDetailPage() {
         }));
     }
 
-    // ─── Modal open ───────────────────────────────────────────────────────────
     function openCreate() {
         setEditTarget(null); setWName(''); setWExList([]);
         setShowModal(true);
@@ -273,56 +245,91 @@ export default function ProjectDetailPage() {
                         )}
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 40 }}>
+                    <div className="flex flex-col gap-2.5 mb-10">
                         {orderedWorkouts.map((w, idx) => {
                             const exCount = w.exercises.length;
+                            const completedCount = getCompletedCount(w.id);
+                            const completionPct = getCompletionPercentage(w.id);
                             return (
-                                <div key={w.id} className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 bg-white card-depth p-3 md:p-4 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all" style={{ cursor: 'default' }}>
-                                    {isOwner && (
-                                        <div className="flex flex-row sm:flex-col gap-1 shrink-0 sm:mr-2">
-                                            <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-                                                onClick={() => moveWorkout(idx, -1)} disabled={idx === 0} title="Mover para cima">
-                                                <ArrowUp size={14} />
-                                            </button>
-                                            <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-                                                onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1} title="Mover para baixo">
-                                                <ArrowDown size={14} />
-                                            </button>
+                                <div
+                                    key={w.id}
+                                    className="bg-white card-depth rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all"
+                                >
+                                    {/* Linha principal — sempre em row */}
+                                    <div className="flex items-center gap-3 p-3 md:p-4">
+                                        {/* Setas de ordem */}
+                                        {isOwner && (
+                                            <div className="flex flex-col gap-0.5 shrink-0">
+                                                <button
+                                                    className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20"
+                                                    onClick={() => moveWorkout(idx, -1)} disabled={idx === 0}
+                                                >
+                                                    <ArrowUp size={13} />
+                                                </button>
+                                                <button
+                                                    className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20"
+                                                    onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1}
+                                                >
+                                                    <ArrowDown size={13} />
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Ícone */}
+                                        <div className="size-9 rounded-xl flex items-center justify-center bg-emerald-500 text-white shrink-0">
+                                            <Dumbbell size={16} />
                                         </div>
-                                    )}
-                                    <div className="size-10 rounded-xl flex items-center justify-center bg-emerald-500 text-white shrink-0">
-                                        <Dumbbell size={18} />
-                                    </div>
-                                    <div className="flex-1 cursor-pointer" onClick={() => router.push(`/workouts/${w.id}`)}>
-                                        <div className="item-card-title text-base flex w-full items-center gap-2">
-                                            {w.name}
+
+                                        {/* Nome + badges — clicável */}
+                                        <div
+                                            className="flex-1 min-w-0 cursor-pointer"
+                                            onClick={() => router.push(`/workouts/${w.id}`)}
+                                        >
+                                            <p className="item-card-title text-sm font-extrabold font-inter text-slate-900 truncate">
+                                                {w.name}
+                                            </p>
+                                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                                                <span className="text-slate-400 text-[11px] font-roboto">{exCount} exercício(s)</span>
+                                                {completedCount > 0 && (
+                                                    <>
+                                                        <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
+                                                            Realizado {completedCount}x
+                                                        </span>
+                                                        {completionPct && (
+                                                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
+                                                                {completionPct} executado
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                                            <div className="item-card-sub text-slate-500 text-[11px] mr-1">{exCount} exercício(s)</div>
-                                            {getCompletedCount(w.id) > 0 && (
+
+                                        {/* Ações — sempre à direita, sem border-t */}
+                                        <div className="flex items-center gap-0.5 shrink-0">
+                                            {isOwner && (
                                                 <>
-                                                    <div className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
-                                                        Realizado {getCompletedCount(w.id)}x
-                                                    </div>
-                                                    {getCompletionPercentage(w.id) && (
-                                                        <div className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
-                                                            {getCompletionPercentage(w.id)} executado
-                                                        </div>
-                                                    )}
+                                                    <button
+                                                        className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors"
+                                                        onClick={() => openEdit(w)}
+                                                    >
+                                                        <Pencil size={15} />
+                                                    </button>
+                                                    <button
+                                                        className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
+                                                        onClick={() => setDeleteTarget(w)}
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
                                                 </>
                                             )}
+                                            <button
+                                                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors"
+                                                onClick={() => router.push(`/workouts/${w.id}`)}
+                                            >
+                                                <ChevronRight size={16} />
+                                            </button>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                                        {isOwner && (
-                                            <>
-                                                <button className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Editar" onClick={() => openEdit(w)}><Pencil size={16} /></button>
-                                                <button className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" title="Excluir" onClick={() => setDeleteTarget(w)}><Trash2 size={16} /></button>
-                                            </>
-                                        )}
-                                        <button className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors hidden sm:flex" onClick={() => router.push(`/workouts/${w.id}`)}>
-                                            <ChevronRight size={18} />
-                                        </button>
                                     </div>
                                 </div>
                             );
@@ -367,7 +374,6 @@ export default function ProjectDetailPage() {
                                 <div key={exIdx} className="bg-white rounded-xl card-depth p-4 md:p-5 border border-slate-100">
                                     <div className="flex justify-between items-center mb-4">
                                         <div className="flex items-center gap-3">
-                                            {/* Exercise reorder buttons */}
                                             <div className="flex flex-col gap-1">
                                                 <button type="button" onClick={() => moveEx(exIdx, -1)} disabled={exIdx === 0}
                                                     className="p-0.5 rounded-sm hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400">

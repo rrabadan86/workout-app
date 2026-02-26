@@ -124,7 +124,7 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between mb-6">
                                 <div>
                                     <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Amigos Mais Ativos</h2>
-                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Quantida de treinos realizados nos últimos 15 dias</p>
+                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Quantidade de treinos realizados nos últimos 15 dias</p>
                                 </div>
                                 <a className="text-primary font-bold font-montserrat text-sm hover:underline cursor-pointer" onClick={() => router.push('/community')}>Ver Comunidade</a>
                             </div>
@@ -146,7 +146,7 @@ export default function DashboardPage() {
                                             </div>
                                             <div className="flex flex-col flex-1">
                                                 <span className="text-sm font-bold font-inter text-slate-900 leading-tight" title={u.name}>{displayName}</span>
-                                                <span className="text-[10px] font-bold font-roboto text-primary truncate mt-0.5">{u.workoutsCount} treinos</span>
+                                                <span className="text-[10px] font-bold font-roboto text-primary truncate mt-0.5">{u.workoutsCount} check-ins</span>
                                             </div>
                                         </div>
                                     );

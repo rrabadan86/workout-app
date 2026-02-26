@@ -142,14 +142,7 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
                             <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
                         </div>
                         <div className="flex flex-col">
-                            <div className="flex items-center gap-1 flex-wrap">
-                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
-                                {isShared && (
-                                    <span className="text-[8px] sm:text-[10px] bg-emerald-100 text-emerald-600 font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md">
-                                        Compartilhado
-                                    </span>
-                                )}
-                            </div>
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
                             <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formattedPercentage}</span>
                         </div>
                     </div>
@@ -224,12 +217,24 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
                         )}
                     </div>
                     <div>
-                        <h4 className="text-base font-bold font-inter text-slate-900 hover:text-primary transition-colors">{user.id === myId ? 'Você' : user.name}</h4>
-                        <p className="text-slate-400 text-xs font-normal font-roboto">{timeAgo(event.createdAt)} • {eventText}</p>
+                        <h4 className="text-base font-bold font-inter text-slate-900 hover:text-primary transition-colors">
+                            {user.id === myId ? 'Você' : user.name}
+                        </h4>
+                        {/* Subtítulo com tag Compartilhado inline após o texto */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-slate-400 text-xs font-normal font-roboto">
+                                {timeAgo(event.createdAt)} • {eventText}
+                            </p>
+                            {isShared && (
+                                <span className="text-[8px] bg-emerald-100 text-emerald-600 font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md whitespace-nowrap">
+                                    Compartilhado
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
                 {actionOnClick && (
-                    <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto" onClick={actionOnClick}>
+                    <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto shrink-0" onClick={actionOnClick}>
                         Mais detalhes
                     </button>
                 )}
