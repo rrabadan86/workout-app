@@ -251,85 +251,57 @@ export default function ProjectDetailPage() {
                             const completedCount = getCompletedCount(w.id);
                             const completionPct = getCompletionPercentage(w.id);
                             return (
-                                <div
-                                    key={w.id}
-                                    className="bg-white card-depth rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all"
-                                >
-                                    {/* Linha principal — sempre em row */}
-                                    <div className="flex items-center gap-3 p-3 md:p-4">
-                                        {/* Setas de ordem */}
-                                        {isOwner && (
-                                            <div className="flex flex-col gap-0.5 shrink-0">
-                                                <button
-                                                    className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20"
-                                                    onClick={() => moveWorkout(idx, -1)} disabled={idx === 0}
-                                                >
-                                                    <ArrowUp size={13} />
-                                                </button>
-                                                <button
-                                                    className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20"
-                                                    onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1}
-                                                >
-                                                    <ArrowDown size={13} />
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {/* Ícone */}
-                                        <div className="size-9 rounded-xl flex items-center justify-center bg-emerald-500 text-white shrink-0">
-                                            <Dumbbell size={16} />
-                                        </div>
-
-                                        {/* Nome + badges — clicável */}
-                                        <div
-                                            className="flex-1 min-w-0 cursor-pointer"
-                                            onClick={() => router.push(`/workouts/${w.id}`)}
-                                        >
-                                            <p className="item-card-title text-sm font-extrabold font-inter text-slate-900 truncate">
-                                                {w.name}
-                                            </p>
-                                            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                                <span className="text-slate-400 text-[11px] font-roboto">{exCount} exercício(s)</span>
-                                                {completedCount > 0 && (
-                                                    <>
-                                                        <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
-                                                            Realizado {completedCount}x
-                                                        </span>
-                                                        {completionPct && (
-                                                            <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
-                                                                {completionPct} executado
-                                                            </span>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Ações — sempre à direita, sem border-t */}
-                                        <div className="flex items-center gap-0.5 shrink-0">
-                                            {isOwner && (
-                                                <>
-                                                    <button
-                                                        className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors"
-                                                        onClick={() => openEdit(w)}
-                                                    >
-                                                        <Pencil size={15} />
-                                                    </button>
-                                                    <button
-                                                        className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
-                                                        onClick={() => setDeleteTarget(w)}
-                                                    >
-                                                        <Trash2 size={15} />
-                                                    </button>
-                                                </>
-                                            )}
-                                            <button
-                                                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors"
-                                                onClick={() => router.push(`/workouts/${w.id}`)}
-                                            >
-                                                <ChevronRight size={16} />
+                                <div key={w.id} className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4 bg-white card-depth p-3 md:p-4 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all">
+                                    {isOwner && (
+                                        <div className="flex flex-row sm:flex-col gap-1 shrink-0 sm:mr-2">
+                                            <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                                                onClick={() => moveWorkout(idx, -1)} disabled={idx === 0} title="Mover para cima">
+                                                <ArrowUp size={14} />
+                                            </button>
+                                            <button className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                                                onClick={() => moveWorkout(idx, 1)} disabled={idx === orderedWorkouts.length - 1} title="Mover para baixo">
+                                                <ArrowDown size={14} />
                                             </button>
                                         </div>
+                                    )}
+                                    <div className="size-10 rounded-xl flex items-center justify-center bg-emerald-500 text-white shrink-0">
+                                        <Dumbbell size={18} />
+                                    </div>
+
+                                    {/* Conteúdo: 3 linhas no mobile */}
+                                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => router.push(`/workouts/${w.id}`)}>
+                                        {/* Linha 1: nome completo */}
+                                        <p className="item-card-title text-base font-extrabold font-inter text-slate-900">
+                                            {w.name}
+                                        </p>
+                                        {/* Linha 2: exercícios + ícones de ação */}
+                                        <div className="flex items-center justify-between mt-0.5">
+                                            <span className="item-card-sub text-slate-500 text-[11px]">{exCount} exercício(s)</span>
+                                            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                                {isOwner && (
+                                                    <>
+                                                        <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" onClick={() => openEdit(w)}><Pencil size={14} /></button>
+                                                        <button className="p-1.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" onClick={() => setDeleteTarget(w)}><Trash2 size={14} /></button>
+                                                    </>
+                                                )}
+                                                <button className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors" onClick={() => router.push(`/workouts/${w.id}`)}>
+                                                    <ChevronRight size={15} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {/* Linha 3: badges */}
+                                        {completedCount > 0 && (
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto uppercase tracking-wider border border-emerald-200 whitespace-nowrap">
+                                                    Realizado {completedCount}x
+                                                </span>
+                                                {completionPct && (
+                                                    <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold font-roboto tracking-wider border border-slate-200 whitespace-nowrap">
+                                                        {completionPct} executado
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
