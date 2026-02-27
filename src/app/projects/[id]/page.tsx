@@ -221,10 +221,10 @@ export default function ProjectDetailPage() {
                 </div>
                 <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-4 mb-6">
                     <div>
-                        <h1 className="page-title text-2xl md:text-3xl">
+                        <h1 className="page-title">
                             {currentUser?.role !== 'personal' ? project.name.replace('✨ ', '').replace('✨', '') : project.name}
                         </h1>
-                        <p className="page-subtitle mt-1">{workouts.length} sessão(ões)</p>
+                        <p className="page-subtitle mt-1">{workouts.length} série(s)</p>
                     </div>
                     {isOwner && (
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={openCreate}>
