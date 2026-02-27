@@ -70,7 +70,7 @@ export default function HistoryPage() {
         const newType = event.eventType === 'WO_COMPLETED' ? 'WO_COMPLETED_HIDDEN' : 'WO_COMPLETED';
         await updateFeedEvent({ ...event, eventType: newType });
         setSaving(false);
-        setToast({ msg: newType === 'WO_COMPLETED' ? 'Sessão visível na comunidade.' : 'Sessão oculta da comunidade.', type: 'success' });
+        setToast({ msg: newType === 'WO_COMPLETED' ? 'Treino visível na comunidade.' : 'Treino oculto da comunidade.', type: 'success' });
     }
 
     async function confirmDelete() {
@@ -102,9 +102,9 @@ export default function HistoryPage() {
         setDeleteTarget(null);
 
         if (sameDayEvents.length <= 1) {
-            setToast({ msg: 'Sessão e registros excluídos do histórico.', type: 'success' });
+            setToast({ msg: 'Treino e registros excluídos do histórico.', type: 'success' });
         } else {
-            setToast({ msg: 'Sessão removida do histórico. As séries foram mantidas pois há outras sessões no mesmo dia.', type: 'success' });
+            setToast({ msg: 'Treino removido do histórico. As séries foram mantidas pois há outras treinos no mesmo dia.', type: 'success' });
         }
     }
 
@@ -132,7 +132,7 @@ export default function HistoryPage() {
                 {myHistory.length === 0 ? (
                     <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
                         <Dumbbell size={48} className="text-slate-300 mb-4" />
-                        <p className="text-slate-500 font-bold font-roboto">Nenhuma sessão finalizada ainda.</p>
+                        <p className="text-slate-500 font-bold font-roboto">Nenhum treino finalizado.</p>
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={() => router.push('/projects')}>
                             Ir para Treinos
                         </button>
@@ -219,7 +219,7 @@ export default function HistoryPage() {
                                             </button>
                                             <button
                                                 className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors focus:outline-none"
-                                                title="Excluir sessão"
+                                                title="Excluir treino"
                                                 onClick={() => setDeleteTarget(event)}
                                                 disabled={saving}
                                             >
@@ -321,7 +321,7 @@ export default function HistoryPage() {
 
             {/* Delete Modal */}
             {deleteTarget && (
-                <Modal title="Excluir Sessão Passada" onClose={() => setDeleteTarget(null)}
+                <Modal title="Excluir treino" onClose={() => setDeleteTarget(null)}
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setDeleteTarget(null)} disabled={saving}>Cancelar</button>

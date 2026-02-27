@@ -94,7 +94,7 @@ export default function AdminPage() {
                             // Create a dummy project to hold old isolated sessions since the new UI needs a Project
                             const { data: newProject } = await supabase.from('projects').insert({
                                 name: 'Histórico Antigo',
-                                description: 'Sessões resgatadas do banco de dados antigo antes da versão de Projetos.',
+                                description: 'Treinos resgatados do banco de dados antigo antes da versão de Projetos.',
                                 ownerId: profile.id,
                                 startDate: new Date().toISOString(),
                                 // give it 10 years end date so it doesn't expire
@@ -169,7 +169,7 @@ export default function AdminPage() {
                     // Create dummy project for this owner
                     const { data: newProject } = await supabase.from('projects').insert({
                         name: 'Histórico Antigo',
-                        description: 'Sessões resgatadas do banco de dados antigo antes da versão de Projetos.',
+                        description: 'Treinos resgatados do banco de dados antigo antes da versão de Projetos.',
                         ownerId: ownerId,
                         startDate: new Date().toISOString(),
                         endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 10)).toISOString(),

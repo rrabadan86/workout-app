@@ -143,7 +143,7 @@ export default function WorkoutDetailPage() {
         <>
             <Navbar />
             <div className="container" style={{ paddingTop: 40 }}>
-                <div className="empty-state"><p>Sessão não encontrada.</p></div>
+                <div className="empty-state"><p>Treino não encontrado.</p></div>
             </div>
         </>
     );
@@ -271,7 +271,7 @@ export default function WorkoutDetailPage() {
                                         {/* Friend comparison */}
                                         {lastFriendLog && (
                                             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
-                                                <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-3">📊 Última sessão de {friendName}</p>
+                                                <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-3">📊 Último treino de {friendName}</p>
                                                 <div className="flex flex-wrap gap-2">
                                                     {lastFriendLog.sets.map((s, i) => (
                                                         <span key={i} className="text-xs font-bold bg-white text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 shadow-sm">
@@ -340,7 +340,7 @@ export default function WorkoutDetailPage() {
                                                                                 <Edit2 size={16} />
                                                                             </button>
                                                                             <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-red-500 transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Excluir este registro" onClick={async () => {
-                                                                                if (confirm('Tem certeza que deseja excluir este registro de sessão?')) {
+                                                                                if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
                                                                                     setSaving(log.id);
                                                                                     await deleteLog(log.id);
                                                                                     setSaving(null);
@@ -448,7 +448,7 @@ export default function WorkoutDetailPage() {
 
             {/* Confirm Finish Modal */}
             {confirmingFinish && (
-                <Modal title="Finalizar Sessão de Treino" onClose={() => setConfirmingFinish(false)}
+                <Modal title="Finalizar Treino" onClose={() => setConfirmingFinish(false)}
                     footer={
                         <>
                             <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full sm:w-auto" onClick={() => {
@@ -534,7 +534,7 @@ export default function WorkoutDetailPage() {
 
             {/* Summary Modal (After Confirmation) */}
             {showSummary && (
-                <Modal title="🏁 Sessão Finalizada!" onClose={() => setShowSummary(false)}
+                <Modal title="🏁 Treino finalizado!" onClose={() => setShowSummary(false)}
                     footer={
                         <>
                             <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors" onClick={() => setShowSummary(false)}>Fechar</button>
@@ -546,7 +546,7 @@ export default function WorkoutDetailPage() {
                 >
                     <div style={{ textAlign: 'center', padding: '16px 0' }}>
                         <div style={{ fontSize: '3rem', marginBottom: 12 }}>💪</div>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>Duração da sessão</p>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>Duração do treino</p>
                         <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#22c55e', fontVariantNumeric: 'tabular-nums', letterSpacing: 1 }}>
                             {fmtTime(finalDuration)}
                         </div>

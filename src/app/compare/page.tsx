@@ -91,9 +91,9 @@ export default function ComparePage() {
                             </select>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Sessão</label>
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Treino</label>
                             <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white disabled:opacity-50" value={workoutId} onChange={(e) => setWorkoutId(e.target.value)} disabled={!friendId}>
-                                <option value="">Selecione uma sessão</option>
+                                <option value="">Selecione um treino</option>
                                 {availableWorkouts.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
@@ -178,7 +178,7 @@ export default function ComparePage() {
                     !workoutId && (
                         <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
                             <BarChart2 size={48} className="text-slate-300 mb-4" />
-                            <p className="text-slate-500 font-bold font-roboto">Selecione um usuário e uma sessão para ver a comparação.</p>
+                            <p className="text-slate-500 font-bold font-roboto">Selecione um usuário e um treino para ver a comparação.</p>
                         </div>
                     )
                 )}

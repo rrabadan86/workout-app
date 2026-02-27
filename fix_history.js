@@ -43,7 +43,7 @@ async function fixHistory() {
         }
     }
 
-    console.log(`Encontradas ${Object.keys(sessions).length} sessões baseadas em logs.`);
+    console.log(`Encontradas ${Object.keys(sessions).length} treinos baseadas em logs.`);
 
     console.log("Buscando todos os feed_events de WO_COMPLETED...");
     const { data: events, error: evErr } = await supabase
@@ -71,7 +71,7 @@ async function fixHistory() {
         });
 
         if (!eventExists) {
-            console.log(`-> Corrigindo retroativo para sessão: ${session.date} | User: ${session.userId} | Workout: ${session.workoutId}`);
+            console.log(`-> Corrigindo retroativo para treino: ${session.date} | User: ${session.userId} | Workout: ${session.workoutId}`);
 
             // Inserir novo feed_event para preencher a lacuna
             const newEvent = {
@@ -79,7 +79,7 @@ async function fixHistory() {
                 userId: session.userId,
                 eventType: 'WO_COMPLETED',
                 referenceId: session.workoutId,
-                // Simulando que foi feito no meio-dia daquela data da sessão para evitar bugs de fuso
+                // Simulando que foi feito no meio-dia daquela data do treino para evitar bugs de fuso
                 createdAt: `${session.date}T12:00:00.000Z`,
                 duration: null
             };

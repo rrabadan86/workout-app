@@ -62,7 +62,7 @@ async function run() {
         const completedEvents = events.filter(e => e.eventType === 'WO_COMPLETED');
         console.log(`\n=> Encontrados ${completedEvents.length} eventos de CONCLUSÃO de treino hoje.`);
         if (completedEvents.length > 0) {
-            console.log(`Duração gravada no banco de dados para a sua última sessão de hoje: ${completedEvents[0].duration} segundos.`);
+            console.log(`Duração gravada no banco de dados para o seu último treino de hoje: ${completedEvents[0].duration} segundos.`);
         } else {
             console.log("O botão de Finalizar ainda não disparou o registro definitivo no feed.");
         }
