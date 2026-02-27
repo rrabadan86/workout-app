@@ -118,12 +118,14 @@ export default function HistoryPage() {
                     </button>
                 </div>
                 <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
-                    <div>
-                        <h1 className="page-title">Histórico</h1>
-                        <p className="page-subtitle">Seus treinos já realizados</p>
-                    </div>
-                    <div className="size-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary shrink-0">
-                        <Clock size={24} />
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h1 className="page-title">Histórico</h1>
+                            <p className="page-subtitle">Seus treinos já realizados</p>
+                        </div>
+                        <div className="size-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary shrink-0 mt-1">
+                            <Clock size={24} />
+                        </div>
                     </div>
                 </div>
 
