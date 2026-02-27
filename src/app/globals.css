@@ -79,7 +79,7 @@
 
   /* Título da página (Montserrat + Negrito) */
   .page-title {
-    @apply text-4xl font-extrabold tracking-tight text-slate-900 leading-none mb-2 font-montserrat;
+    @apply text-xl font-extrabold tracking-tight text-slate-900 leading-none mb-2 font-montserrat;
   }
 
   /* Subtítulos e Labels (Montserrat + Caps) */
