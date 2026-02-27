@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Sparkles, Loader2, Calendar, Dumbbell } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
@@ -20,9 +20,15 @@ function projectStatus(p: Project): 'ativo' | 'inativo' | 'futuro' {
 }
 
 const STATUS_LABEL = {
-    ativo: { label: 'Ativo', color: '#22c55e', dot: '🟢' },
-    inativo: { label: 'Encerrado', color: '#9ca3af', dot: '⚪' },
-    futuro: { label: 'Em breve', color: '#f59e0b', dot: '🟡' },
+    ativo: { label: 'Ativo', color: '#22c55e', bg: '#22c55e18', dot: '🟢' },
+    inativo: { label: 'Encerrado', color: '#9ca3af', bg: '#9ca3af18', dot: '⚪' },
+    futuro: { label: 'Em breve', color: '#f59e0b', bg: '#f59e0b18', dot: '🟡' },
+};
+
+const STATUS_BORDER = {
+    ativo: '#22c55e',
+    inativo: '#d1d5db',
+    futuro: '#f59e0b',
 };
 
 export default function ProjectsPage() {
@@ -61,8 +67,8 @@ export default function ProjectsPage() {
     const [showPStudentDropdown, setShowPStudentDropdown] = useState(false);
 
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'ativos' | 'inativos'>('ativos');
-    const [filterCreator, setFilterCreator] = useState<string>('all'); // for User
-    const [filterStudent, setFilterStudent] = useState<string>('all'); // for Personal
+    const [filterCreator, setFilterCreator] = useState<string>('all');
+    const [filterStudent, setFilterStudent] = useState<string>('all');
     const [filterShared, setFilterShared] = useState<'Todos' | 'Sim' | 'Não'>('Todos');
     const [linkedStudentIds, setLinkedStudentIds] = useState<string[]>([]);
 
@@ -75,7 +81,6 @@ export default function ProjectsPage() {
         });
     }, [userId, currentUser?.role]);
 
-    // Auto-update status to inactive if end_date < today
     useEffect(() => {
         if (!ready || !store.projects.length) return;
         const today = new Date().toISOString().slice(0, 10);
@@ -122,9 +127,7 @@ export default function ProjectsPage() {
         return true;
     });
 
-    // Extract unique personals for filters
     const uniquePersonals = Array.from(new Set(store.projects.filter(p => p.prescribed_to === userId && p.prescribed_by).map(p => p.prescribed_by as string)));
-    // Extract unique students for filters (combine previously prescribed + currently active linked students)
     const uniqueStudents = Array.from(new Set([
         ...store.projects.filter(p => p.prescribed_by === userId && p.prescribed_to).map(p => p.prescribed_to as string),
         ...linkedStudentIds
@@ -134,15 +137,12 @@ export default function ProjectsPage() {
         setAiFocus('');
         setAiLimitations('');
         setAiPrescribeEmail('');
-
         const today = new Date().toISOString().slice(0, 10);
         const future = new Date();
         future.setDate(future.getDate() + 30);
         const end = future.toISOString().slice(0, 10);
-
         setAiStart(today);
         setAiEnd(end);
-
         setShowAIModal(true);
     }
 
@@ -170,58 +170,32 @@ export default function ProjectsPage() {
             } else {
                 let prescribedTo: string | null = null;
                 const newProjectId = uid();
-
-                // If personal prescribing to someone
                 if (currentUser?.role === 'personal' && pPrescribeEmail) {
                     const studentAccount = store.profiles.find((u) => u.email.toLowerCase() === pPrescribeEmail.trim().toLowerCase());
                     if (studentAccount) {
                         prescribedTo = studentAccount.id;
-                        // Link them automatically if not linked
                         const { data: linkMatch } = await supabase.from('personal_students')
-                            .select('*')
-                            .eq('personal_id', userId)
-                            .eq('student_id', studentAccount.id)
-                            .maybeSingle();
-
+                            .select('*').eq('personal_id', userId).eq('student_id', studentAccount.id).maybeSingle();
                         if (!linkMatch) {
-                            await supabase.from('personal_students').insert({
-                                personal_id: userId,
-                                student_id: studentAccount.id,
-                                status: 'active'
-                            });
+                            await supabase.from('personal_students').insert({ personal_id: userId, student_id: studentAccount.id, status: 'active' });
                         }
                     } else {
-                        // Pending prescription
-                        await supabase.from('pending_prescriptions').insert({
-                            personal_id: userId,
-                            student_email: pPrescribeEmail.trim().toLowerCase(),
-                            project_id: newProjectId
-                        });
+                        await supabase.from('pending_prescriptions').insert({ personal_id: userId, student_email: pPrescribeEmail.trim().toLowerCase(), project_id: newProjectId });
                     }
                 }
-
                 await addProject({
-                    id: newProjectId,
-                    name: pName,
-                    ownerId: userId,
-                    startDate: pStart,
-                    endDate: pEnd,
-                    sharedWith: [],
+                    id: newProjectId, name: pName, ownerId: userId,
+                    startDate: pStart, endDate: pEnd, sharedWith: [],
                     prescribed_by: currentUser?.role === 'personal' && pPrescribeEmail ? userId : null,
-                    prescribed_to: prescribedTo,
-                    status: 'active',
-                    is_evolution: pIsEvolution
+                    prescribed_to: prescribedTo, status: 'active', is_evolution: pIsEvolution
                 });
-
                 setToast({ msg: 'Treino criado!', type: 'success' });
             }
             setShowModal(false);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Erro ao salvar treino';
             setToast({ msg: `Erro: ${msg}`, type: 'error' });
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     }
 
     async function confirmDelete() {
@@ -240,17 +214,12 @@ export default function ProjectsPage() {
         if (!proj) return;
         const foundUser = store.profiles.find((u) => u.email.toLowerCase() === email);
         if (foundUser) {
-            if (foundUser.id === userId) {
-                setShareStatus({ msg: 'Você não pode compartilhar consigo mesmo.', ok: false }); return;
-            }
-            if (proj.sharedWith.includes(foundUser.id)) {
-                setShareStatus({ msg: 'Este usuário já tem acesso.', ok: false }); return;
-            }
+            if (foundUser.id === userId) { setShareStatus({ msg: 'Você não pode compartilhar consigo mesmo.', ok: false }); return; }
+            if (proj.sharedWith.includes(foundUser.id)) { setShareStatus({ msg: 'Este usuário já tem acesso.', ok: false }); return; }
             await updateProject({ ...proj, sharedWith: [...proj.sharedWith, foundUser.id] });
             setShareEmail('');
             setShareStatus({ msg: `${foundUser.name} agora tem acesso ao treino! ✅`, ok: true });
         } else {
-            // Simulate invite email (no real email service)
             setShareEmail('');
             setShareStatus({ msg: `Convite enviado para ${email}. Assim que criar uma conta, terá acesso ao treino. ✉️`, ok: true });
         }
@@ -272,26 +241,18 @@ export default function ProjectsPage() {
             if (aiUsePrevious && myProjs.length > 0) {
                 lastProjectInfo = myProjs[myProjs.length - 1].name;
             }
-
             const res = await fetch('/api/generate-project', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    focus: aiFocus,
-                    daysPerWeek: parseInt(aiDays),
-                    maxTimeMins: parseInt(aiTime),
-                    experienceLevel: aiExperience,
-                    limitations: aiLimitations,
-                    lastProjectInfo,
+                    focus: aiFocus, daysPerWeek: parseInt(aiDays), maxTimeMins: parseInt(aiTime),
+                    experienceLevel: aiExperience, limitations: aiLimitations, lastProjectInfo,
                     existingExercises: store.exercises.map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle }))
                 })
             });
-
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erro na IA');
 
             const newProjectId = uid();
-
             let prescribedTo: string | null = null;
             let studentMsg = '';
             if (currentUser?.role === 'personal' && aiPrescribeEmail) {
@@ -301,95 +262,82 @@ export default function ProjectsPage() {
                     prescribedTo = studentAccount.id;
                     studentMsg = `Prescrito p/ ${studentAccount.name.split(' ')[0]}. `;
                     const { data: linkMatch } = await supabase.from('personal_students')
-                        .select('*')
-                        .eq('personal_id', userId)
-                        .eq('student_id', studentAccount.id)
-                        .maybeSingle();
-
+                        .select('*').eq('personal_id', userId).eq('student_id', studentAccount.id).maybeSingle();
                     if (!linkMatch) {
-                        await supabase.from('personal_students').insert({
-                            personal_id: userId,
-                            student_id: studentAccount.id,
-                            status: 'active'
-                        });
+                        await supabase.from('personal_students').insert({ personal_id: userId, student_id: studentAccount.id, status: 'active' });
                     }
                 } else {
                     studentMsg = `Convite pendente p/ ${emailToSearch}. `;
-                    await supabase.from('pending_prescriptions').insert({
-                        personal_id: userId,
-                        student_email: emailToSearch,
-                        project_id: newProjectId
-                    });
+                    await supabase.from('pending_prescriptions').insert({ personal_id: userId, student_email: emailToSearch, project_id: newProjectId });
                 }
             }
 
             await addProject({
-                id: newProjectId,
-                name: `✨ ${data.projectName || `Treino IA (${aiFocus})`}`,
+                id: newProjectId, name: `✨ ${data.projectName || `Treino IA (${aiFocus})`}`,
                 ownerId: userId,
                 startDate: aiStart || new Date().toISOString().slice(0, 10),
                 endDate: aiEnd || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
                 sharedWith: [],
                 prescribed_by: currentUser?.role === 'personal' && aiPrescribeEmail ? userId : null,
-                prescribed_to: prescribedTo,
-                status: 'active'
+                prescribed_to: prescribedTo, status: 'active'
             });
 
             for (const w of (data.workouts || [])) {
-                await addWorkout({
-                    id: uid(),
-                    projectId: newProjectId,
-                    ownerId: userId,
-                    name: w.name,
-                    order: w.order,
-                    exercises: w.exercises || []
-                });
+                await addWorkout({ id: uid(), projectId: newProjectId, ownerId: userId, name: w.name, order: w.order, exercises: w.exercises || [] });
             }
-
             setToast({ msg: `${studentMsg}Treino Gerado! 🚀`, type: 'success' });
             setShowAIModal(false);
-            setAiFocus('');
-            setAiLimitations('');
-            setAiPrescribeEmail('');
+            setAiFocus(''); setAiLimitations(''); setAiPrescribeEmail('');
         } catch (err: unknown) {
             setToast({ msg: (err as Error).message || 'Falha ao gerar treino.', type: 'error' });
-        } finally {
-            setAiGenerating(false);
-        }
+        } finally { setAiGenerating(false); }
     }
-
 
     return (
         <>
             <Navbar />
-            <main className="flex-1 w-full max-w-[1000px] mx-auto px-6 lg:px-12 py-8">
-                <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
+            <main className="flex-1 w-full max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-8">
+                {/* ─── Header ─── */}
+                <div className="flex flex-col gap-5 mb-8">
                     <div>
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => router.push('/')} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm">
-                                ← Voltar ao Dashboard
-                            </button>
-                        </div>
+                        <button onClick={() => router.push('/')} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-2 text-sm mb-3">
+                            ← Voltar ao Dashboard
+                        </button>
                         <h1 className="page-title">Treinos</h1>
                         <p className="page-subtitle">{myProjects.length} treino(s)</p>
                     </div>
 
-                    {/* Filters */}
-                    <div style={{ alignSelf: 'flex-start', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        <select className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 shadow-sm outline-none" value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}>
+                    {/* Action buttons — full width on mobile */}
+                    <div className="flex gap-3 w-full sm:w-auto">
+                        <button
+                            className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] shadow-lg shadow-[#C084FC]/30 px-5 py-3 flex-1 sm:flex-none justify-center"
+                            onClick={openAIModal}
+                            style={{ border: 'none' }}
+                        >
+                            <Sparkles size={16} /> Gerar por IA
+                        </button>
+                        <button
+                            className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-5 py-3 flex-1 sm:flex-none justify-center"
+                            onClick={openCreate}
+                        >
+                            <Plus size={16} /> Nova
+                        </button>
+                    </div>
+
+                    {/* Filters — horizontal scroll on mobile */}
+                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                        <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}>
                             <option value="Todos">Todos (Status)</option>
                             <option value="ativos">Ativos</option>
                             <option value="inativos">Inativos</option>
                         </select>
-
-                        <select className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 shadow-sm outline-none" value={filterShared} onChange={e => setFilterShared(e.target.value as any)}>
-                            <option value="Todos">Compartilhado comigo?</option>
+                        <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterShared} onChange={e => setFilterShared(e.target.value as any)}>
+                            <option value="Todos">Compartilhado?</option>
                             <option value="Sim">Sim</option>
                             <option value="Não">Não</option>
                         </select>
-
                         {currentUser?.role === 'personal' ? (
-                            <select className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 shadow-sm outline-none" value={filterStudent} onChange={e => setFilterStudent(e.target.value)}>
+                            <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterStudent} onChange={e => setFilterStudent(e.target.value)}>
                                 <option value="all">Todos os Alunos</option>
                                 {uniqueStudents.map(sId => {
                                     const student = store.profiles.find(u => u.id === sId);
@@ -397,27 +345,19 @@ export default function ProjectsPage() {
                                 })}
                             </select>
                         ) : (
-                            <select className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm text-slate-700 shadow-sm outline-none" value={filterCreator} onChange={e => setFilterCreator(e.target.value)}>
+                            <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterCreator} onChange={e => setFilterCreator(e.target.value)}>
                                 <option value="all">Criador (Todos)</option>
                                 <option value="me">Criados por mim</option>
                                 {uniquePersonals.map(pId => {
                                     const personal = store.profiles.find(u => u.id === pId);
-                                    return personal ? <option key={pId} value={pId}>Enviado por {personal.name}</option> : null;
+                                    return personal ? <option key={pId} value={pId}>Por {personal.name}</option> : null;
                                 })}
                             </select>
                         )}
                     </div>
-
-                    <div style={{ alignSelf: 'flex-start', marginTop: 12, display: 'flex', gap: 10 }}>
-                        <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] shadow-lg shadow-[#C084FC]/30 px-6 py-4" onClick={openAIModal} style={{ border: 'none' }}>
-                            <Sparkles size={16} /> Gerar por IA
-                        </button>
-                        <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={openCreate}>
-                            <Plus size={16} /> Nova
-                        </button>
-                    </div>
                 </div>
 
+                {/* ─── Project Cards ─── */}
                 {myProjects.length === 0 ? (
                     <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
                         <FolderOpen size={48} className="text-slate-300 mb-4" />
@@ -427,10 +367,11 @@ export default function ProjectsPage() {
                         </button>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}>
+                    <div className="flex flex-col gap-3 mb-10">
                         {myProjects.map((p) => {
                             const statusLabel = p.status === 'inactive' ? projectStatus({ ...p, endDate: '1970-01-01' }) : projectStatus(p);
                             const st = STATUS_LABEL[statusLabel];
+                            const borderColor = STATUS_BORDER[statusLabel];
                             const workoutCount = store.workouts.filter((w) => w.projectId === p.id).length;
 
                             const isOwner = p.ownerId === userId;
@@ -443,72 +384,142 @@ export default function ProjectsPage() {
                             const canShare = isOwner || isPrescribedByMe;
                             const canViewDetail = !isPrescriptionForMe || !isInactive;
 
+                            const isAI = p.name.includes('✨');
+                            const displayName = currentUser?.role !== 'personal' ? p.name.replace('✨ ', '').replace('✨', '') : p.name;
+
                             return (
-                                <div key={p.id} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white card-depth p-4 md:p-6 rounded-xl border border-transparent ${canViewDetail ? 'hover:border-primary/20 hover:shadow-lg cursor-pointer' : 'opacity-70'} transition-all`} onClick={() => canViewDetail && router.push(`/projects/${p.id}`)}>
-                                    <div className="size-12 rounded-xl flex items-center justify-center bg-[#C084FC] text-white shrink-0">
-                                        <FolderOpen size={20} />
-                                    </div>
-                                    <div className="flex-1 cursor-pointer" onClick={() => router.push(`/projects/${p.id}`)}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                                            <span className="item-card-title text-base sm:text-lg">
-                                                {currentUser?.role !== 'personal' ? p.name.replace('✨ ', '').replace('✨', '') : p.name}
+                                <div
+                                    key={p.id}
+                                    className={`
+                                        group bg-white card-depth rounded-xl
+                                        border border-transparent
+                                        ${canViewDetail ? 'hover:border-primary/20 hover:shadow-lg cursor-pointer active:scale-[0.99]' : 'opacity-60'}
+                                        transition-all duration-200
+                                    `}
+                                    style={{ borderLeft: `3px solid ${borderColor}` }}
+                                    onClick={() => canViewDetail && router.push(`/projects/${p.id}`)}
+                                >
+                                    {/* ── Card Content ── */}
+                                    <div className="p-4 sm:p-5">
+                                        {/* Row 1: Icon + Title + Badges */}
+                                        <div className="flex items-start gap-3">
+                                            <div className="size-10 sm:size-11 rounded-xl flex items-center justify-center bg-[#C084FC] text-white shrink-0 mt-0.5">
+                                                <FolderOpen size={18} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                {/* Title */}
+                                                <h3 className="item-card-title text-[0.95rem] sm:text-base font-bold text-slate-900 leading-snug line-clamp-2">
+                                                    {displayName}
+                                                </h3>
+
+                                                {/* Badges row */}
+                                                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                    {isAI && currentUser?.role === 'personal' && (
+                                                        <span className="inline-flex items-center gap-1 text-[0.65rem] font-bold text-[#C084FC] bg-[#C084FC]/10 rounded-full px-2 py-0.5">
+                                                            <Sparkles size={9} /> IA
+                                                        </span>
+                                                    )}
+                                                    <span
+                                                        className="inline-flex items-center gap-1 text-[0.65rem] font-bold rounded-full px-2 py-0.5"
+                                                        style={{ color: st.color, background: st.bg }}
+                                                    >
+                                                        {st.dot} {st.label}
+                                                    </span>
+                                                    {isPrescribedByMe && p.prescribed_to && (
+                                                        <span className="inline-flex items-center text-[0.65rem] font-bold text-blue-500 bg-blue-500/10 rounded-full px-2 py-0.5">
+                                                            Prescrito
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Desktop chevron */}
+                                            {canViewDetail && (
+                                                <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 hidden sm:block mt-1" />
+                                            )}
+                                        </div>
+
+                                        {/* Row 2: Metadata — compact with icons */}
+                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 ml-[52px] sm:ml-[56px] text-[0.75rem] text-slate-500">
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <Calendar size={12} className="text-slate-400" />
+                                                {formatDate(p.startDate)} → {formatDate(p.endDate)}
                                             </span>
-                                            {p.name.includes('✨') && currentUser?.role === 'personal' && (
-                                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#C084FC', background: '#C084FC22', borderRadius: 20, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                    <Sparkles size={10} /> IA
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <Dumbbell size={12} className="text-slate-400" />
+                                                {workoutCount} treino(s)
+                                            </span>
+                                        </div>
+
+                                        {/* Row 3: Prescription / Shared info */}
+                                        <div className="ml-[52px] sm:ml-[56px] mt-1.5 flex flex-col gap-0.5">
+                                            {p.prescribed_by && p.prescribed_to === userId && (
+                                                <span className="text-[0.72rem] font-semibold" style={{ color: 'var(--primary)' }}>
+                                                    Enviado por {store.profiles.find(u => u.id === p.prescribed_by)?.name}
                                                 </span>
                                             )}
-                                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: st.color, background: `${st.color}22`, borderRadius: 20, padding: '2px 10px' }}>
-                                                {st.dot} {st.label}
-                                            </span>
-                                            {isPrescribedByMe && p.prescribed_to && (
-                                                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#3b82f6', background: '#3b82f622', borderRadius: 20, padding: '2px 10px' }}>
-                                                    Prescrito
+                                            {p.prescribed_to && p.prescribed_by === userId && (
+                                                <span className="text-[0.72rem] font-semibold" style={{ color: 'var(--primary)' }}>
+                                                    Prescrito para {store.profiles.find(u => u.id === p.prescribed_to)?.name}
+                                                </span>
+                                            )}
+                                            {p.sharedWith.length > 0 && (
+                                                <span className="text-[0.72rem] text-slate-400 inline-flex items-center gap-1">
+                                                    <Users size={11} />
+                                                    Compartilhado com {p.sharedWith.length} pessoa(s)
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="item-card-sub text-slate-500 mt-2 text-xs">
-                                            📅 {formatDate(p.startDate)} → {formatDate(p.endDate)} <span className="mx-2">•</span> 🏋️ {workoutCount} treino(s)
+                                    </div>
+
+                                    {/* ── Action Bar ── */}
+                                    {(canShare || canEdit || canDelete) && (
+                                        <div
+                                            className="flex items-center gap-1 px-4 sm:px-5 py-2.5 border-t border-slate-100/80"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {canShare && (
+                                                <button
+                                                    className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-slate-400 hover:text-primary px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                                    title="Compartilhar"
+                                                    onClick={() => setShowShareModal(p.id)}
+                                                >
+                                                    <Share2 size={14} />
+                                                    <span className="hidden sm:inline">Compartilhar</span>
+                                                </button>
+                                            )}
+                                            {canEdit && (
+                                                <button
+                                                    className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-slate-400 hover:text-primary px-2.5 py-1.5 rounded-lg hover:bg-slate-50 transition-colors"
+                                                    title="Editar"
+                                                    onClick={() => openEdit(p)}
+                                                >
+                                                    <Pencil size={14} />
+                                                    <span className="hidden sm:inline">Editar</span>
+                                                </button>
+                                            )}
+                                            {canDelete && (
+                                                <button
+                                                    className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium text-slate-400 hover:text-rose-500 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                                                    title="Excluir"
+                                                    onClick={() => setDeleteTarget(p)}
+                                                >
+                                                    <Trash2 size={14} />
+                                                    <span className="hidden sm:inline">Excluir</span>
+                                                </button>
+                                            )}
+
+                                            {/* Spacer + open arrow on mobile */}
+                                            {canViewDetail && (
+                                                <button
+                                                    className="ml-auto inline-flex items-center gap-1 text-[0.72rem] font-medium text-slate-400 hover:text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors sm:hidden"
+                                                    onClick={() => router.push(`/projects/${p.id}`)}
+                                                >
+                                                    Abrir <ChevronRight size={14} />
+                                                </button>
+                                            )}
                                         </div>
-                                        {p.prescribed_by && p.prescribed_to === userId && (
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: 4, fontWeight: 'bold' }}>
-                                                Enviado por seu Personal ({store.profiles.find(u => u.id === p.prescribed_by)?.name})
-                                            </div>
-                                        )}
-                                        {p.prescribed_to && p.prescribed_by === userId && (
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: 4, fontWeight: 'bold' }}>
-                                                Prescrito para {store.profiles.find(u => u.id === p.prescribed_to)?.name}
-                                            </div>
-                                        )}
-                                        {p.sharedWith.length > 0 && (
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                                                <Users size={11} style={{ display: 'inline', marginRight: 4 }} />
-                                                Compartilhado com {p.sharedWith.length} pessoa(s)
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100" onClick={(e) => e.stopPropagation()}>
-                                        {canShare && (
-                                            <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Compartilhar" onClick={() => setShowShareModal(p.id)}>
-                                                <Share2 size={18} />
-                                            </button>
-                                        )}
-                                        {canEdit && (
-                                            <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Editar / Inativar" onClick={() => openEdit(p)}>
-                                                <Pencil size={18} />
-                                            </button>
-                                        )}
-                                        {canDelete && (
-                                            <button className="p-2.5 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" title="Excluir" onClick={() => setDeleteTarget(p)}>
-                                                <Trash2 size={18} />
-                                            </button>
-                                        )}
-                                        {canViewDetail && (
-                                            <button className="p-2.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors hidden sm:flex" onClick={() => router.push(`/projects/${p.id}`)}>
-                                                <ChevronRight size={20} />
-                                            </button>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -516,7 +527,7 @@ export default function ProjectsPage() {
                 )}
             </main>
 
-            {/* Create / Edit Modal */}
+            {/* ─── Create / Edit Modal ─── */}
             {showModal && (
                 <Modal title={editTarget ? 'Editar Treino' : 'Novo treino'} onClose={() => setShowModal(false)}
                     footer={
@@ -565,10 +576,7 @@ export default function ProjectsPage() {
                                             type="text"
                                             placeholder="Opcional. Ex: aluno@email.com"
                                             value={pPrescribeEmail}
-                                            onChange={(e) => {
-                                                setPPrescribeEmail(e.target.value);
-                                                setShowPStudentDropdown(true);
-                                            }}
+                                            onChange={(e) => { setPPrescribeEmail(e.target.value); setShowPStudentDropdown(true); }}
                                             onFocus={() => setShowPStudentDropdown(true)}
                                             onBlur={() => setTimeout(() => setShowPStudentDropdown(false), 200)}
                                         />
@@ -576,22 +584,11 @@ export default function ProjectsPage() {
                                             <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-auto" style={{ top: '100%', left: 0 }}>
                                                 {(() => {
                                                     const search = pPrescribeEmail.toLowerCase();
-                                                    const filtered = uniqueStudents
-                                                        .map(id => store.profiles.find(u => u.id === id))
-                                                        .filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
-
+                                                    const filtered = uniqueStudents.map(id => store.profiles.find(u => u.id === id)).filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
                                                     if (filtered.length === 0) return null;
-
                                                     return filtered.map(u => (
-                                                        <div
-                                                            key={u!.id}
-                                                            className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
-                                                            onMouseDown={(e) => {
-                                                                e.preventDefault(); // prevent blur before click registers
-                                                                setPPrescribeEmail(u!.email);
-                                                                setShowPStudentDropdown(false);
-                                                            }}
-                                                        >
+                                                        <div key={u!.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
+                                                            onMouseDown={(e) => { e.preventDefault(); setPPrescribeEmail(u!.email); setShowPStudentDropdown(false); }}>
                                                             <span className="text-sm font-bold text-slate-800">{u!.name}</span>
                                                             <span className="text-xs text-slate-500">{u!.email}</span>
                                                         </div>
@@ -603,10 +600,7 @@ export default function ProjectsPage() {
                                 )}
                                 <div className="field">
                                     <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: myProjects.length === 0 ? 'not-allowed' : 'pointer', fontWeight: 'normal', color: 'var(--text-secondary)' }} title={myProjects.length === 0 ? 'Você precisa de um treino anterior para evoluir' : ''}>
-                                        <input
-                                            type="checkbox"
-                                            checked={pIsEvolution}
-                                            disabled={myProjects.length === 0}
+                                        <input type="checkbox" checked={pIsEvolution} disabled={myProjects.length === 0}
                                             onChange={(e) => {
                                                 const checked = e.target.checked;
                                                 setPIsEvolution(checked);
@@ -628,7 +622,7 @@ export default function ProjectsPage() {
                 </Modal>
             )}
 
-            {/* AI Generation Modal */}
+            {/* ─── AI Generation Modal ─── */}
             {showAIModal && (
                 <Modal title="✨ Novo treino por IA" onClose={() => { setShowAIModal(false); setAiPrescribeEmail(''); }}
                     footer={
@@ -654,9 +648,7 @@ export default function ProjectsPage() {
                             <div className="field">
                                 <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Dias por semana *</label>
                                 <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required>
-                                    {[1, 2, 3, 4, 5, 6, 7].map(num => (
-                                        <option key={num} value={num}>{num} dias</option>
-                                    ))}
+                                    {[1, 2, 3, 4, 5, 6, 7].map(num => (<option key={num} value={num}>{num} dias</option>))}
                                 </select>
                             </div>
                             <div className="field">
@@ -678,7 +670,6 @@ export default function ProjectsPage() {
                                 </select>
                             </div>
                         </div>
-
                         <div className="grid grid-cols-2 gap-4">
                             <div className="field">
                                 <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de início *</label>
@@ -689,7 +680,6 @@ export default function ProjectsPage() {
                                 <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={aiEnd} onChange={(e) => setAiEnd(e.target.value)} required min={aiStart} />
                             </div>
                         </div>
-
                         <div className="field">
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Possui alguma limitação física ou preferência? (Opcional)</label>
                             <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
@@ -699,37 +689,20 @@ export default function ProjectsPage() {
                                 <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (Informe o nome do aluno ou e-mail caso não tenha histórico com você)</label>
                                 <input
                                     className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white"
-                                    type="text"
-                                    placeholder="Opcional. Ex: aluno@email.com"
-                                    value={aiPrescribeEmail}
-                                    onChange={(e) => {
-                                        setAiPrescribeEmail(e.target.value);
-                                        setShowAiStudentDropdown(true);
-                                    }}
+                                    type="text" placeholder="Opcional. Ex: aluno@email.com" value={aiPrescribeEmail}
+                                    onChange={(e) => { setAiPrescribeEmail(e.target.value); setShowAiStudentDropdown(true); }}
                                     onFocus={() => setShowAiStudentDropdown(true)}
-                                    // SetTimeout isn't needed here if we use onMouseDown on the items, but let's keep it safe
                                     onBlur={() => setTimeout(() => setShowAiStudentDropdown(false), 200)}
                                 />
                                 {showAiStudentDropdown && aiPrescribeEmail && (
                                     <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-auto" style={{ top: '100%', left: 0 }}>
                                         {(() => {
                                             const search = aiPrescribeEmail.toLowerCase();
-                                            const filtered = uniqueStudents
-                                                .map(id => store.profiles.find(u => u.id === id))
-                                                .filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
-
+                                            const filtered = uniqueStudents.map(id => store.profiles.find(u => u.id === id)).filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
                                             if (filtered.length === 0) return null;
-
                                             return filtered.map(u => (
-                                                <div
-                                                    key={u!.id}
-                                                    className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
-                                                    onMouseDown={(e) => {
-                                                        e.preventDefault(); // prevent blur
-                                                        setAiPrescribeEmail(u!.email);
-                                                        setShowAiStudentDropdown(false);
-                                                    }}
-                                                >
+                                                <div key={u!.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
+                                                    onMouseDown={(e) => { e.preventDefault(); setAiPrescribeEmail(u!.email); setShowAiStudentDropdown(false); }}>
                                                     <span className="text-sm font-bold text-slate-800">{u!.name}</span>
                                                     <span className="text-xs text-slate-500">{u!.email}</span>
                                                 </div>
@@ -742,12 +715,7 @@ export default function ProjectsPage() {
                         {store.projects.filter(p => p.ownerId === userId).length > 0 && (
                             <div className="field" style={{ marginTop: 8 }}>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 'normal', color: 'var(--text-secondary)' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={aiUsePrevious}
-                                        onChange={(e) => setAiUsePrevious(e.target.checked)}
-                                        style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
-                                    />
+                                    <input type="checkbox" checked={aiUsePrevious} onChange={(e) => setAiUsePrevious(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
                                     Evoluir a partir do meu treino: &quot;{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}&quot;
                                 </label>
                             </div>
@@ -756,7 +724,7 @@ export default function ProjectsPage() {
                 </Modal>
             )}
 
-            {/* Delete Modal */}
+            {/* ─── Delete Modal ─── */}
             {deleteTarget && (
                 <Modal title="Excluir Treino" onClose={() => setDeleteTarget(null)}
                     footer={
@@ -774,7 +742,7 @@ export default function ProjectsPage() {
                 </Modal>
             )}
 
-            {/* Share Modal */}
+            {/* ─── Share Modal ─── */}
             {showShareModal && (() => {
                 const proj = store.projects.find((p) => p.id === showShareModal);
                 if (!proj) return null;
@@ -784,15 +752,11 @@ export default function ProjectsPage() {
                         footer={<button className="btn btn-ghost" onClick={() => { setShowShareModal(null); setShareEmail(''); setShareStatus(null); }}>Fechar</button>}
                     >
                         <div className="flex flex-col gap-6 mt-6">
-                            {/* Email input */}
                             <div className="field">
                                 <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Compartilhar por e-mail</label>
                                 <div className="flex flex-col sm:flex-row gap-3">
-                                    <input
-                                        className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all flex-1"
-                                        type="email"
-                                        placeholder="exemplo@email.com"
-                                        value={shareEmail}
+                                    <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all flex-1"
+                                        type="email" placeholder="exemplo@email.com" value={shareEmail}
                                         onChange={(e) => { setShareEmail(e.target.value); setShareStatus(null); }}
                                         onKeyDown={(e) => e.key === 'Enter' && handleShareByEmail(proj.id)}
                                     />
@@ -801,13 +765,9 @@ export default function ProjectsPage() {
                                     </button>
                                 </div>
                                 {shareStatus && (
-                                    <p className={`text-xs mt-2 font-bold font-roboto ${shareStatus.ok ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        {shareStatus.msg}
-                                    </p>
+                                    <p className={`text-xs mt-2 font-bold font-roboto ${shareStatus.ok ? 'text-emerald-500' : 'text-rose-500'}`}>{shareStatus.msg}</p>
                                 )}
                             </div>
-
-                            {/* Already shared with */}
                             {sharedUsers.length > 0 && (
                                 <div>
                                     <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Com acesso</p>
