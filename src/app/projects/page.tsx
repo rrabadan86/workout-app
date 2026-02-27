@@ -25,12 +25,6 @@ const STATUS_LABEL = {
     futuro: { label: 'Em breve', color: '#f59e0b', bg: '#f59e0b18', dot: '🟡' },
 };
 
-const STATUS_BORDER = {
-    ativo: '#22c55e',
-    inativo: '#d1d5db',
-    futuro: '#f59e0b',
-};
-
 export default function ProjectsPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
@@ -324,20 +318,20 @@ export default function ProjectsPage() {
                         </button>
                     </div>
 
-                    {/* Filters — horizontal scroll on mobile */}
-                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-                        <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}>
+                    {/* Filters */}
+                    <div className="flex gap-2 flex-wrap">
+                        <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none min-w-0 flex-1 sm:flex-none" value={filterStatus} onChange={e => setFilterStatus(e.target.value as any)}>
                             <option value="Todos">Todos (Status)</option>
                             <option value="ativos">Ativos</option>
                             <option value="inativos">Inativos</option>
                         </select>
-                        <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterShared} onChange={e => setFilterShared(e.target.value as any)}>
+                        <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none min-w-0 flex-1 sm:flex-none" value={filterShared} onChange={e => setFilterShared(e.target.value as any)}>
                             <option value="Todos">Compartilhado?</option>
                             <option value="Sim">Sim</option>
                             <option value="Não">Não</option>
                         </select>
                         {currentUser?.role === 'personal' ? (
-                            <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterStudent} onChange={e => setFilterStudent(e.target.value)}>
+                            <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none min-w-0 flex-1 sm:flex-none" value={filterStudent} onChange={e => setFilterStudent(e.target.value)}>
                                 <option value="all">Todos os Alunos</option>
                                 {uniqueStudents.map(sId => {
                                     const student = store.profiles.find(u => u.id === sId);
@@ -345,7 +339,7 @@ export default function ProjectsPage() {
                                 })}
                             </select>
                         ) : (
-                            <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none whitespace-nowrap shrink-0" value={filterCreator} onChange={e => setFilterCreator(e.target.value)}>
+                            <select className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none min-w-0 flex-1 sm:flex-none" value={filterCreator} onChange={e => setFilterCreator(e.target.value)}>
                                 <option value="all">Criador (Todos)</option>
                                 <option value="me">Criados por mim</option>
                                 {uniquePersonals.map(pId => {
@@ -371,7 +365,6 @@ export default function ProjectsPage() {
                         {myProjects.map((p) => {
                             const statusLabel = p.status === 'inactive' ? projectStatus({ ...p, endDate: '1970-01-01' }) : projectStatus(p);
                             const st = STATUS_LABEL[statusLabel];
-                            const borderColor = STATUS_BORDER[statusLabel];
                             const workoutCount = store.workouts.filter((w) => w.projectId === p.id).length;
 
                             const isOwner = p.ownerId === userId;
@@ -396,7 +389,6 @@ export default function ProjectsPage() {
                                         ${canViewDetail ? 'hover:border-primary/20 hover:shadow-lg cursor-pointer active:scale-[0.99]' : 'opacity-60'}
                                         transition-all duration-200
                                     `}
-                                    style={{ borderLeft: `3px solid ${borderColor}` }}
                                     onClick={() => canViewDetail && router.push(`/projects/${p.id}`)}
                                 >
                                     {/* ── Card Content ── */}
