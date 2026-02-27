@@ -14,7 +14,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { focus, daysPerWeek, maxTimeMins, experienceLevel, limitations, lastProjectInfo, existingExercises } = body;
 
-    // existingExercises is a list of object { id, name, muscle } to help the AI map exercises.
+    // existingExercises now includes description for smarter exercise selection
+    const exerciseList = existingExercises
+      .map((e: { id: string; name: string; muscle: string; description?: string }) =>
+        `${e.id} | ${e.name} | ${e.muscle}${e.description ? ` | ${e.description}` : ''}`
+      )
+      .join('\n');
 
     const prompt = `Você é o Vimu, educador físico com mais de 15 anos de experiência prática, especialista em musculação, biomecânica e periodização de treinos. Possui pós-graduação em Fisiologia do Exercício e já atuou com atletas amadores e profissionais de alto rendimento. Você aplica as metodologias mais modernas da ciência do esporte, como princípios de sobrecarga progressiva, especificidade, variação de estímulos e recuperação adequada. Sua missão é criar programas de treino altamente eficazes, seguros e 100% personalizados ao perfil do aluno.
 
@@ -32,11 +37,11 @@ Diretrizes obrigatórias que você deve seguir ao montar o programa:
 3. Priorize exercícios compostos (multiarticulares) no início de cada sessão e exercícios isoladores no final.
 4. Respeite o tempo máximo por sessão, considerando aproximadamente 2-3 minutos de descanso entre séries e ~1 minuto por série de execução.
 5. Adapte o volume (número de séries e repetições) ao objetivo: hipertrofia (6-12 reps), força (3-6 reps), resistência (15+ reps), emagrecimento (12-20 reps com menor descanso).
-6. Se houver limitações físicas, substitua exercícios que possam agravar a condição.
-7. Se houver treino anterior, evolua o programa com variação de exercícios ou aumento de volume para evitar estagnação.
+6. Se houver limitações físicas, substitua exercícios que possam agravar a condição. Use a descrição dos exercícios para entender o equipamento e biomecânica envolvida.
+7. Se houver treino anterior, evolua o programa com variação de exercícios ou aumento de volume para evitar estagnação. Não repita exatamente os mesmos exercícios e séries — mude ângulos, ordens ou técnicas.
 
-Você tem a seguinte lista de exercícios disponíveis no banco de dados do aplicativo (Listados como 'ID | Nome | Músculo'):
-${existingExercises.map((e: { id: string, name: string, muscle: string }) => `${e.id} | ${e.name} | ${e.muscle}`).join('\n')}
+Você tem a seguinte lista de exercícios disponíveis no banco de dados do aplicativo (Listados como 'ID | Nome | Músculo | Descrição'):
+${exerciseList}
 
 Monte um programa com ${daysPerWeek} sessões diferentes. Cada sessão deve conter exercícios escolhidos ESTRITAMENTE da lista acima. A quantidade de exercícios e séries por sessão deve respeitar rigorosamente o limite de ${maxTimeMins} minutos.
 
@@ -81,8 +86,35 @@ Lembre-se: Use APENAS os IDs de exercícios da lista fornecida. Retorne APENAS o
       }
 
       const data = JSON.parse(responseText);
+
+      // ── Post-generation validation: remove exercises with invalid IDs ──
+      const validIds = new Set(
+        existingExercises.map((e: { id: string }) => e.id)
+      );
+
+      if (data.workouts && Array.isArray(data.workouts)) {
+        for (const workout of data.workouts) {
+          if (workout.exercises && Array.isArray(workout.exercises)) {
+            workout.exercises = workout.exercises.filter(
+              (ex: { exerciseId: string }) => validIds.has(ex.exerciseId)
+            );
+          }
+        }
+        // Remove workouts that ended up with zero exercises after validation
+        data.workouts = data.workouts.filter(
+          (w: { exercises: unknown[] }) => w.exercises && w.exercises.length > 0
+        );
+      }
+
+      if (!data.workouts || data.workouts.length === 0) {
+        return NextResponse.json(
+          { error: 'A IA não conseguiu mapear os exercícios corretamente. Tente novamente.' },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json(data);
-    } catch (jsonErr) {
+    } catch {
       console.error("Failed to parse JSON:", responseText);
       return NextResponse.json({ error: 'Erro ao gerar o formato do treino. Tente novamente.' }, { status: 500 });
     }

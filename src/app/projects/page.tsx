@@ -240,7 +240,7 @@ export default function ProjectsPage() {
                 body: JSON.stringify({
                     focus: aiFocus, daysPerWeek: parseInt(aiDays), maxTimeMins: parseInt(aiTime),
                     experienceLevel: aiExperience, limitations: aiLimitations, lastProjectInfo,
-                    existingExercises: store.exercises.map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle }))
+                    existingExercises: store.exercises.map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle, description: ex.description }))
                 })
             });
             const data = await res.json();
