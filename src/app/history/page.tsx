@@ -7,8 +7,31 @@ import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { Clock, Trash2, Eye, EyeOff, Dumbbell, Play } from 'lucide-react';
+import { Clock, Trash2, Eye, EyeOff, Dumbbell } from 'lucide-react';
 import type { FeedEvent } from '@/lib/types';
+
+function formatDuration(seconds?: number) {
+    if (!seconds) return '--:--';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function timeAgo(dateStr: string) {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'agora mesmo';
+    if (diffMins < 60) return `${diffMins}m atrás`;
+    if (diffHours < 24) return `${diffHours}h atrás`;
+    if (diffDays === 1) return 'ontem';
+    if (diffDays < 30) return `${diffDays}d atrás`;
+    return `${Math.floor(diffDays / 30)} mês(es) atrás`;
+}
 
 export default function HistoryPage() {
     const router = useRouter();
@@ -24,6 +47,8 @@ export default function HistoryPage() {
     }, [ready, userId, router]);
 
     if (!ready || !userId) return null;
+
+    const currentUser = store.profiles.find(u => u.id === userId);
 
     // Get all completed and hidden workouts for this user
     const myHistory = store.feedEvents
@@ -42,37 +67,27 @@ export default function HistoryPage() {
         if (!deleteTarget) return;
         setSaving(true);
 
-        // Find the date of the event in YYYY-MM-DD
         const eventDateObj = new Date(deleteTarget.createdAt);
         const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
 
-        // Check if there are multiple feedEvents for this exact workout on this exact day
         const sameDayEvents = store.feedEvents.filter(e => {
             if (e.userId !== userId || e.referenceId !== deleteTarget.referenceId) return false;
             if (e.eventType !== 'WO_COMPLETED' && e.eventType !== 'WO_COMPLETED_HIDDEN') return false;
-
             const eDateObj = new Date(e.createdAt);
             const eDateStr = `${eDateObj.getFullYear()}-${String(eDateObj.getMonth() + 1).padStart(2, '0')}-${String(eDateObj.getDate()).padStart(2, '0')}`;
             return eDateStr === localDateStr;
         });
 
-        // Only delete the underlying logs if this is the ONLY time they completed this workout today
         if (sameDayEvents.length <= 1) {
-            // Find all logs for this event
             const logsToDelete = store.logs.filter(l =>
-                l.userId === userId &&
-                l.workoutId === deleteTarget.referenceId &&
-                l.date === localDateStr
+                l.userId === userId && l.workoutId === deleteTarget.referenceId && l.date === localDateStr
             );
-
             for (const log of logsToDelete) {
                 await deleteLog(log.id);
             }
         }
 
-        // Always delete the feed event
         await deleteFeedEvent(deleteTarget.id);
-
         setSaving(false);
         setDeleteTarget(null);
 
@@ -86,7 +101,7 @@ export default function HistoryPage() {
     return (
         <>
             <Navbar />
-            <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 lg:px-12 py-8">
+            <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-8">
                 <div className="mb-4">
                     <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/dashboard')}>
                         ← Voltar ao Dashboard
@@ -95,7 +110,7 @@ export default function HistoryPage() {
                 <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
                     <div>
                         <h1 className="page-title">Histórico</h1>
-                        <p className="page-subtitle">Suas sessões já realizadas</p>
+                        <p className="page-subtitle">Seus treinos já realizados</p>
                     </div>
                     <div className="size-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary shrink-0">
                         <Clock size={24} />
@@ -111,42 +126,70 @@ export default function HistoryPage() {
                         </button>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-4 mb-10">
+                    <div className="flex flex-col gap-6 mb-10">
                         {myHistory.map(event => {
                             const workout = store.workouts.find(w => w.id === event.referenceId);
                             if (!workout) return null;
 
+                            const project = store.projects.find(p => p.id === workout.projectId);
                             const isHidden = event.eventType === 'WO_COMPLETED_HIDDEN';
+
                             const eventDateObj = new Date(event.createdAt);
-                            const formattedDate = eventDateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'short' });
                             const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
 
                             const dayLogs = store.logs.filter(l => l.userId === userId && l.workoutId === workout.id && l.date === localDateStr);
-                            const totalWeight = dayLogs.reduce((acc, log) => {
-                                return acc + log.sets.reduce((sum, s) => sum + (s.weight * s.reps), 0);
-                            }, 0);
+
+                            // Stats
+                            let totalVolume = 0;
+                            const exerciseCount = dayLogs.length;
+                            dayLogs.forEach(log => {
+                                log.sets.forEach(set => {
+                                    totalVolume += set.weight || 0;
+                                });
+                            });
+
+                            const eventText = project
+                                ? `Treino "${workout.name}" • ${project.name}`
+                                : `Treino "${workout.name}"`;
 
                             return (
-                                <div key={event.id} className="bg-white rounded-xl card-depth p-5 md:p-6 border border-slate-100 flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex gap-4 items-center">
-                                            <div className="size-10 md:size-12 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-500 shrink-0">
-                                                <Dumbbell size={20} />
+                                <div
+                                    key={event.id}
+                                    className="bg-white rounded-xl card-depth p-6 flex flex-col gap-6 animate-fade border border-transparent hover:border-slate-100 transition-colors"
+                                >
+                                    {/* ── Header: Avatar + Info + Actions ── */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            {/* Avatar */}
+                                            <div className="size-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
+                                                {currentUser?.photo_url ? (
+                                                    <img src={currentUser.photo_url} alt={currentUser.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-lg font-bold text-slate-600">
+                                                        {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div>
-                                                <div className="font-bold font-inter text-base md:text-lg text-slate-900 flex items-center gap-2 flex-wrap">
-                                                    {workout.name}
-                                                    {isHidden && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">Privado</span>}
-                                                </div>
-                                                <div className="text-xs md:text-sm font-roboto text-slate-500 capitalize mt-0.5">
-                                                    {formattedDate} · <span className="font-medium text-slate-700">{totalWeight} kg</span> levantados {event.duration ? ` · ⏱️ ${Math.floor(event.duration / 60)}m ${event.duration % 60}s` : ''}
-                                                </div>
+                                                <h4 className="text-lg font-bold font-inter text-slate-900 flex items-center gap-2 flex-wrap">
+                                                    Você
+                                                    {isHidden && (
+                                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                            Privado
+                                                        </span>
+                                                    )}
+                                                </h4>
+                                                <p className="text-slate-400 text-sm font-normal font-roboto">
+                                                    {timeAgo(event.createdAt)} • {eventText}
+                                                </p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-1 md:gap-2 shrink-0">
+
+                                        {/* Action buttons */}
+                                        <div className="flex gap-1 shrink-0">
                                             <button
                                                 className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors focus:outline-none"
-                                                title={isHidden ? "Mostrar na comunidade" : "Ocultar da comunidade"}
+                                                title={isHidden ? 'Mostrar na comunidade' : 'Ocultar da comunidade'}
                                                 onClick={() => toggleVisibility(event)}
                                                 disabled={saving}
                                             >
@@ -163,80 +206,64 @@ export default function HistoryPage() {
                                         </div>
                                     </div>
 
+                                    {/* ── Stats Grid ── */}
+                                    <div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-xl p-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Duração</span>
+                                            <span className="text-2xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Volume</span>
+                                            <span className="text-2xl font-extrabold text-slate-900">
+                                                {totalVolume} <span className="text-primary text-sm font-bold tracking-normal">kg</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Exercícios</span>
+                                            <span className="text-2xl font-extrabold text-slate-900">{exerciseCount}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* ── Exercise Details ── */}
+                                    {dayLogs.length > 0 && (
+                                        <div className="flex flex-col gap-2">
+                                            {dayLogs.map((log) => {
+                                                const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                                const groups: { count: number; weight: number }[] = [];
+                                                for (const s of log.sets) {
+                                                    if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                        groups[groups.length - 1].count++;
+                                                    } else {
+                                                        groups.push({ count: 1, weight: s.weight });
+                                                    }
+                                                }
+                                                const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+
+                                                return (
+                                                    <div key={log.id} className="flex justify-between items-center text-sm py-0.5">
+                                                        <span className="text-slate-500 font-bold font-inter uppercase">{exName}</span>
+                                                        <span className="text-primary font-normal font-roboto">{setsDisplay}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {/* ── Exercises not done (planned but no log) ── */}
                                     {(() => {
-                                        const renderItems: { id: string; exId: string; plannedSets: number; log?: any; isExtra?: boolean }[] = [];
-                                        const availableLogs = [...dayLogs];
-
-                                        workout.exercises.forEach((planned, idx) => {
-                                            const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
-                                            let log = undefined;
-                                            if (logIdx !== -1) {
-                                                log = availableLogs[logIdx];
-                                                availableLogs.splice(logIdx, 1);
-                                            }
-                                            renderItems.push({
-                                                id: `planned-${idx}-${planned.exerciseId}`,
-                                                exId: planned.exerciseId,
-                                                plannedSets: planned.sets.length,
-                                                log
-                                            });
-                                        });
-
-                                        availableLogs.forEach((log, idx) => {
-                                            renderItems.push({
-                                                id: `extra-${idx}-${log.id}`,
-                                                exId: log.exerciseId,
-                                                plannedSets: 0,
-                                                log,
-                                                isExtra: true
-                                            });
-                                        });
-
-                                        if (renderItems.length === 0) return null;
+                                        const loggedExerciseIds = dayLogs.map(l => l.exerciseId);
+                                        const notDone = workout.exercises.filter(ex => !loggedExerciseIds.includes(ex.exerciseId));
+                                        if (notDone.length === 0) return null;
 
                                         return (
-                                            <div className="mt-2 pt-4 border-t border-slate-100 flex flex-col gap-2">
-                                                {renderItems.map((item) => {
-                                                    const log = item.log;
-                                                    const plannedSets = item.plannedSets;
-                                                    const completedSets = log ? log.sets.length : 0;
-                                                    const exId = item.exId;
-
-                                                    const exName = store.exercises.find(e => e.id === exId)?.name || 'Exercício';
-                                                    const skippedSets = Math.max(0, plannedSets - completedSets);
-
-                                                    let setsDisplay = '';
-                                                    if (log && log.sets.length > 0) {
-                                                        const groups: { count: number, weight: number }[] = [];
-                                                        for (const s of log.sets) {
-                                                            if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                                                groups[groups.length - 1].count++;
-                                                            } else {
-                                                                groups.push({ count: 1, weight: s.weight });
-                                                            }
-                                                        }
-                                                        setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
-                                                    } else {
-                                                        setsDisplay = '-';
-                                                    }
-
+                                            <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+                                                {notDone.map((planned, idx) => {
+                                                    const exName = store.exercises.find(e => e.id === planned.exerciseId)?.name || 'Exercício';
                                                     return (
-                                                        <div key={item.id} className="flex justify-between items-center text-[13px] md:text-sm font-roboto py-1">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className={`truncate ${!log ? 'text-slate-300 line-through' : 'text-slate-600'}`}>{exName}</span>
-                                                                {log && skippedSets > 0 && (
-                                                                    <span className="text-[10px] bg-rose-500/10 text-rose-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                                        faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
-                                                                    </span>
-                                                                )}
-                                                                {!log && (
-                                                                    <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                                        não feito
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <span className="text-primary font-bold pl-3 text-right shrink-0">
-                                                                {setsDisplay}
+                                                        <div key={`notdone-${idx}`} className="flex justify-between items-center text-sm py-0.5">
+                                                            <span className="text-slate-300 line-through font-bold font-inter uppercase">{exName}</span>
+                                                            <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                não feito
                                                             </span>
                                                         </div>
                                                     );
@@ -264,7 +291,7 @@ export default function HistoryPage() {
                     }
                 >
                     <p className="text-slate-500 font-roboto text-sm">
-                        Tem certeza que deseja excluir as atividades deste dia? Esse registro sumirá do seu hitórico, dos gráficos e do feed da comunidade.
+                        Tem certeza que deseja excluir as atividades deste dia? Esse registro sumirá do seu histórico, dos gráficos e do feed da comunidade.
                     </p>
                 </Modal>
             )}
