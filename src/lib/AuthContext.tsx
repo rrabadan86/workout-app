@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 
 interface AuthContextValue {
     userId: string;
+    userEmail: string;
     ready: boolean;
     login: (uid: string) => void;
     logout: () => void;
@@ -14,6 +15,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
     userId: '',
+    userEmail: '',
     ready: false,
     login: () => { },
     logout: () => { },
@@ -21,56 +23,61 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [userId, setUserId] = useState('');
+    const [userEmail, setUserEmail] = useState('');
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
         // 1. Carrega sessão local (login email/senha)
         const localSession = getSession();
-        if (localSession) {
+        if (localSession && !userId) {
             setUserId(localSession);
-            setReady(true);
-            return;
         }
 
         // 2. Verifica se há sessão ativa do Supabase Auth (login Google/OAuth)
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        const initSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 const authUserId = session.user.id;
-
-                // Garante que o usuário existe em public.users (fallback caso trigger não rode)
-                await supabase.from('users').upsert({
+                await supabase.from('profiles').upsert({
                     id: authUserId,
                     name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuário',
                     email: session.user.email,
-                    password: '',
-                    friend_ids: [],
+                    role: 'user',
+                    onboarding_done: true,
+                    photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
                 }, { onConflict: 'id', ignoreDuplicates: true });
 
                 setSession(authUserId);
                 setUserId(authUserId);
+                setUserEmail(session.user.email || '');
             }
             setReady(true);
-        });
+        };
+
+        initSession();
 
         // 3. Listener para mudanças de auth (ex: redirect após login Google)
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
                 const authUserId = session.user.id;
 
-                // Garante que o usuário existe em public.users
-                await supabase.from('users').upsert({
+                // Garante que o usuário existe em public.profiles
+                await supabase.from('profiles').upsert({
                     id: authUserId,
                     name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuário',
                     email: session.user.email,
-                    password: '',
-                    friend_ids: [],
+                    role: 'user',
+                    onboarding_done: true,
+                    photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
                 }, { onConflict: 'id', ignoreDuplicates: true });
 
                 setSession(authUserId);
                 setUserId(authUserId);
+                setUserEmail(session.user.email || '');
             } else if (event === 'SIGNED_OUT') {
                 clearSession();
                 setUserId('');
+                setUserEmail('');
             }
         });
 
@@ -85,12 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = useCallback(async () => {
         clearSession();
         setUserId('');
-        // Também faz logout do Supabase Auth (para limpar sessão OAuth)
+        setUserEmail('');
         await supabase.auth.signOut();
     }, []);
 
     return (
-        <AuthContext.Provider value={{ userId, ready, login, logout }}>
+        <AuthContext.Provider value={{ userId, userEmail, ready, login, logout }}>
             {children}
         </AuthContext.Provider>
     );
