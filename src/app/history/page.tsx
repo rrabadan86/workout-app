@@ -182,10 +182,10 @@ export default function HistoryPage() {
                                                     Você
                                                     {isHidden && (
                                                         <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                            Privado
+                                                            Oculto do feed
                                                         </span>
                                                     )}
-                                                    {!isHidden && (
+                                                    {project && project.sharedWith.length > 0 && (
                                                         <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
                                                             Compartilhado
                                                         </span>
