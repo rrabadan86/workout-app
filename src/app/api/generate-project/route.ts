@@ -71,7 +71,7 @@ Responda APENAS com um JSON válido e sem formatação Markdown extra contendo a
 
 Lembre-se: Use APENAS os IDs de exercícios da lista fornecida. Retorne APENAS o JSON, nada mais.`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -126,6 +126,11 @@ Lembre-se: Use APENAS os IDs de exercícios da lista fornecida. Retorne APENAS o
       return NextResponse.json(
         { error: 'Limite gratuito atingido. O Google precisa descansar por 1 minuto antes de criar o seu próximo treino! Tente novamente em alguns segundos.' },
         { status: 429 }
+      );
+    } else if (errorMessage.includes('503') || errorMessage.includes('Service Unavailable') || errorMessage.includes('overloaded')) {
+      return NextResponse.json(
+        { error: 'Os servidores da Inteligência Artificial estão congestionados no momento. Aguarde alguns instantes e clique em Gerar novamente.' },
+        { status: 503 }
       );
     }
 
