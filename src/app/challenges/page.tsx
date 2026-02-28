@@ -119,6 +119,11 @@ export default function ChallengesPage() {
                             const myParticipant = store.challengeParticipants.find(p => p.challenge_id === c.id && p.user_id === userId);
                             const role = myParticipant?.role || (c.created_by === userId ? 'owner' : null);
 
+                            const ownerParticipant = store.challengeParticipants.find(p => p.challenge_id === c.id && p.role === 'owner');
+                            const creatorId = ownerParticipant?.user_id ?? c.created_by;
+                            const creator = creatorId ? store.profiles.find(u => u.id === creatorId) : null;
+                            const creatorLabel = creatorId === userId ? 'Você' : (creator?.name?.split(' ')[0] ?? null);
+
                             return (
                                 <div
                                     key={c.id}
@@ -151,9 +156,9 @@ export default function ChallengesPage() {
                                                     >
                                                         {st.dot} {st.label}
                                                     </span>
-                                                    {role === 'owner' && (
-                                                        <span className="inline-flex items-center text-[0.65rem] font-bold text-amber-500 bg-amber-50 rounded-full px-2 py-0.5">
-                                                            👑 Criador
+                                                    {creatorLabel && (
+                                                        <span className="inline-flex items-center gap-1 text-[0.65rem] font-bold text-violet-700 bg-violet-50 border border-violet-100 rounded-full px-2 py-0.5">
+                                                            👑 {creatorLabel}
                                                         </span>
                                                     )}
                                                     {role === 'admin' && (

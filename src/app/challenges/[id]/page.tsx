@@ -589,6 +589,23 @@ export default function ChallengeDetailsPage() {
                                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
                                     <Users size={14} /> {participants.length} inscritos
                                 </span>
+                                {(() => {
+                                    const ownerParticipant = participants.find(p => p.role === 'owner');
+                                    const creator = ownerParticipant ? store.profiles.find(u => u.id === ownerParticipant.user_id) : null;
+                                    if (!creator) return null;
+                                    return (
+                                        <span className="inline-flex items-center gap-2 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-full">
+                                            {creator.photo_url ? (
+                                                <img src={creator.photo_url} alt={creator.name} className="w-4 h-4 rounded-full object-cover shrink-0" />
+                                            ) : (
+                                                <span className="w-4 h-4 rounded-full bg-violet-200 text-violet-700 flex items-center justify-center text-[10px] font-black shrink-0">
+                                                    {creator.name.charAt(0).toUpperCase()}
+                                                </span>
+                                            )}
+                                            👑 Criado por {creator.name.split(' ')[0]}
+                                        </span>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
