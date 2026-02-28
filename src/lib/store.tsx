@@ -3,9 +3,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from './supabase';
-import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo, Challenge, ChallengeParticipant, ChallengeInvite, ChallengeCheckin, ChallengeComment, ChallengeBadge } from './types';
+import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo, Challenge, ChallengeParticipant, ChallengeInvite, ChallengeCheckin, ChallengeComment, ChallengeBadge, Notification } from './types';
 
-const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [], challenges: [], challengeParticipants: [], challengeInvites: [], challengeCheckins: [], challengeComments: [], challengeBadges: [] };
+const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [], challenges: [], challengeParticipants: [], challengeInvites: [], challengeCheckins: [], challengeComments: [], challengeBadges: [], notifications: [] };
 
 // ─── Store Context ────────────────────────────────────────────────────────────
 interface StoreContextValue {
@@ -49,6 +49,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     supabase.from('challenge_checkins').select('*'),
                     supabase.from('challenge_comments').select('*'),
                     supabase.from('challenge_badges').select('*'),
+                    supabase.from('notifications').select('*').order('created_at', { ascending: false }),
                 ]);
 
                 const result = await Promise.race([fetchTask, timeout]);
@@ -73,7 +74,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     return res.value?.data ?? [];
                 };
 
-                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes, challengesRes, challengeParticipantsRes, challengeInvitesRes, challengeCheckinsRes, challengeCommentsRes, challengeBadgesRes] = settled;
+                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes, challengesRes, challengeParticipantsRes, challengeInvitesRes, challengeCheckinsRes, challengeCommentsRes, challengeBadgesRes, notificationsRes] = settled;
 
                 let workouts = getValue(workoutsRes, 'workouts') as Workout[];
                 let projects = getValue(projectsRes, 'projects') as Project[];
@@ -136,6 +137,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     challengeCheckins: getValue(challengeCheckinsRes, 'challenge_checkins') as ChallengeCheckin[],
                     challengeComments: getValue(challengeCommentsRes, 'challenge_comments') as ChallengeComment[],
                     challengeBadges: getValue(challengeBadgesRes, 'challenge_badges') as ChallengeBadge[],
+                    notifications: getValue(notificationsRes, 'notifications') as Notification[],
                 });
             } catch (err) {
                 console.error('[Store] Refresh issue:', err);
@@ -330,6 +332,33 @@ export function useStore() {
         await refresh();
     }, [refresh]);
 
+    // ─── Notifications ─────────────────────────────────────────────────────
+    const createNotification = useCallback(async (n: Omit<Notification, 'created_at' | 'read'>) => {
+        const { error } = await supabase.from('notifications').insert({ ...n, read: false });
+        if (error) throw new Error(error.message);
+        // Optimistically update in-store without full refresh
+        setStore(prev => ({
+            ...prev,
+            notifications: [{ ...n, read: false, created_at: new Date().toISOString() }, ...prev.notifications],
+        }));
+    }, []);
+
+    const markNotificationRead = useCallback(async (id: string) => {
+        await supabase.from('notifications').update({ read: true }).eq('id', id);
+        setStore(prev => ({
+            ...prev,
+            notifications: prev.notifications.map(n => n.id === id ? { ...n, read: true } : n),
+        }));
+    }, []);
+
+    const markAllNotificationsRead = useCallback(async (userId: string) => {
+        await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+        setStore(prev => ({
+            ...prev,
+            notifications: prev.notifications.map(n => ({ ...n, read: true })),
+        }));
+    }, []);
+
     return {
         store, setStore, loading, refresh,
         addProfile, updateProfile,
@@ -339,6 +368,7 @@ export function useStore() {
         addLog, updateLog, deleteLog,
         addFeedEvent, updateFeedEvent, deleteFeedEvent, toggleKudo,
         addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge,
+        createNotification, markNotificationRead, markAllNotificationsRead,
     };
 }
 

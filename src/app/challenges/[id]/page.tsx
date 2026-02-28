@@ -20,7 +20,7 @@ export default function ChallengeDetailsPage() {
     const id = params.id as string;
 
     const { userId, ready } = useAuth();
-    const { store, refresh, addFeedEvent, addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge } = useStore();
+    const { store, refresh, addFeedEvent, addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, createNotification } = useStore();
 
     const [challenge, setChallenge] = useState<Challenge | null>(null);
     const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
@@ -61,7 +61,7 @@ export default function ChallengeDetailsPage() {
     const todayStr = today();
     const hasCheckedInToday = checkins.some(ck => ck.user_id === userId && ck.checkin_date === todayStr);
 
-    const isActive = challenge?.status === 'active' && challenge?.end_date >= todayStr;
+    const isActive = challenge?.status === 'active' && challenge?.start_date <= todayStr && challenge?.end_date >= todayStr;
 
     // A ref to prevent React Strict Mode from firing sync twice simultaneously
     const syncingRef = useRef(false);
@@ -204,6 +204,48 @@ export default function ChallengeDetailsPage() {
         finalizeChallenge();
     }, [challenge, participants, checkins, store.challengeBadges, todayStr, refresh]);
 
+    // Time-based alerts: start day and 3 days before end
+    const alertSentRef = useRef(false);
+    useEffect(() => {
+        if (!challenge || !participants.length || alertSentRef.current) return;
+        alertSentRef.current = true;
+
+        const daysToEnd = Math.ceil((new Date(challenge.end_date).getTime() - new Date(todayStr).getTime()) / (1000 * 60 * 60 * 24));
+        const isStartDay = challenge.start_date === todayStr;
+        const is3DaysLeft = daysToEnd === 3;
+
+        if (!isStartDay && !is3DaysLeft) return;
+
+        participants.forEach(p => {
+            const profile = store.profiles.find(u => u.id === p.user_id);
+            if (!profile) return;
+            // Respect preference (default = true)
+            const wantsAlerts = profile.notification_prefs?.challenge_alerts !== false;
+            if (!wantsAlerts) return;
+
+            // Avoid duplicate: check if we already sent this type today
+            const alreadySent = store.notifications.some(n =>
+                n.user_id === p.user_id &&
+                n.reference_id === challenge.id &&
+                n.type === 'challenge_alert' &&
+                n.created_at.slice(0, 10) === todayStr
+            );
+            if (alreadySent) return;
+
+            const notifData = isStartDay
+                ? { title: '🏁 Desafio Começou!', message: `"${challenge.title}" começou hoje! Faça seu primeiro check-in.` }
+                : { title: '⏰ Faltam 3 dias!', message: `"${challenge.title}" termina em 3 dias. Não perca o prazo!` };
+
+            createNotification({
+                id: uid(),
+                user_id: p.user_id,
+                type: 'challenge_alert',
+                reference_id: challenge.id,
+                ...notifData
+            }).catch(console.error);
+        });
+    }, [challenge, participants, store.profiles, store.notifications, todayStr, createNotification]);
+
     if (!ready || !userId || !challenge) return null; // Or a loading spinner
 
     async function handleJoin() {
@@ -260,6 +302,55 @@ export default function ChallengeDetailsPage() {
             };
             const { error } = await supabase.from('challenge_checkins').insert(newCheckin);
             if (error) throw error;
+
+            // Snapshot rankings BEFORE and AFTER for notification logic
+            const rankSnapshot = (ckList: ChallengeCheckin[]) =>
+                participants
+                    .map(p => ({
+                        ...p,
+                        score: ckList.filter(ck => ck.user_id === p.user_id).length
+                    }))
+                    .sort((a, b) => b.score - a.score);
+
+            const beforeRanks = rankSnapshot(checkins);
+            const afterCheckins = [...checkins, newCheckin as any];
+            const afterRanks = rankSnapshot(afterCheckins);
+
+            // For each person whose rank dropped, send a rank_down notification
+            afterRanks.forEach((entry, newIdx) => {
+                const oldIdx = beforeRanks.findIndex(r => r.user_id === entry.user_id);
+                if (newIdx > oldIdx && entry.user_id !== userId) {
+                    const profile = store.profiles.find(u => u.id === entry.user_id);
+                    const wantsRankNotif = profile?.notification_prefs?.rank_changes !== false;
+                    if (!wantsRankNotif) return;
+                    createNotification({
+                        id: uid(),
+                        user_id: entry.user_id,
+                        type: 'rank_down',
+                        reference_id: challenge!.id,
+                        title: '📉 Você foi ultrapassado!',
+                        message: `Alguém te passou no ranking de "${challenge!.title}". Hora de reagir! 🔥`
+                    }).catch(console.error);
+                }
+            });
+
+            // If the current user just reached 1st place (and wasn't before), notify them
+            const myOldRank = beforeRanks.findIndex(r => r.user_id === userId);
+            const myNewRank = afterRanks.findIndex(r => r.user_id === userId);
+            if (myNewRank === 0 && myOldRank > 0) {
+                const myProfile = store.profiles.find(u => u.id === userId);
+                const wantsRankNotif = myProfile?.notification_prefs?.rank_changes !== false;
+                if (wantsRankNotif) {
+                    createNotification({
+                        id: uid(),
+                        user_id: userId,
+                        type: 'rank_top1',
+                        reference_id: challenge!.id,
+                        title: '🥇 Você é o número 1!',
+                        message: `Você alcançou o 1º lugar em "${challenge!.title}"! Continue assim! 🚀`
+                    }).catch(console.error);
+                }
+            }
 
             const updatedCheckins = [...store.challengeCheckins, newCheckin as any];
             await evaluateBadges(userId, challenge!.id, updatedCheckins, store.challengeBadges);

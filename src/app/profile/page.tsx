@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { UserCircle, Trophy, ChevronRight } from 'lucide-react';
+import { UserCircle, Trophy, ChevronRight, Bell } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -23,6 +23,8 @@ export default function ProfilePage() {
     const [sex, setSex] = useState<'M' | 'F' | 'outro' | ''>('');
     const [birthDate, setBirthDate] = useState('');
     const [photoUrl, setPhotoUrl] = useState('');
+    const [notifChallengeAlerts, setNotifChallengeAlerts] = useState(true);
+    const [notifRankChanges, setNotifRankChanges] = useState(true);
 
     const [ufs, setUfs] = useState<{ id: number, sigla: string, nome: string }[]>([]);
     const [cities, setCities] = useState<{ id: number, nome: string }[]>([]);
@@ -47,6 +49,8 @@ export default function ProfilePage() {
             setSex(me.sex || '');
             setBirthDate(me.birth_date || '');
             setPhotoUrl(me.photo_url || '');
+            setNotifChallengeAlerts(me.notification_prefs?.challenge_alerts ?? true);
+            setNotifRankChanges(me.notification_prefs?.rank_changes ?? true);
         }
     }, [me]);
 
@@ -89,7 +93,11 @@ export default function ProfilePage() {
                 cref: role === 'personal' ? cref.trim() : me.cref,
                 sex,
                 birth_date: birthDate,
-                photo_url: photoUrl.trim()
+                photo_url: photoUrl.trim(),
+                notification_prefs: {
+                    challenge_alerts: notifChallengeAlerts,
+                    rank_changes: notifRankChanges,
+                },
             };
             // @ts-ignore
             await updateProfile(updatedProfile);
@@ -229,6 +237,40 @@ export default function ProfilePage() {
                                 />
                             </div>
                         )}
+
+                        {/* Notification Prefs */}
+                        <div className="border-t border-slate-100 pt-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Bell size={16} className="text-slate-400" />
+                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Preferências de Notificações</label>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">Alertas de Desafio (Início / Fim)</p>
+                                        <p className="text-xs text-slate-500">Notificar quando um desafio começar ou faltar 3 dias para terminar.</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notifChallengeAlerts}
+                                        onChange={e => setNotifChallengeAlerts(e.target.checked)}
+                                        className="w-5 h-5 rounded accent-blue-600 shrink-0 ml-4"
+                                    />
+                                </label>
+                                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">Mudanças no Ranking</p>
+                                        <p className="text-xs text-slate-500">Notificar quando alguém ultrapassar você ou quando você alcançar o 1º lugar.</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notifRankChanges}
+                                        onChange={e => setNotifRankChanges(e.target.checked)}
+                                        className="w-5 h-5 rounded accent-blue-600 shrink-0 ml-4"
+                                    />
+                                </label>
+                            </div>
+                        </div>
 
                         <div className="pt-4 border-t border-slate-100 flex justify-end">
                             <button

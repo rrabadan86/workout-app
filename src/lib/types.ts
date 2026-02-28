@@ -1,3 +1,8 @@
+export interface NotificationPrefs {
+  challenge_alerts: boolean;
+  rank_changes: boolean;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -12,6 +17,18 @@ export interface Profile {
   birth_date?: string;
   photo_url?: string;
   created_at?: string;
+  notification_prefs?: NotificationPrefs;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  type: 'challenge_alert' | 'rank_down' | 'rank_top1';
+  reference_id?: string | null;
+  read: boolean;
+  created_at: string;
 }
 
 export interface PersonalStudent {
@@ -183,4 +200,5 @@ export interface AppStore {
   challengeCheckins: ChallengeCheckin[];
   challengeComments: ChallengeComment[];
   challengeBadges: ChallengeBadge[];
+  notifications: Notification[];
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Trophy } from 'lucide-react';
+import { Menu, X, Trophy, Bell } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { UFitLogo } from '@/components/UFitLogo';
@@ -12,34 +12,37 @@ const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 const BASE_NAV_ITEMS = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/projects', label: 'Treinos' },
-    // "Alunos" is injected dynamically for personal trainers later
     { href: '/history', label: 'Histórico' },
     { href: '/community', label: 'Comunidade' },
     { href: '/compare', label: 'Comparar' },
-    { href: '/challenges', label: 'Desafios', icon: true }, // Added flag
+    { href: '/challenges', label: 'Desafios', icon: true },
 ];
 
 export default function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
     const { userId, logout } = useAuth();
-    const { store } = useStore();
+    const { store, markNotificationRead, markAllNotificationsRead } = useStore();
 
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const bellRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         function handleClick(e: MouseEvent) {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
                 setShowUserMenu(false);
             }
+            if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+                setShowNotifications(false);
+            }
         }
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
 
-    // Close mobile menu on route change
     useEffect(() => {
         setShowMobileMenu(false);
     }, [pathname]);
@@ -51,17 +54,33 @@ export default function Navbar() {
 
     const isSupervisor = user.email === SUPERVISOR_EMAIL;
 
-    // Build full nav items list (including dynamic "Alunos" for personal trainers)
     const allNavItems = [...BASE_NAV_ITEMS];
     if (user.role === 'personal') {
-        // Insert "Alunos" after "Treinos"
         const treinosIdx = allNavItems.findIndex(i => i.href === '/projects');
         allNavItems.splice(treinosIdx + 1, 0, { href: '/students', label: 'Alunos' });
     }
 
+    // Only show current user's notifications
+    const myNotifications = store.notifications.filter(n => n.user_id === userId);
+    const unreadCount = myNotifications.filter(n => !n.read).length;
+
     function handleLogout() {
         logout();
         router.push('/');
+    }
+
+    function handleNotificationClick(notif: typeof myNotifications[number]) {
+        markNotificationRead(notif.id);
+        if (notif.reference_id) {
+            router.push(`/challenges/${notif.reference_id}`);
+        }
+        setShowNotifications(false);
+    }
+
+    function NotifIcon(type: string) {
+        if (type === 'rank_top1') return '🥇';
+        if (type === 'rank_down') return '📉';
+        return '🔔';
     }
 
     function NavLink({ href, label, icon }: { href: string; label: string; icon?: boolean }) {
@@ -117,12 +136,72 @@ export default function Navbar() {
                             {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
                         </button>
 
+                        {/* 🔔 Bell Notification Button */}
+                        <div className="relative" ref={bellRef}>
+                            <button
+                                className="relative size-10 flex items-center justify-center bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors"
+                                onClick={() => {
+                                    setShowNotifications(prev => !prev);
+                                    setShowUserMenu(false);
+                                }}
+                                aria-label="Notificações"
+                            >
+                                <Bell size={20} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black leading-none size-4 flex items-center justify-center rounded-full">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {showNotifications && (
+                                <div className="absolute top-[120%] right-0 bg-white border border-slate-100 shadow-xl rounded-2xl min-w-[300px] max-w-[340px] flex flex-col z-50 shadow-slate-200/50 overflow-hidden">
+                                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                                        <span className="font-bold text-sm text-slate-800">Notificações</span>
+                                        {unreadCount > 0 && (
+                                            <button
+                                                onClick={() => markAllNotificationsRead(userId)}
+                                                className="text-xs text-blue-500 hover:underline font-semibold"
+                                            >
+                                                Marcar todas como lidas
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-[360px] overflow-y-auto flex flex-col divide-y divide-slate-50">
+                                        {myNotifications.length === 0 ? (
+                                            <div className="py-8 text-center text-slate-400 text-sm font-medium">
+                                                Nenhuma notificação por enquanto 🎉
+                                            </div>
+                                        ) : myNotifications.map(notif => (
+                                            <button
+                                                key={notif.id}
+                                                onClick={() => handleNotificationClick(notif)}
+                                                className={`flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors w-full ${!notif.read ? 'bg-blue-50/40' : ''}`}
+                                            >
+                                                <span className="text-lg shrink-0 mt-0.5">{NotifIcon(notif.type)}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-sm font-bold leading-tight ${notif.read ? 'text-slate-600' : 'text-slate-900'}`}>{notif.title}</p>
+                                                    <p className="text-xs text-slate-500 mt-0.5 leading-snug">{notif.message}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-1">
+                                                        {new Date(notif.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                                {!notif.read && (
+                                                    <span className="size-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Profile avatar + dropdown */}
                         <div className="relative" ref={menuRef}>
                             <div
                                 className={`size-10 rounded-xl ${user.photo_url ? 'bg-transparent hover:opacity-80' : 'bg-slate-200 hover:bg-slate-300'} overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none transition-all`}
                                 title={user.name}
-                                onClick={() => setShowUserMenu(!showUserMenu)}
+                                onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
                             >
                                 {user.photo_url ? (
                                     <img src={user.photo_url} alt={user.name} className="w-full h-full object-cover" />

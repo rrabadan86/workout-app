@@ -299,6 +299,11 @@ export default function DashboardPage() {
                                 <span className="flex-1 text-left font-inter leading-tight">Comunidade</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
+                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/challenges')}>
+                                <div className="size-10 rounded-lg text-rose-500 bg-rose-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><BarChart2 size={18} /></div>
+                                <span className="flex-1 text-left font-inter leading-tight">Meus Desafios</span>
+                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
+                            </button>
                         </div>
                     </div>
                 </aside>
