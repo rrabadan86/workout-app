@@ -2,7 +2,7 @@
 const fs = require('fs');
 const envFile = fs.readFileSync('.env.local', 'utf8');
 const keyMatch = envFile.match(/GEMINI_API_KEY=(.*)/);
-process.env.GEMINI_API_KEY = keyMatch ? keyMatch[1].trim() : '';
+process.env.GEMINI_API_KEY = keyMatch ? keyMatch[1].trim().replace(/"/g, '') : '';
 
 
 async function checkModels() {

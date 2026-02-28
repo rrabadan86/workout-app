@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Sparkles, Loader2, Calendar, Dumbbell } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -11,6 +11,8 @@ import { useStore } from '@/lib/store';
 import { uid, formatDate } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Project } from '@/lib/types';
+
+const MUSCLES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Abdômen', 'Glúteos', 'Panturrilha', 'Antebraço', 'Aeróbico'];
 
 function projectStatus(p: Project): 'ativo' | 'inativo' | 'futuro' {
     const today = new Date().toISOString().slice(0, 10);
@@ -54,9 +56,12 @@ export default function ProjectsPage() {
     const [aiLimitations, setAiLimitations] = useState('');
     const [aiUsePrevious, setAiUsePrevious] = useState(false);
     const [aiGenerating, setAiGenerating] = useState(false);
+    const [aiCooldown, setAiCooldown] = useState(0);
     const [aiPrescribeEmail, setAiPrescribeEmail] = useState('');
     const [aiStart, setAiStart] = useState('');
     const [aiEnd, setAiEnd] = useState('');
+    const [aiMuscleFilter, setAiMuscleFilter] = useState<string[]>([...MUSCLES]);
+    const [showMuscleDropdown, setShowMuscleDropdown] = useState(false);
     const [showAiStudentDropdown, setShowAiStudentDropdown] = useState(false);
     const [showPStudentDropdown, setShowPStudentDropdown] = useState(false);
 
@@ -67,6 +72,18 @@ export default function ProjectsPage() {
     const [linkedStudentIds, setLinkedStudentIds] = useState<string[]>([]);
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
+
+    // AI cooldown countdown timer
+    useEffect(() => {
+        if (aiCooldown <= 0) return;
+        const timer = setInterval(() => {
+            setAiCooldown(prev => {
+                if (prev <= 1) { clearInterval(timer); return 0; }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [aiCooldown]);
 
     useEffect(() => {
         if (!userId || currentUser?.role !== 'personal') return;
@@ -131,6 +148,7 @@ export default function ProjectsPage() {
         setAiFocus('');
         setAiLimitations('');
         setAiPrescribeEmail('');
+        setAiMuscleFilter([...MUSCLES]);
         const today = new Date().toISOString().slice(0, 10);
         const future = new Date();
         future.setDate(future.getDate() + 30);
@@ -229,6 +247,7 @@ export default function ProjectsPage() {
     async function handleGenerateAI(e: React.FormEvent) {
         e.preventDefault();
         setAiGenerating(true);
+        setAiCooldown(0);
         try {
             let lastProjectInfo = '';
             const myProjs = store.projects.filter(p => p.ownerId === userId);
@@ -240,7 +259,9 @@ export default function ProjectsPage() {
                 body: JSON.stringify({
                     focus: aiFocus, daysPerWeek: parseInt(aiDays), maxTimeMins: parseInt(aiTime),
                     experienceLevel: aiExperience, limitations: aiLimitations, lastProjectInfo,
-                    existingExercises: store.exercises.map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle, description: ex.description }))
+                    existingExercises: store.exercises
+                        .filter(ex => aiMuscleFilter.includes(ex.muscle))
+                        .map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle, description: ex.description }))
                 })
             });
             const data = await res.json();
@@ -281,9 +302,10 @@ export default function ProjectsPage() {
             }
             setToast({ msg: `${studentMsg}Treino Gerado! 🚀`, type: 'success' });
             setShowAIModal(false);
-            setAiFocus(''); setAiLimitations(''); setAiPrescribeEmail('');
+            setAiFocus(''); setAiLimitations(''); setAiPrescribeEmail(''); setAiMuscleFilter([...MUSCLES]);
         } catch (err: unknown) {
             setToast({ msg: (err as Error).message || 'Falha ao gerar treino.', type: 'error' });
+            setAiCooldown(60); // Start 60s cooldown after any error
         } finally { setAiGenerating(false); }
     }
 
@@ -625,8 +647,8 @@ export default function ProjectsPage() {
                                 </span>
                             )}
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowAIModal(false)} disabled={aiGenerating}>Cancelar</button>
-                            <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] hover:scale-[1.02] shadow-xl shadow-[#C084FC]/30 px-6 py-4 flex items-center gap-2" form="ai-form" type="submit" disabled={aiGenerating}>
-                                {aiGenerating ? 'Criando a mágica...' : 'Gerar Programa Mágico'}
+                            <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] hover:scale-[1.02] shadow-xl shadow-[#C084FC]/30 px-6 py-4 flex items-center gap-2" form="ai-form" type="submit" disabled={aiGenerating || aiCooldown > 0}>
+                                {aiGenerating ? 'Criando a mágica...' : aiCooldown > 0 ? `Aguarde ${aiCooldown}s...` : 'Gerar Programa Mágico'}
                             </button>
                         </div>
                     }
@@ -671,6 +693,59 @@ export default function ProjectsPage() {
                                 <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de término *</label>
                                 <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={aiEnd} onChange={(e) => setAiEnd(e.target.value)} required min={aiStart} />
                             </div>
+                        </div>
+                        <div className="field relative">
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Grupos musculares incluídos</label>
+                            <button
+                                type="button"
+                                onClick={() => setShowMuscleDropdown(prev => !prev)}
+                                className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white text-left flex items-center justify-between"
+                            >
+                                <span className={aiMuscleFilter.length === MUSCLES.length ? 'text-slate-900' : aiMuscleFilter.length === 0 ? 'text-rose-500 font-semibold' : 'text-[#C084FC] font-semibold'}>
+                                    {aiMuscleFilter.length === MUSCLES.length
+                                        ? `Todos os grupos (${store.exercises.length} exercícios)`
+                                        : aiMuscleFilter.length === 0
+                                            ? 'Nenhum grupo selecionado!'
+                                            : `${aiMuscleFilter.length} grupo(s) — ${store.exercises.filter(ex => aiMuscleFilter.includes(ex.muscle)).length} exercícios`
+                                    }
+                                </span>
+                                <svg className={`w-4 h-4 text-slate-400 transition-transform ${showMuscleDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                            </button>
+                            {showMuscleDropdown && (
+                                <div
+                                    className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden"
+                                    style={{ top: '100%', left: 0 }}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                >
+                                    <div className="flex gap-2 px-3 py-2 border-b border-slate-100 bg-slate-50/50">
+                                        <button type="button" onClick={() => setAiMuscleFilter([...MUSCLES])} className="text-[11px] font-bold text-[#C084FC] hover:underline">Marcar Todos</button>
+                                        <span className="text-slate-300">|</span>
+                                        <button type="button" onClick={() => setAiMuscleFilter([])} className="text-[11px] font-bold text-slate-400 hover:text-rose-500 hover:underline">Desmarcar Todos</button>
+                                    </div>
+                                    <div className="max-h-48 overflow-auto py-1">
+                                        {MUSCLES.map(m => {
+                                            const checked = aiMuscleFilter.includes(m);
+                                            const count = store.exercises.filter(ex => ex.muscle === m).length;
+                                            return (
+                                                <label
+                                                    key={m}
+                                                    className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={checked}
+                                                        onChange={() => setAiMuscleFilter(prev => checked ? prev.filter(x => x !== m) : [...prev, m])}
+                                                        className="w-4 h-4 rounded border-slate-300"
+                                                        style={{ accentColor: '#C084FC' }}
+                                                    />
+                                                    <span className="text-sm font-roboto text-slate-800 flex-1">{m}</span>
+                                                    <span className="text-[11px] text-slate-400 font-semibold">{count}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="field">
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Possui alguma limitação física ou preferência? (Opcional)</label>
