@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Sparkles, Loader2, Calendar, Dumbbell } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -75,20 +75,20 @@ export default function ProjectsPage() {
         });
     }, [userId, currentUser?.role]);
 
+    const autoDeactivatedRef = useRef(false);
     useEffect(() => {
         if (!ready || !store.projects.length || loading) return;
-        const today = new Date().toISOString().slice(0, 10);
-        let updated = false;
-        store.projects.forEach(p => {
-            if (p.status === 'active' && p.endDate < today) {
-                updateProject({ ...p, status: 'inactive' });
-                updated = true;
-            }
-        });
-        // No explicit refresh() needed as updateProject calls it via store
-    }, [ready, store.projects, updateProject, loading]);
+        if (autoDeactivatedRef.current) return;
+        autoDeactivatedRef.current = true;
 
-    if (!ready || !userId) return null;
+        const today = new Date().toISOString().slice(0, 10);
+        const expiredProjects = store.projects.filter(p => p.status === 'active' && p.endDate < today);
+        expiredProjects.forEach(p => {
+            updateProject({ ...p, status: 'inactive' });
+        });
+    }, [ready, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    if (!ready || !userId || loading) return null;
 
     const myProjects = store.projects.filter((p) => {
         const isOwner = p.ownerId === userId;

@@ -12,12 +12,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export default function ComparePage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store } = useStore();
+    const { store, loading } = useStore();
     const [friendId, setFriendId] = useState('');
     const [workoutId, setWorkoutId] = useState('');
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
-    if (!ready || !userId) return null;
+    if (!ready || !userId || loading) return null;
 
     const currentUser = store.profiles.find((u) => u.id === userId);
     const friendUser = store.profiles.find((u) => u.id === friendId);

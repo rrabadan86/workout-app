@@ -35,7 +35,7 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
 
-    const allRelevantIds = [...friendIds, myId];
+    const allRelevantIds = useMemo(() => [...friendIds, myId], [friendIds, myId]);
 
     const feedItems = useMemo(() => {
         if (!mounted) return [];
@@ -50,7 +50,9 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
     if (feedItems.length === 0) {
         return (
             <div className="bg-white rounded-xl card-depth p-8 text-center flex flex-col items-center justify-center h-48">
-                <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">forum</span>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300 mb-2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
                 <p className="text-slate-500 font-bold mb-1">Nenhuma atividade recente.</p>
                 <p className="text-xs text-slate-400">Os treinos concluídos por você e seus amigos aparecerão aqui.</p>
             </div>

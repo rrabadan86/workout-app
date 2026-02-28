@@ -33,9 +33,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const runRefresh = async () => {
             console.log('[Store] Refreshing data...');
             try {
-                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Store fetch timeout')), 8000));
+                const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 15000));
 
-                const fetchTask = Promise.all([
+                const fetchTask = Promise.allSettled([
                     supabase.from('profiles').select('*'),
                     supabase.from('exercises').select('*'),
                     supabase.from('projects').select('*'),
@@ -45,23 +45,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     supabase.from('kudos').select('*'),
                 ]);
 
-                const results = await Promise.race([fetchTask, timeout]) as any[];
-                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes] = results;
+                const result = await Promise.race([fetchTask, timeout]);
 
-                console.log('[Store] Data fetched:', { profiles: usersRes.data?.length, events: feedRes.data?.length });
+                // Timeout — queries travaram (provavelmente auth.uid() é NULL antes do login)
+                if (result === null) {
+                    console.warn('[Store] Fetch timed out — will retry after login.');
+                    return;
+                }
+
+                const settled = result;
+
+                const getValue = (res: PromiseSettledResult<any>, name: string) => {
+                    if (res.status === 'rejected') {
+                        console.error(`[Store] Failed to fetch ${name}:`, res.reason);
+                        return [];
+                    }
+                    if (res.value?.error) {
+                        console.error(`[Store] Query error on ${name}:`, res.value.error.message);
+                        return [];
+                    }
+                    return res.value?.data ?? [];
+                };
+
+                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes] = settled;
+
+                console.log('[Store] Data fetched:', {
+                    profiles: getValue(usersRes, 'profiles').length,
+                    events: getValue(feedRes, 'feed_events').length,
+                });
 
                 setStore({
-                    profiles: (usersRes.data ?? []) as Profile[],
-                    exercises: (exercisesRes.data ?? []) as Exercise[],
-                    projects: (projectsRes.data ?? []) as Project[],
-                    workouts: (workoutsRes.data ?? []) as Workout[],
-                    logs: (logsRes.data ?? []) as WorkoutLog[],
-                    feedEvents: (feedRes.data ?? []) as FeedEvent[],
-                    kudos: (kudosRes.data ?? []) as Kudo[],
+                    profiles: getValue(usersRes, 'profiles') as Profile[],
+                    exercises: getValue(exercisesRes, 'exercises') as Exercise[],
+                    projects: getValue(projectsRes, 'projects') as Project[],
+                    workouts: getValue(workoutsRes, 'workouts') as Workout[],
+                    logs: getValue(logsRes, 'workout_logs') as WorkoutLog[],
+                    feedEvents: getValue(feedRes, 'feed_events') as FeedEvent[],
+                    kudos: getValue(kudosRes, 'kudos') as Kudo[],
                 });
             } catch (err) {
                 console.error('[Store] Refresh issue:', err);
-                // On failure, we keep the existing store if it was already populated
+                // On failure, keep existing store if already populated
             } finally {
                 setLoading(false);
                 refreshPromiseRef.current = null;

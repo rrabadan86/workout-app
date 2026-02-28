@@ -22,7 +22,7 @@ const muscleColors: Record<string, string> = {
 export default function ExercisesPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addExercise, updateExercise, deleteExercise } = useStore();
+    const { store, loading, addExercise, updateExercise, deleteExercise } = useStore();
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState<Exercise | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Exercise | null>(null);
@@ -36,7 +36,7 @@ export default function ExercisesPage() {
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
-    if (!ready || !userId) return null;
+    if (!ready || !userId || loading) return null;
     const user = store.profiles.find((u) => u.id === userId);
     if (!user) return null;
     const isSupervisor = user.email === 'rodrigorabadan@gmail.com';

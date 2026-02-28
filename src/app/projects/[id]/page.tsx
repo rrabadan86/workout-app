@@ -16,7 +16,7 @@ export default function ProjectDetailPage() {
     const params = useParams();
     const id = params.id as string;
     const { userId, ready } = useAuth();
-    const { store, addWorkout, updateWorkout, deleteWorkout } = useStore();
+    const { store, loading, addWorkout, updateWorkout, deleteWorkout } = useStore();
     const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [showModal, setShowModal] = useState(false);
@@ -117,7 +117,7 @@ export default function ProjectDetailPage() {
         return pct.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
     }, [project, userId, store.feedEvents, store.logs, store.workouts]);
 
-    if (!ready || !userId) return null;
+    if (!ready || !userId || loading) return null;
     if (!project) return (
         <>
             <Navbar />

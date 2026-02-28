@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen, Clock } from 'lucide-react';
+import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen, Clock, Plus } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Feed from '@/components/Feed';
 import { useAuth } from '@/lib/AuthContext';
@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store';
 export default function DashboardPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store } = useStore();
+    const { store, loading } = useStore();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -63,10 +63,15 @@ export default function DashboardPage() {
         .filter(p => !p.prescribed_to || p.prescribed_to === userId) // Only projects for me
         .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 
-    // Other users to follow
+    // Other users to follow (exclude already-following via friendIds)
     const peopleToFollow = useMemo(() => {
         if (!user) return [];
-        return store.profiles.filter(u => u.id !== user.id && !myFriendsIds.includes(u.id)).slice(0, 3);
+        const followingIds = user.friendIds || [];
+        return store.profiles.filter(u =>
+            u.id !== user.id &&
+            !myFriendsIds.includes(u.id) &&
+            !followingIds.includes(u.id)
+        ).slice(0, 3);
     }, [store.profiles, user, myFriendsIds]);
 
     // Calculate progress
@@ -96,7 +101,7 @@ export default function DashboardPage() {
     };
 
     // RULES OF HOOKS: All hooks must be called before conditional returns
-    if (!mounted || !ready || !userId) return null;
+    if (!mounted || !ready || !userId || loading) return null;
     if (!user) return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
@@ -255,7 +260,7 @@ export default function DashboardPage() {
                                             </div>
                                         </div>
                                         <button className="size-10 bg-slate-50 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors" onClick={() => router.push('/community')}>
-                                            <span className="material-symbols-outlined font-bold">add</span>
+                                            <Plus size={18} />
                                         </button>
                                     </div>
                                 ))}

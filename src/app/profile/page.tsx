@@ -11,7 +11,7 @@ import { UserCircle } from 'lucide-react';
 export default function ProfilePage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, updateProfile } = useStore();
+    const { store, loading, updateProfile } = useStore();
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -73,7 +73,7 @@ export default function ProfilePage() {
             .catch(err => console.error('Erro IBGE Cidades', err));
     }, [stateUF, me]);
 
-    if (!ready || !userId || !me) return null;
+    if (!ready || !userId || loading || !me) return null;
 
     async function handleSave(e: React.FormEvent) {
         e.preventDefault();

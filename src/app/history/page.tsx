@@ -37,7 +37,7 @@ function timeAgo(dateStr: string) {
 export default function HistoryPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, deleteFeedEvent, updateFeedEvent, deleteLog } = useStore();
+    const { store, loading, deleteFeedEvent, updateFeedEvent, deleteLog } = useStore();
 
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<FeedEvent | null>(null);
@@ -50,7 +50,7 @@ export default function HistoryPage() {
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
-    if (!mounted || !ready || !userId) return null;
+    if (!mounted || !ready || !userId || loading) return null;
 
     const currentUser = store.profiles.find(u => u.id === userId);
 

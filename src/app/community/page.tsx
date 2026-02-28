@@ -13,7 +13,7 @@ import Modal from '@/components/Modal';
 export default function CommunityPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, updateProfile } = useStore();
+    const { store, loading, updateProfile } = useStore();
 
     const [searchName, setSearchName] = useState('');
     const [searchCity, setSearchCity] = useState('');
@@ -28,7 +28,7 @@ export default function CommunityPage() {
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
-    if (!ready || !userId) return null;
+    if (!ready || !userId || loading) return null;
 
     const me = store.profiles.find(u => u.id === userId);
     if (!me) return null;
@@ -297,7 +297,7 @@ export default function CommunityPage() {
 
                 {otherUsers.length === 0 ? (
                     <div className="bg-white rounded-xl card-depth p-10 text-center flex flex-col items-center">
-                        <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">group_off</span>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300 mb-2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="18" y1="8" x2="23" y2="13" /><line x1="23" y1="8" x2="18" y2="13" /></svg>
                         <p className="text-slate-500 font-bold mb-1">Nenhum usuário encontrado.</p>
                         <p className="text-xs text-slate-400">Tente buscar por outro nome.</p>
                     </div>

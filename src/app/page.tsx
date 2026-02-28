@@ -70,7 +70,7 @@ export default function LoginPage() {
 
   // Handle Google OAuth response when returning to this page
   useEffect(() => {
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         setLoading(true);
         const user = session.user;
@@ -144,6 +144,7 @@ export default function LoginPage() {
         }
       }
     });
+    return () => subscription.unsubscribe();
   }, [login, router, refresh]);
 
   async function handleGoogleLogin() {
@@ -489,7 +490,7 @@ export default function LoginPage() {
               onClick={handleGoogleLogin}
               disabled={loading}
             >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" className="w-5 h-5" />
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo" className="w-5 h-5" loading="lazy" />
               <span className="font-bold font-inter text-sm">Google</span>
             </button>
           </>

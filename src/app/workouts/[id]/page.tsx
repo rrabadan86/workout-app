@@ -3,7 +3,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronDown, ChevronUp, Dumbbell, TrendingUp, Save, Play, Square, Timer, Trash2, Edit2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { ChevronDown, ChevronUp, Dumbbell, Save, Play, Square, Timer, Trash2, Edit2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
@@ -11,13 +12,17 @@ import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { uid, formatDate, today } from '@/lib/utils';
 import type { WorkoutLog } from '@/lib/types';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+
+const ExerciseChart = dynamic(() => import('@/components/ExerciseChart'), {
+    ssr: false,
+    loading: () => <div className="h-48 w-full bg-slate-50 rounded-2xl animate-pulse" />,
+});
 
 export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addLog, updateLog, deleteLog, addFeedEvent } = useStore();
+    const { store, loading, addLog, updateLog, deleteLog, addFeedEvent } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
     const [weights, setWeights] = useState<Record<string, string[]>>({});
     const [loadedStorage, setLoadedStorage] = useState(false);
@@ -147,7 +152,7 @@ export default function WorkoutDetailPage() {
         }));
     }, [id, workout?.id, timerRunning, weights, loadedStorage, isFinished]);
 
-    if (!ready || !userId) return null;
+    if (!ready || !userId || loading) return null;
 
     if (!workout) return (
         <>
@@ -375,28 +380,13 @@ export default function WorkoutDetailPage() {
                                                     </div>
                                                 )}
 
-                                                {/* Chart */}
+                                                {/* Chart — lazy loaded para reduzir bundle inicial */}
                                                 {chartData.length > 0 && (
-                                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex-1">
-                                                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                            <TrendingUp size={14} className="text-primary" /> Evolução (kg)
-                                                        </p>
-                                                        <div className="h-48 w-full">
-                                                            <ResponsiveContainer width="100%" height="100%">
-                                                                <LineChart data={chartData}>
-                                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                                                                    <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dy={10} />
-                                                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} dx={-10} />
-                                                                    <Tooltip contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px', color: '#f8fafc', fontWeight: 700, boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} itemStyle={{ fontWeight: 700 }} />
-                                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: 12, fontWeight: 700, paddingTop: 10 }} />
-                                                                    <Line type="monotone" dataKey="Você" stroke="#00AAFF" strokeWidth={3} dot={{ fill: '#00AAFF', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }} />
-                                                                    {comparisonFriendId && friendName && (
-                                                                        <Line type="monotone" dataKey={friendName} stroke="#ff4757" strokeWidth={3} dot={{ fill: '#ff4757', r: 4, strokeWidth: 0 }} strokeDasharray="5 5" />
-                                                                    )}
-                                                                </LineChart>
-                                                            </ResponsiveContainer>
-                                                        </div>
-                                                    </div>
+                                                    <ExerciseChart
+                                                        chartData={chartData}
+                                                        friendName={friendName}
+                                                        comparisonFriendId={comparisonFriendId}
+                                                    />
                                                 )}
                                             </div>
                                         </div>
