@@ -57,11 +57,12 @@ export default function WorkoutDetailPage() {
     }
 
     async function finishWorkout() {
+        console.log('[Workout] Finishing workout...', { id, elapsedSeconds });
         const finalSecs = elapsedSeconds;
         setTimerRunning(false);
         setFinalDuration(finalSecs);
         setShowSummary(true);
-        setIsFinished(true); // Impede que o useEffect ressalve o localStorage
+        setIsFinished(true);
 
         // Zera UI
         setElapsedSeconds(0);
@@ -75,14 +76,23 @@ export default function WorkoutDetailPage() {
         localStorage.removeItem(`fitsync_active_${id}`);
 
         if (workout) {
-            await addFeedEvent({
-                id: uid(),
-                userId,
-                eventType: 'WO_COMPLETED',
-                referenceId: workout.id,
-                createdAt: new Date().toISOString(),
-                duration: finalSecs > 0 ? finalSecs : undefined
-            });
+            try {
+                console.log('[Workout] Creating feed event...');
+                await addFeedEvent({
+                    id: uid(),
+                    userId,
+                    eventType: 'WO_COMPLETED',
+                    referenceId: workout.id,
+                    createdAt: new Date().toISOString(),
+                    duration: finalSecs > 0 ? finalSecs : undefined
+                });
+                console.log('[Workout] Feed event created successfully.');
+            } catch (err) {
+                console.error('[Workout] Failed to create feed event:', err);
+                setToast({ msg: 'Erro ao salvar atividade no feed. Tente novamente.', type: 'error' });
+            }
+        } else {
+            console.warn('[Workout] No workout found in store during finalization.');
         }
     }
 

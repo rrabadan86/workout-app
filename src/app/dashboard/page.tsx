@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen, Clock } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -12,12 +12,14 @@ export default function DashboardPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
     const { store } = useStore();
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
-    const user = store.profiles.find((u) => u.id === userId);
+    const user = useMemo(() => store.profiles.find((u) => u.id === userId), [store.profiles, userId]);
     const myProjects = store.projects.filter((p) =>
         p.ownerId === userId ||
         p.sharedWith.includes(userId || '') ||
@@ -94,8 +96,21 @@ export default function DashboardPage() {
     };
 
     // RULES OF HOOKS: All hooks must be called before conditional returns
-    if (!ready || !userId) return null;
-    if (!user) return null;
+    if (!mounted || !ready || !userId) return null;
+    if (!user) return (
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-slate-500 font-medium font-roboto">Carregando dados...</p>
+                <button
+                    className="text-xs text-primary underline font-bold"
+                    onClick={() => window.location.reload()}
+                >
+                    Tentar Novamente
+                </button>
+            </div>
+        </div>
+    );
 
     return (
         <>

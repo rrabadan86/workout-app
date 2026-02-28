@@ -28,7 +28,7 @@ const STATUS_LABEL = {
 export default function ProjectsPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addProject, updateProject, deleteProject, addWorkout, refresh } = useStore();
+    const { store, addProject, updateProject, deleteProject, addWorkout, refresh, loading } = useStore();
     const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [showModal, setShowModal] = useState(false);
@@ -76,7 +76,7 @@ export default function ProjectsPage() {
     }, [userId, currentUser?.role]);
 
     useEffect(() => {
-        if (!ready || !store.projects.length) return;
+        if (!ready || !store.projects.length || loading) return;
         const today = new Date().toISOString().slice(0, 10);
         let updated = false;
         store.projects.forEach(p => {
@@ -85,8 +85,8 @@ export default function ProjectsPage() {
                 updated = true;
             }
         });
-        if (updated) refresh();
-    }, [ready, store.projects, updateProject, refresh]);
+        // No explicit refresh() needed as updateProject calls it via store
+    }, [ready, store.projects, updateProject, loading]);
 
     if (!ready || !userId) return null;
 

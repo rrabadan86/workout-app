@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -31,17 +31,21 @@ function formatDuration(seconds?: number) {
 }
 
 export default function Feed({ friendIds, myId }: { friendIds: string[], myId: string }) {
-    const { store, toggleKudo } = useStore();
-    const router = useRouter();
+    const { store } = useStore();
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
 
     const allRelevantIds = [...friendIds, myId];
 
     const feedItems = useMemo(() => {
+        if (!mounted) return [];
         return store.feedEvents
             .filter(e => allRelevantIds.includes(e.userId))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 20);
-    }, [store.feedEvents, allRelevantIds]);
+    }, [store.feedEvents, allRelevantIds, mounted]);
+
+    if (!mounted) return <div className="h-48 animate-pulse bg-slate-50 rounded-xl" />;
 
     if (feedItems.length === 0) {
         return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
@@ -43,12 +43,14 @@ export default function HistoryPage() {
     const [deleteTarget, setDeleteTarget] = useState<FeedEvent | null>(null);
     const [saving, setSaving] = useState(false);
     const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
-    if (!ready || !userId) return null;
+    if (!mounted || !ready || !userId) return null;
 
     const currentUser = store.profiles.find(u => u.id === userId);
 

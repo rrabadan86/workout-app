@@ -31,27 +31,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const localSession = getSession();
         if (localSession && !userId) {
             setUserId(localSession);
+            // Se temos sessão local, marcamos como ready para evitar tela branca, 
+            // enquanto o initSession valida no fundo.
+            setReady(true);
         }
 
         // 2. Verifica se há sessão ativa do Supabase Auth (login Google/OAuth)
         const initSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                const authUserId = session.user.id;
-                await supabase.from('profiles').upsert({
-                    id: authUserId,
-                    name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuário',
-                    email: session.user.email,
-                    role: 'user',
-                    onboarding_done: true,
-                    photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
-                }, { onConflict: 'id', ignoreDuplicates: true });
+            try {
+                // Adiciona um timeout de 3 segundos para o getSession()
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Auth timeout')), 3000));
+                const { data: { session } } = await Promise.race([
+                    supabase.auth.getSession(),
+                    timeout
+                ]) as any;
 
-                setSession(authUserId);
-                setUserId(authUserId);
-                setUserEmail(session.user.email || '');
+                if (session?.user) {
+                    const authUserId = session.user.id;
+                    // Só fazemos o upsert em background se necessário, ou deixamos para o evento SIGNED_IN
+                    setSession(authUserId);
+                    setUserId(authUserId);
+                    setUserEmail(session.user.email || '');
+                }
+            } catch (err) {
+                console.warn('[Auth] Initialization issue (timeout or lock):', err);
+            } finally {
+                setReady(true);
             }
-            setReady(true);
         };
 
         initSession();
