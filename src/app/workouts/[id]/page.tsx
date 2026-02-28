@@ -82,11 +82,16 @@ export default function WorkoutDetailPage() {
 
         if (workout) {
             try {
+                const totalEx = workout.exercises.length;
+                let doneEx = Object.values(weights).filter(arr => arr.some(v => v !== '')).length;
+                // Save payload as WO_COMPLETED|Workout Name|done|total
+                const payloadType = `WO_COMPLETED|${workout.name}|${doneEx}|${totalEx}`;
+
                 console.log('[Workout] Creating feed event...');
                 await addFeedEvent({
                     id: uid(),
                     userId,
-                    eventType: 'WO_COMPLETED',
+                    eventType: payloadType,
                     referenceId: workout.id,
                     createdAt: new Date().toISOString(),
                     duration: finalSecs > 0 ? finalSecs : undefined

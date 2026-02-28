@@ -69,7 +69,7 @@ export default function ProjectDetailPage() {
         const endDayBoundary = projectEnd + (24 * 60 * 60 * 1000);
         return store.feedEvents.filter(e => {
             if (e.userId !== targetUserId) return false;
-            if (e.eventType !== 'WO_COMPLETED') return false;
+            if (!e.eventType.startsWith('WO_COMPLETED')) return false;
             if (e.referenceId !== workoutId) return false;
             const eventTime = new Date(e.createdAt).getTime();
             return eventTime >= projectStart && eventTime <= endDayBoundary;
@@ -87,7 +87,7 @@ export default function ProjectDetailPage() {
         const endDayBoundary = projectEnd + (24 * 60 * 60 * 1000);
         const completions = store.feedEvents.filter(e => {
             if (e.userId !== targetUserId) return false;
-            if (e.eventType !== 'WO_COMPLETED') return false;
+            if (!e.eventType.startsWith('WO_COMPLETED')) return false;
             if (e.referenceId !== workoutId) return false;
             const eventTime = new Date(e.createdAt).getTime();
             return eventTime >= projectStart && eventTime <= endDayBoundary;

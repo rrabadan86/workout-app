@@ -30,6 +30,12 @@ export default function DashboardPage() {
     const myFriendsIds = useMemo(() => {
         if (!userId) return [];
         const set = new Set<string>();
+
+        // 0. Explicitly followed users
+        if (user && user.friendIds) {
+            user.friendIds.forEach(id => set.add(id));
+        }
+
         // 1. Shared projects
         store.projects.forEach(p => {
             if (p.ownerId === userId) {
@@ -52,9 +58,9 @@ export default function DashboardPage() {
         if (!userId || !user) return [];
         const counts: Record<string, number> = {};
         store.feedEvents.forEach(e => {
-            if (e.eventType === 'WO_COMPLETED') counts[e.userId] = (counts[e.userId] || 0) + 1;
+            if (e.eventType.startsWith('WO_COMPLETED')) counts[e.userId] = (counts[e.userId] || 0) + 1;
         });
-        const allRelevantUsers = store.profiles.filter(u => myFriendsIds.includes(u.id) || u.id === user.id);
+        const allRelevantUsers = store.profiles.filter(u => myFriendsIds.includes(u.id) && u.id !== user.id);
         const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
         return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
     }, [store.feedEvents, store.profiles, user, userId, myFriendsIds]);
@@ -154,7 +160,7 @@ export default function DashboardPage() {
                                     const displayName = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0];
 
                                     return (
-                                        <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push('/community')}>
+                                        <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push(`/community?user=${u.id}`)}>
                                             <div className="size-12 rounded-full story-ring shrink-0">
                                                 <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white text-primary flex items-center justify-center font-extrabold text-lg">
                                                     {u.photo_url ? (
@@ -284,12 +290,12 @@ export default function DashboardPage() {
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
                             <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
-                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
+                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
                                 <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>
                             <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/community')}>
-                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
+                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
                                 <span className="flex-1 text-left font-inter leading-tight">Comunidade</span>
                                 <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
                             </button>

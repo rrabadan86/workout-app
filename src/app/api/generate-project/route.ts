@@ -71,7 +71,7 @@ Responda APENAS com um JSON válido e sem formatação Markdown extra contendo a
 
 Lembre-se: Use APENAS os IDs de exercícios da lista fornecida. Retorne APENAS o JSON, nada mais.`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -118,8 +118,17 @@ Lembre-se: Use APENAS os IDs de exercícios da lista fornecida. Retorne APENAS o
       console.error("Failed to parse JSON:", responseText);
       return NextResponse.json({ error: 'Erro ao gerar o formato do treino. Tente novamente.' }, { status: 500 });
     }
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error('Gemini API error:', error);
-    return NextResponse.json({ error: (error as Error).message || 'Erro interno no servidor' }, { status: 500 });
+
+    const errorMessage = error.message || '';
+    if (errorMessage.includes('429') || errorMessage.includes('Too Many Requests') || errorMessage.includes('quota')) {
+      return NextResponse.json(
+        { error: 'Limite gratuito atingido. O Google precisa descansar por 1 minuto antes de criar o seu próximo treino! Tente novamente em alguns segundos.' },
+        { status: 429 }
+      );
+    }
+
+    return NextResponse.json({ error: errorMessage || 'Erro interno no servidor' }, { status: 500 });
   }
 }

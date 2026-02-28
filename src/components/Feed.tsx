@@ -84,7 +84,13 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
     let actionOnClick: (() => void) | undefined;
     let isShared = false;
 
-    if (event.eventType === 'WO_COMPLETED') {
+    if (event.eventType.startsWith('WO_COMPLETED')) {
+        const payloadParts = event.eventType.split('|');
+        const isPayload = payloadParts.length === 4;
+        const payloadWorkoutName = payloadParts[1];
+        const payloadDone = payloadParts[2];
+        const payloadTotal = payloadParts[3];
+
         const workout = store.workouts.find(w => w.id === event.referenceId);
         const project = workout ? store.projects.find(p => p.id === workout.projectId) : null;
 
@@ -136,23 +142,31 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
             const completionPercentage = totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0;
             const formattedPercentage = completionPercentage.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
 
-            statsUI = (
-                <>
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4 mt-1">
-                        <div className="flex flex-col">
-                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Duração</span>
-                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Exercícios</span>
-                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
-                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formattedPercentage}</span>
-                        </div>
+            if (renderItems.length === 0) {
+                statsUI = (
+                    <div className="bg-slate-50 rounded-xl p-3 sm:p-4 mt-1 text-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+                            Concluído (Sem detalhes de exercícios)
+                        </span>
                     </div>
-                    {renderItems.length > 0 && (
+                );
+            } else {
+                statsUI = (
+                    <>
+                        <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4 mt-1">
+                            <div className="flex flex-col">
+                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Duração</span>
+                                <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Exercícios</span>
+                                <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
+                                <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formattedPercentage}</span>
+                            </div>
+                        </div>
                         <div className="mt-2 flex flex-col items-center">
                             <button className="text-[10px] text-primary font-bold uppercase tracking-widest hover:underline py-1" onClick={() => setIsExpanded(!isExpanded)}>
                                 {isExpanded ? 'Ocultar Exercícios' : `Ver Exercícios (${totalExercises})`}
@@ -205,9 +219,42 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
                                 </div>
                             )}
                         </div>
-                    )}
-                </>
-            );
+                    </>
+                );
+            }
+        } else if (isPayload) {
+            eventText = `Treino "${payloadWorkoutName}"`;
+            const totalExercises = parseInt(payloadTotal, 10) || 0;
+            const completedExercises = parseInt(payloadDone, 10) || 0;
+            const completionPercentage = totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0;
+            const formattedPercentage = completionPercentage.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
+
+            if (totalExercises === 0) {
+                statsUI = (
+                    <div className="bg-slate-50 rounded-xl p-3 sm:p-4 mt-1 text-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+                            Concluído (Sem detalhes de exercícios)
+                        </span>
+                    </div>
+                );
+            } else {
+                statsUI = (
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 bg-slate-50 rounded-xl p-3 sm:p-4 mt-1">
+                        <div className="flex flex-col">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Duração</span>
+                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration || 0)}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Exercícios</span>
+                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
+                            <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formattedPercentage}</span>
+                        </div>
+                    </div>
+                );
+            }
         }
     }
 

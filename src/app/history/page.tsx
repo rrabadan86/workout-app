@@ -55,7 +55,7 @@ export default function HistoryPage() {
     const currentUser = store.profiles.find(u => u.id === userId);
 
     const myHistory = store.feedEvents
-        .filter(e => e.userId === userId && (e.eventType === 'WO_COMPLETED' || e.eventType === 'WO_COMPLETED_HIDDEN'))
+        .filter(e => e.userId === userId && (e.eventType.startsWith('WO_COMPLETED') || e.eventType.startsWith('WO_COMPLETED_HIDDEN')))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     function toggleExpand(eventId: string) {
@@ -69,10 +69,10 @@ export default function HistoryPage() {
 
     async function toggleVisibility(event: FeedEvent) {
         setSaving(true);
-        const newType = event.eventType === 'WO_COMPLETED' ? 'WO_COMPLETED_HIDDEN' : 'WO_COMPLETED';
+        const newType = event.eventType.startsWith('WO_COMPLETED_HIDDEN') ? 'WO_COMPLETED' : 'WO_COMPLETED_HIDDEN';
         await updateFeedEvent({ ...event, eventType: newType });
         setSaving(false);
-        setToast({ msg: newType === 'WO_COMPLETED' ? 'Treino visível na comunidade.' : 'Treino oculto da comunidade.', type: 'success' });
+        setToast({ msg: newType.startsWith('WO_COMPLETED_HIDDEN') ? 'Treino oculto da comunidade.' : 'Treino visível na comunidade.', type: 'success' });
     }
 
     async function confirmDelete() {
@@ -84,7 +84,7 @@ export default function HistoryPage() {
 
         const sameDayEvents = store.feedEvents.filter(e => {
             if (e.userId !== userId || e.referenceId !== deleteTarget.referenceId) return false;
-            if (e.eventType !== 'WO_COMPLETED' && e.eventType !== 'WO_COMPLETED_HIDDEN') return false;
+            if (!e.eventType.startsWith('WO_COMPLETED') && !e.eventType.startsWith('WO_COMPLETED_HIDDEN')) return false;
             const eDateObj = new Date(e.createdAt);
             const eDateStr = `${eDateObj.getFullYear()}-${String(eDateObj.getMonth() + 1).padStart(2, '0')}-${String(eDateObj.getDate()).padStart(2, '0')}`;
             return eDateStr === localDateStr;

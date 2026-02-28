@@ -1,16 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { Users, UserPlus, UserCheck, Search, Activity, Dumbbell } from 'lucide-react';
+import { Users, UserPlus, UserCheck, Search, Activity, Dumbbell, X } from 'lucide-react';
 import type { Profile, FeedEvent, WorkoutLog } from '@/lib/types';
 import Modal from '@/components/Modal';
 
-export default function CommunityPage() {
+function CommunityContent() {
     const router = useRouter();
     const { userId, ready } = useAuth();
     const { store, loading, updateProfile } = useStore();
@@ -24,9 +24,24 @@ export default function CommunityPage() {
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
 
+    const searchParams = useSearchParams();
+
     useEffect(() => {
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
+
+    // Auto-open user modal if ?user=id is present in URL
+    useEffect(() => {
+        const uid = searchParams.get('user');
+        if (uid && store.profiles.length > 0 && !selectedUser) {
+            const userToOpen = store.profiles.find(p => p.id === uid);
+            if (userToOpen) {
+                setSelectedUser(userToOpen);
+                // Clean the URL without fully reloading
+                router.replace('/community', { scroll: false });
+            }
+        }
+    }, [searchParams, store.profiles, selectedUser, router]);
 
     if (!ready || !userId || loading) return null;
 
@@ -83,7 +98,7 @@ export default function CommunityPage() {
         fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
 
         return store.feedEvents
-            .filter(e => e.userId === uid && e.eventType === 'WO_COMPLETED' && new Date(e.createdAt) >= fifteenDaysAgo)
+            .filter(e => e.userId === uid && e.eventType.startsWith('WO_COMPLETED') && new Date(e.createdAt) >= fifteenDaysAgo)
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
 
@@ -136,7 +151,15 @@ export default function CommunityPage() {
                         });
                     });
 
-                    if (renderItems.length === 0) return null;
+                    if (renderItems.length === 0) {
+                        return (
+                            <div className="mt-3 border-t border-slate-200 pt-3 text-center">
+                                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md font-bold uppercase tracking-wide">
+                                    Concluído (Sem detalhes de exercícios)
+                                </span>
+                            </div>
+                        );
+                    }
 
                     return (
                         <div className="mt-3 border-t border-slate-200 pt-3">
@@ -308,10 +331,10 @@ export default function CommunityPage() {
                             const isLoading = saving === u.id;
 
                             return (
-                                <div key={u.id} className="bg-white rounded-xl card-depth p-4 flex items-center justify-between cursor-pointer border border-transparent hover:border-primary/20 transition-all group"
+                                <div key={u.id} className="bg-white rounded-xl card-depth p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer border border-transparent hover:border-primary/20 transition-all group"
                                     onClick={() => setSelectedUser(u)}
                                 >
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
                                         <div className={`size-12 rounded-full ${u.photo_url ? 'bg-transparent' : 'bg-slate-100 group-hover:bg-primary/10 transition-colors'} overflow-hidden flex items-center justify-center font-extrabold text-primary shrink-0 text-lg`}>
                                             {u.photo_url ? (
                                                 <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
@@ -319,37 +342,39 @@ export default function CommunityPage() {
                                                 u.name.charAt(0).toUpperCase()
                                             )}
                                         </div>
-                                        <div>
-                                            <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap">
-                                                {u.name}
+                                        <div className="flex-1 min-w-0 pr-2">
+                                            <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap min-w-0">
+                                                <span className="truncate">{u.name}</span>
                                                 {u.city && u.state && (
-                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide shrink-0">
                                                         📍 {u.city}, {u.state}
                                                     </span>
                                                 )}
                                                 {u.role === 'personal' && u.cref && (
-                                                    <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide border border-sky-200">
+                                                    <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide border border-sky-200 shrink-0">
                                                         CREF: {u.cref}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5">
+                                            <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5 truncate">
                                                 {u.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}
                                             </div>
                                         </div>
                                     </div>
 
-                                    <button
-                                        className={`btn font-montserrat ${isFollowing ? 'btn-ghost' : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02]'} !px-6 !py-3 w-40`}
-                                        onClick={(e) => { e.stopPropagation(); toggleFollow(u.id); }}
-                                        disabled={isLoading}
-                                    >
-                                        {isLoading ? 'Aguarde...' : isFollowing ? (
-                                            <><UserCheck size={16} /> Seguindo</>
-                                        ) : (
-                                            <><UserPlus size={16} /> Seguir</>
-                                        )}
-                                    </button>
+                                    <div className="shrink-0 pl-2">
+                                        <button
+                                            className={`btn font-montserrat ${isFollowing ? 'btn-ghost' : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02]'} !px-4 sm:!px-6 !py-3 w-32 sm:w-40`}
+                                            onClick={(e) => { e.stopPropagation(); toggleFollow(u.id); }}
+                                            disabled={isLoading}
+                                        >
+                                            {isLoading ? 'Aguarde...' : isFollowing ? (
+                                                <><UserCheck size={16} /> Seguindo</>
+                                            ) : (
+                                                <><UserPlus size={16} /> Seguir</>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -361,8 +386,9 @@ export default function CommunityPage() {
 
             {/* User Profile Modal */}
             {selectedUser && (
-                <div className="modal-overlay">
-                    <div className="modal animate-slide">
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setSelectedUser(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-y-auto px-6 py-8 relative animate-in fade-in zoom-in-95 duration-200">
+                        <button className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" onClick={() => setSelectedUser(null)}><X size={20} /></button>
                         <div className="text-center mb-8 flex flex-col items-center">
                             <div className={`size-20 rounded-full overflow-hidden ${selectedUser.photo_url ? 'bg-transparent' : 'bg-primary/10 text-primary'} flex items-center justify-center font-extrabold text-3xl mb-4`}>
                                 {selectedUser.photo_url ? (
@@ -389,7 +415,7 @@ export default function CommunityPage() {
                             </div>
                         </div>
 
-                        <div className="mb-4 flex items-center gap-2">
+                        <div className="w-full mt-6 mb-4 flex items-center justify-center md:justify-start gap-2 border-t border-slate-100 pt-6">
                             <Activity size={18} className="text-primary" />
                             <span className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Atividade Recente (15 Dias)</span>
                         </div>
@@ -403,13 +429,24 @@ export default function CommunityPage() {
                                 {getUserRecentActivity(selectedUser.id).map(renderModalActivity)}
                             </div>
                         )}
-
-                        <div className="modal-footer mt-8 border-t border-slate-100 pt-6">
-                            <button className="btn btn-ghost w-full justify-center" onClick={() => setSelectedUser(null)}>Fechar</button>
-                        </div>
                     </div>
                 </div>
             )}
         </>
+    );
+}
+
+export default function CommunityPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-500 font-medium font-roboto text-sm max-w-xs text-center">Carregando comunidade...</p>
+                </div>
+            </div>
+        }>
+            <CommunityContent />
+        </Suspense>
     );
 }
