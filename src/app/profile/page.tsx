@@ -6,7 +6,8 @@ import Navbar from '@/components/Navbar';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { UserCircle } from 'lucide-react';
+import { UserCircle, Trophy, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -240,6 +241,39 @@ export default function ProfilePage() {
                         </div>
                     </form>
                 </div>
+
+                {/* ─── Desafios Section ─── */}
+                <div className="mt-12 mb-4 flex items-center gap-3">
+                    <Trophy size={24} className="text-amber-500" />
+                    <h2 className="text-2xl font-extrabold text-slate-800 font-inter tracking-tight">Meus Desafios</h2>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:p-8">
+                    {store.challengeParticipants.filter(p => p.user_id === userId).length === 0 ? (
+                        <p className="text-slate-500 text-sm">Você ainda não está participando de nenhum desafio.</p>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {store.challengeParticipants
+                                .filter(p => p.user_id === userId)
+                                .map(p => store.challenges.find(c => c.id === p.challenge_id))
+                                .filter(Boolean)
+                                .map(c => (
+                                    <Link key={c!.id} href={`/challenges/${c!.id}`} className="group flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-amber-500/20 hover:bg-slate-50 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="size-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">{c!.emoji}</div>
+                                            <div>
+                                                <h4 className="font-bold text-slate-900">{c!.title}</h4>
+                                                <p className="text-xs text-slate-500">{store.challengeCheckins.filter(ck => ck.user_id === userId && ck.challenge_id === c!.id).length} check-ins feitos</p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={20} className="text-slate-300 group-hover:text-amber-500 transition-colors" />
+                                    </Link>
+                                ))
+                            }
+                        </div>
+                    )}
+                </div>
+
             </main>
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
         </>

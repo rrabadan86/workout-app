@@ -10,7 +10,9 @@ import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { uid, formatDate, today } from '@/lib/utils';
+import { evaluateBadges } from '@/lib/badges';
 import type { WorkoutLog } from '@/lib/types';
 
 const ExerciseChart = dynamic(() => import('@/components/ExerciseChart'), {
@@ -22,7 +24,7 @@ export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, loading, addLog, updateLog, deleteLog, addFeedEvent } = useStore();
+    const { store, loading, addLog, updateLog, deleteLog, addFeedEvent, refresh } = useStore();
     const [expanded, setExpanded] = useState<string | null>(null);
     const [weights, setWeights] = useState<Record<string, string[]>>({});
     const [loadedStorage, setLoadedStorage] = useState(false);
@@ -83,13 +85,24 @@ export default function WorkoutDetailPage() {
         if (workout) {
             try {
                 const totalEx = workout.exercises.length;
-                let doneEx = Object.values(weights).filter(arr => arr.some(v => v !== '')).length;
-                // Save payload as WO_COMPLETED|Workout Name|done|total
-                const payloadType = `WO_COMPLETED|${workout.name}|${doneEx}|${totalEx}`;
+                let doneEx = Object.values(weights).filter(arr =>
+                    arr.some(v => v !== '')).length;
+
+                // Capture the log IDs for TODAY's entries for this workout
+                // This allows feed to correctly show only THIS session's exercises
+                const todayStr = today();
+                const sessionLogIds = store.logs
+                    .filter(l => l.workoutId === workout.id && l.userId === userId && l.date === todayStr)
+                    .map(l => l.id)
+                    .join(',');
+
+                // Save payload as WO_COMPLETED|Workout Name|done|total|logId1,logId2,...
+                const payloadType = `WO_COMPLETED|${workout.name}|${doneEx}|${totalEx}|${sessionLogIds}`;
 
                 console.log('[Workout] Creating feed event...');
+                const newFeedEventId = uid();
                 await addFeedEvent({
-                    id: uid(),
+                    id: newFeedEventId,
                     userId,
                     eventType: payloadType,
                     referenceId: workout.id,
@@ -97,6 +110,54 @@ export default function WorkoutDetailPage() {
                     duration: finalSecs > 0 ? finalSecs : undefined
                 });
                 console.log('[Workout] Feed event created successfully.');
+
+                // --- 🏆 Challenge Auto Check-in Logic ---
+                console.log('[Workout] Processing auto check-ins...');
+                try {
+                    const todayStr = today();
+                    const myChallengeIds = store.challengeParticipants.filter(p => p.user_id === userId).map(p => p.challenge_id);
+                    const activeChallenges = store.challenges.filter(c =>
+                        myChallengeIds.includes(c.id) &&
+                        c.status === 'active' &&
+                        todayStr >= c.start_date && todayStr <= c.end_date
+                    );
+
+                    const checkinsToInsert = [];
+                    for (const challenge of activeChallenges) {
+                        // Validate Specific Workout Rule
+                        if (challenge.checkin_type === 'specific_workout' && challenge.specific_workout_id !== workout.id) continue;
+
+                        // Validate check-in doesn't already exist for today
+                        const alreadyCheckedIn = store.challengeCheckins.some(ck => ck.challenge_id === challenge.id && ck.user_id === userId && ck.checkin_date === todayStr);
+                        if (alreadyCheckedIn) continue;
+
+                        checkinsToInsert.push({
+                            id: uid(),
+                            challenge_id: challenge.id,
+                            user_id: userId,
+                            checkin_date: todayStr,
+                            checkin_type: 'auto',
+                            workout_id: workout.id,
+                            feed_event_id: newFeedEventId
+                        });
+                    }
+
+                    if (checkinsToInsert.length > 0) {
+                        const { error } = await supabase.from('challenge_checkins').insert(checkinsToInsert);
+                        if (error) console.error('[Workout] Failed array insert for checkins:', error);
+                        else {
+                            console.log(`[Workout] Auto check-in completed for ${checkinsToInsert.length} challenges.`);
+                            const updatedCheckins = [...store.challengeCheckins, ...(checkinsToInsert as any[])];
+                            for (const ck of checkinsToInsert) {
+                                await evaluateBadges(userId, ck.challenge_id, updatedCheckins, store.challengeBadges);
+                            }
+                            await refresh();
+                        }
+                    }
+                } catch (ckErr) {
+                    console.error('[Workout] Auto check-in error:', ckErr);
+                }
+                // ----------------------------------------
             } catch (err) {
                 console.error('[Workout] Failed to create feed event:', err);
                 setToast({ msg: 'Erro ao salvar atividade no feed. Tente novamente.', type: 'error' });

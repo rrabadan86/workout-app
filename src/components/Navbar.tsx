@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Trophy } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { UFitLogo } from '@/components/UFitLogo';
@@ -16,6 +16,7 @@ const BASE_NAV_ITEMS = [
     { href: '/history', label: 'Histórico' },
     { href: '/community', label: 'Comunidade' },
     { href: '/compare', label: 'Comparar' },
+    { href: '/challenges', label: 'Desafios', icon: true }, // Added flag
 ];
 
 export default function Navbar() {
@@ -63,22 +64,24 @@ export default function Navbar() {
         router.push('/');
     }
 
-    function NavLink({ href, label }: { href: string; label: string }) {
+    function NavLink({ href, label, icon }: { href: string; label: string; icon?: boolean }) {
         const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
         return (
             <a href={href}
-                className={`font-bold font-roboto text-sm transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
+                className={`font-bold font-roboto text-sm flex items-center gap-1.5 transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
+                {icon && <Trophy size={16} className={isActive ? 'text-primary' : 'text-slate-400'} />}
                 {label}
             </a>
         );
     }
 
-    function MobileNavLink({ href, label }: { href: string; label: string }) {
+    function MobileNavLink({ href, label, icon }: { href: string; label: string; icon?: boolean }) {
         const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
         return (
             <a href={href}
-                className={`block px-6 py-3.5 font-bold text-sm transition-colors ${isActive ? 'text-primary bg-blue-50/50' : 'text-slate-700 hover:text-primary hover:bg-slate-50'}`}
+                className={`flex items-center gap-2 px-6 py-3.5 font-bold text-sm transition-colors ${isActive ? 'text-primary bg-blue-50/50' : 'text-slate-700 hover:text-primary hover:bg-slate-50'}`}
                 onClick={() => setShowMobileMenu(false)}>
+                {icon && <Trophy size={18} className={isActive ? 'text-primary' : 'text-slate-400'} />}
                 {label}
             </a>
         );
@@ -98,8 +101,8 @@ export default function Navbar() {
 
                         {/* Desktop nav */}
                         <nav className="hidden md:flex items-center gap-8">
-                            {allNavItems.map(({ href, label }) => (
-                                <NavLink key={href} href={href} label={label} />
+                            {allNavItems.map(({ href, label, icon }) => (
+                                <NavLink key={href} href={href} label={label} icon={icon} />
                             ))}
                         </nav>
                     </div>
@@ -163,8 +166,8 @@ export default function Navbar() {
                         className="bg-white border-b border-slate-100 shadow-xl py-2 animate-in slide-in-from-top-2 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {allNavItems.map(({ href, label }) => (
-                            <MobileNavLink key={href} href={href} label={label} />
+                        {allNavItems.map(({ href, label, icon }) => (
+                            <MobileNavLink key={href} href={href} label={label} icon={icon} />
                         ))}
                     </nav>
                 </div>

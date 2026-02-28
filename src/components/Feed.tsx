@@ -30,7 +30,7 @@ function formatDuration(seconds?: number) {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function Feed({ friendIds, myId }: { friendIds: string[], myId: string }) {
+export default function Feed({ friendIds, myId, customEvents }: { friendIds: string[], myId: string, customEvents?: FeedEvent[] }) {
     const { store } = useStore();
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
@@ -39,11 +39,12 @@ export default function Feed({ friendIds, myId }: { friendIds: string[], myId: s
 
     const feedItems = useMemo(() => {
         if (!mounted) return [];
+        if (customEvents) return customEvents;
         return store.feedEvents
             .filter(e => allRelevantIds.includes(e.userId))
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 20);
-    }, [store.feedEvents, allRelevantIds, mounted]);
+    }, [store.feedEvents, allRelevantIds, mounted, customEvents]);
 
     if (!mounted) return <div className="h-48 animate-pulse bg-slate-50 rounded-xl" />;
 
@@ -86,10 +87,30 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
 
     if (event.eventType.startsWith('WO_COMPLETED')) {
         const payloadParts = event.eventType.split('|');
-        const isPayload = payloadParts.length === 4;
-        const payloadWorkoutName = payloadParts[1];
-        const payloadDone = payloadParts[2];
-        const payloadTotal = payloadParts[3];
+        // Format: WO_COMPLETED|name|done|total[|logId1,logId2,...]
+        // Detection strategy: if the last segment is NOT a plain non-negative integer, it's the
+        // log IDs segment (new format). This is robust even if the workout name contains '|'.
+        const lastSeg = payloadParts[payloadParts.length - 1];
+        const hasLogIds = payloadParts.length >= 5 && !/^\d+$/.test(lastSeg);
+        const isPayload = payloadParts.length >= 4;
+
+        let payloadWorkoutName = '';
+        let payloadDone = '0';
+        let payloadTotal = '0';
+        let payloadLogIds: string[] = [];
+
+        if (hasLogIds) {
+            // New format: WO_COMPLETED|...name...|done|total|logId1,logId2,...
+            payloadTotal = payloadParts[payloadParts.length - 2];
+            payloadDone = payloadParts[payloadParts.length - 3];
+            payloadWorkoutName = payloadParts.slice(1, -3).join('|');
+            payloadLogIds = lastSeg ? lastSeg.split(',').filter(Boolean) : [];
+        } else if (isPayload) {
+            // Old format: WO_COMPLETED|...name...|done|total
+            payloadTotal = payloadParts[payloadParts.length - 1];
+            payloadDone = payloadParts[payloadParts.length - 2];
+            payloadWorkoutName = payloadParts.slice(1, -2).join('|');
+        }
 
         const workout = store.workouts.find(w => w.id === event.referenceId);
         const project = workout ? store.projects.find(p => p.id === workout.projectId) : null;
@@ -102,9 +123,18 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
                 actionOnClick = () => router.push(`/projects/${project.id}`);
             }
 
-            const eventDateObj = new Date(event.createdAt);
-            const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
-            const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
+            // Use specific log IDs from payload when available (new format)
+            // This correctly handles multiple sessions of the same workout on the same day
+            let dayLogs;
+            if (payloadLogIds.length > 0) {
+                // New format: filter by exact log IDs captured at session completion
+                dayLogs = store.logs.filter(l => payloadLogIds.includes(l.id));
+            } else {
+                // Old format fallback: filter by userId + workoutId + date
+                const eventDateObj = new Date(event.createdAt);
+                const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
+                dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
+            }
 
             // Calculate total volume
             let totalVolume = 0;
@@ -255,6 +285,44 @@ function FeedItemCard({ event, myId }: { event: FeedEvent, myId: string }) {
                     </div>
                 );
             }
+        } else if (event.duration) {
+            // No workout in store and no payload data, but we have duration
+            statsUI = (
+                <div className="bg-slate-50 rounded-xl p-3 sm:p-4 mt-1">
+                    <div className="flex flex-col">
+                        <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Duração</span>
+                        <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
+                    </div>
+                </div>
+            );
+        }
+    } else if (event.eventType.startsWith('CHALLENGE_CHECKIN')) {
+        const titleParts = event.eventType.split('|');
+        const challengeTitle = titleParts.length > 1 ? titleParts[1] : 'um desafio';
+
+        eventText = `fez um check-in no desafio "${challengeTitle}"`;
+        isShared = true;
+
+        const challenge = store.challenges.find(c => c.id === event.referenceId);
+        if (challenge) {
+            actionOnClick = () => router.push(`/challenges/${challenge.id}`);
+            statsUI = (
+                <div className="bg-amber-50 rounded-xl p-3 sm:p-4 mt-2 border border-amber-100 flex items-center justify-center gap-3">
+                    <span className="text-2xl">{challenge.emoji}</span>
+                    <span className="text-sm text-amber-800 font-bold uppercase tracking-wide">
+                        Check-in Realizado 🔥
+                    </span>
+                </div>
+            );
+        } else {
+            statsUI = (
+                <div className="bg-amber-50 rounded-xl p-3 sm:p-4 mt-2 border border-amber-100 flex items-center justify-center gap-3">
+                    <span className="text-2xl">🏆</span>
+                    <span className="text-sm text-amber-800 font-bold uppercase tracking-wide">
+                        Check-in Realizado 🔥
+                    </span>
+                </div>
+            );
         }
     }
 

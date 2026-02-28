@@ -3,9 +3,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from './supabase';
-import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo } from './types';
+import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo, Challenge, ChallengeParticipant, ChallengeInvite, ChallengeCheckin, ChallengeComment, ChallengeBadge } from './types';
 
-const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [] };
+const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [], challenges: [], challengeParticipants: [], challengeInvites: [], challengeCheckins: [], challengeComments: [], challengeBadges: [] };
 
 // ─── Store Context ────────────────────────────────────────────────────────────
 interface StoreContextValue {
@@ -43,6 +43,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     supabase.from('workout_logs').select('*'),
                     supabase.from('feed_events').select('*'),
                     supabase.from('kudos').select('*'),
+                    supabase.from('challenges').select('*'),
+                    supabase.from('challenge_participants').select('*'),
+                    supabase.from('challenge_invites').select('*'),
+                    supabase.from('challenge_checkins').select('*'),
+                    supabase.from('challenge_comments').select('*'),
+                    supabase.from('challenge_badges').select('*'),
                 ]);
 
                 const result = await Promise.race([fetchTask, timeout]);
@@ -67,21 +73,69 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     return res.value?.data ?? [];
                 };
 
-                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes] = settled;
+                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes, challengesRes, challengeParticipantsRes, challengeInvitesRes, challengeCheckinsRes, challengeCommentsRes, challengeBadgesRes] = settled;
+
+                let workouts = getValue(workoutsRes, 'workouts') as Workout[];
+                let projects = getValue(projectsRes, 'projects') as Project[];
+                let logs = getValue(logsRes, 'workout_logs') as WorkoutLog[];
+                const feedEvents = getValue(feedRes, 'feed_events') as FeedEvent[];
 
                 console.log('[Store] Data fetched:', {
                     profiles: getValue(usersRes, 'profiles').length,
-                    events: getValue(feedRes, 'feed_events').length,
+                    events: feedEvents.length,
                 });
+
+                // Secondary fetch: get friend workout data referenced by feed events
+                const existingWorkoutIds = new Set(workouts.map(w => w.id));
+                const missingWorkoutIds = [...new Set(
+                    feedEvents
+                        .filter(e => e.eventType.startsWith('WO_COMPLETED'))
+                        .map(e => e.referenceId)
+                        .filter(id => !existingWorkoutIds.has(id))
+                )];
+
+                if (missingWorkoutIds.length > 0) {
+                    try {
+                        const { data: extraWorkouts } = await supabase
+                            .from('workouts').select('*').in('id', missingWorkoutIds);
+                        if (extraWorkouts && extraWorkouts.length > 0) {
+                            workouts = [...workouts, ...extraWorkouts as Workout[]];
+                            // Also fetch their parent projects and logs
+                            const existingProjectIds = new Set(projects.map(p => p.id));
+                            const missingProjectIds = [...new Set(
+                                (extraWorkouts as Workout[]).map(w => w.projectId).filter(id => !existingProjectIds.has(id))
+                            )];
+                            const extraWorkoutIds = (extraWorkouts as Workout[]).map(w => w.id);
+                            const [projRes, logRes] = await Promise.allSettled([
+                                missingProjectIds.length > 0
+                                    ? supabase.from('projects').select('*').in('id', missingProjectIds)
+                                    : Promise.resolve({ data: [], error: null }),
+                                supabase.from('workout_logs').select('*').in('"workoutId"', extraWorkoutIds),
+                            ]);
+                            const extraProjects = getValue(projRes, 'friend_projects') as Project[];
+                            const extraLogs = getValue(logRes, 'friend_logs') as WorkoutLog[];
+                            if (extraProjects.length > 0) projects = [...projects, ...extraProjects];
+                            if (extraLogs.length > 0) logs = [...logs, ...extraLogs];
+                        }
+                    } catch (err) {
+                        console.warn('[Store] Could not fetch friend workout data:', err);
+                    }
+                }
 
                 setStore({
                     profiles: getValue(usersRes, 'profiles') as Profile[],
                     exercises: getValue(exercisesRes, 'exercises') as Exercise[],
-                    projects: getValue(projectsRes, 'projects') as Project[],
-                    workouts: getValue(workoutsRes, 'workouts') as Workout[],
-                    logs: getValue(logsRes, 'workout_logs') as WorkoutLog[],
-                    feedEvents: getValue(feedRes, 'feed_events') as FeedEvent[],
+                    projects,
+                    workouts,
+                    logs,
+                    feedEvents,
                     kudos: getValue(kudosRes, 'kudos') as Kudo[],
+                    challenges: getValue(challengesRes, 'challenges') as Challenge[],
+                    challengeParticipants: getValue(challengeParticipantsRes, 'challenge_participants') as ChallengeParticipant[],
+                    challengeInvites: getValue(challengeInvitesRes, 'challenge_invites') as ChallengeInvite[],
+                    challengeCheckins: getValue(challengeCheckinsRes, 'challenge_checkins') as ChallengeCheckin[],
+                    challengeComments: getValue(challengeCommentsRes, 'challenge_comments') as ChallengeComment[],
+                    challengeBadges: getValue(challengeBadgesRes, 'challenge_badges') as ChallengeBadge[],
                 });
             } catch (err) {
                 console.error('[Store] Refresh issue:', err);
@@ -165,9 +219,7 @@ export function useStore() {
             // 2. Deletar feed_events referenciando esses workouts
             await supabase.from('feed_events').delete().in('referenceId', workoutIds);
             // 3. Deletar logs
-            for (const wid of workoutIds) {
-                await supabase.from('workout_logs').delete().eq('"workoutId"', wid);
-            }
+            await supabase.from('workout_logs').delete().in('"workoutId"', workoutIds);
             // 4. Deletar workouts
             await supabase.from('workouts').delete().in('id', workoutIds);
         }
@@ -247,6 +299,37 @@ export function useStore() {
         await refresh();
     }, [refresh, store.kudos]);
 
+    // ─── Challenges Admin ─────────────────────────────────────────────────
+    const addChallengeParticipant = useCallback(async (p: ChallengeParticipant) => {
+        const { error } = await supabase.from('challenge_participants').insert(p);
+        if (error) throw new Error(error.message);
+        await refresh();
+    }, [refresh]);
+
+    const removeChallengeParticipant = useCallback(async (id: string) => {
+        // ID here is the challenge_participant table ID
+        const { error } = await supabase.from('challenge_participants').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+        await refresh();
+    }, [refresh]);
+
+    const deleteChallenge = useCallback(async (id: string) => {
+        // supabase might cascade, but we explicitly delete to be safe
+        await supabase.from('challenge_participants').delete().eq('challenge_id', id);
+        await supabase.from('challenge_checkins').delete().eq('challenge_id', id);
+        await supabase.from('challenge_badges').delete().eq('challenge_id', id);
+        // ... then delete challenge
+        const { error } = await supabase.from('challenges').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+        await refresh();
+    }, [refresh]);
+
+    const updateChallenge = useCallback(async (c: Partial<Challenge> & { id: string }) => {
+        const { error } = await supabase.from('challenges').update(c).eq('id', c.id);
+        if (error) throw new Error(error.message);
+        await refresh();
+    }, [refresh]);
+
     return {
         store, setStore, loading, refresh,
         addProfile, updateProfile,
@@ -255,6 +338,7 @@ export function useStore() {
         addWorkout, updateWorkout, deleteWorkout,
         addLog, updateLog, deleteLog,
         addFeedEvent, updateFeedEvent, deleteFeedEvent, toggleKudo,
+        addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge,
     };
 }
 

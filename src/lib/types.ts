@@ -103,6 +103,72 @@ export interface Kudo {
   createdAt: string;
 }
 
+// ─── Challenges ────────────────────────────────────────────────────────────
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  emoji: string;
+  start_date: string;       // ISO date
+  end_date: string;         // ISO date
+  weekly_frequency: number;  // 1-7
+  checkin_type: 'any_workout' | 'specific_workout';
+  specific_workout_id?: string | null;
+  visibility: 'public' | 'private';
+  join_rule: 'anyone' | 'followers_only' | 'invite_only';
+  max_participants?: number | null;
+  created_by: string;
+  status: 'active' | 'ended';
+  invite_token?: string | null;
+  created_at: string;
+}
+
+export interface ChallengeParticipant {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'participant';
+  joined_at: string;
+}
+
+export interface ChallengeInvite {
+  id: string;
+  challenge_id: string;
+  email: string;
+  status: 'pending' | 'accepted' | 'expired';
+  created_at: string;
+}
+
+export interface ChallengeCheckin {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  checkin_date: string;
+  checkin_type: 'auto' | 'manual';
+  evidence_note?: string | null;
+  workout_id?: string | null;
+  feed_event_id?: string | null;
+  created_at: string;
+}
+
+export interface ChallengeComment {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}
+
+export type BadgeType = 'first_flame' | 'unstoppable_streak' | 'challenge_elite' | 'leading_pack' | 'living_proof' | 'challenge_completed' | 'top_1_challenge' | 'top_2_challenge' | 'top_3_challenge';
+
+export interface ChallengeBadge {
+  id: string;
+  challenge_id: string;
+  user_id: string;
+  badge_type: BadgeType;
+  earned_at: string;
+}
+
 export interface AppStore {
   profiles: Profile[];
   exercises: Exercise[];
@@ -111,4 +177,10 @@ export interface AppStore {
   logs: WorkoutLog[];
   feedEvents: FeedEvent[];
   kudos: Kudo[];
+  challenges: Challenge[];
+  challengeParticipants: ChallengeParticipant[];
+  challengeInvites: ChallengeInvite[];
+  challengeCheckins: ChallengeCheckin[];
+  challengeComments: ChallengeComment[];
+  challengeBadges: ChallengeBadge[];
 }
