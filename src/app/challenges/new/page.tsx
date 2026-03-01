@@ -181,7 +181,7 @@ export default function NewChallengeWizard() {
                                 </div>
                                 <div className="field">
                                     <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Descrição</label>
-                                    <textarea className="bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 w-full outline-none transition-all focus:bg-white min-h-[100px] resize-y" placeholder="Quais são as regras? Qual o objetivo principal?" value={description} onChange={(e) => setDescription(e.target.value)} />
+                                    <textarea className="bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 w-full outline-none transition-all focus:bg-white min-h-[100px] resize-y" placeholder="Qual o objetivo principal?" value={description} onChange={(e) => setDescription(e.target.value)} />
                                 </div>
                             </div>
                         </div>
