@@ -2,13 +2,20 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { Clock, Trash2, Eye, EyeOff, Dumbbell, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Trash2, Eye, EyeOff, Dumbbell, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
+import { formatDate } from '@/lib/utils';
 import type { FeedEvent } from '@/lib/types';
+
+const CompareChart = dynamic(() => import('@/components/CompareChart'), {
+    ssr: false,
+    loading: () => <div className="h-[260px] w-full bg-slate-50 rounded-2xl animate-pulse" />,
+});
 
 function formatDurationHMS(seconds?: number) {
     if (!seconds) return '00:00:00';
@@ -34,16 +41,23 @@ function timeAgo(dateStr: string) {
     return `${Math.floor(diffDays / 30)} mês(es) atrás`;
 }
 
+type Tab = 'historico' | 'comparar';
+
 export default function HistoryPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
     const { store, loading, deleteFeedEvent, updateFeedEvent, deleteLog } = useStore();
 
+    const [activeTab, setActiveTab] = useState<Tab>('historico');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<FeedEvent | null>(null);
     const [saving, setSaving] = useState(false);
     const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
     const [mounted, setMounted] = useState(false);
+
+    // ── Compare tab state ──────────────────────────────────────────
+    const [friendId, setFriendId] = useState('');
+    const [workoutId, setWorkoutId] = useState('');
 
     useEffect(() => {
         setMounted(true);
@@ -106,219 +120,361 @@ export default function HistoryPage() {
         if (sameDayEvents.length <= 1) {
             setToast({ msg: 'Treino e registros excluídos do histórico.', type: 'success' });
         } else {
-            setToast({ msg: 'Treino removido do histórico. As séries foram mantidas pois há outras treinos no mesmo dia.', type: 'success' });
+            setToast({ msg: 'Treino removido do histórico. As séries foram mantidas.', type: 'success' });
         }
     }
 
     return (
         <>
             <Navbar />
-            <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-8">
-                <div className="mb-4">
-                    <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 py-2.5 text-sm" onClick={() => router.push('/dashboard')}>
-                        ← Voltar ao Dashboard
+            <main className="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-8">
+
+                {/* ─── Page Header ─── */}
+                <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-2xl font-extrabold font-inter tracking-tight text-slate-900">Evolução</h1>
+                    <div className="size-10 rounded-xl flex items-center justify-center bg-primary/10 text-primary shrink-0">
+                        <Clock size={20} />
+                    </div>
+                </div>
+
+                {/* ─── Tabs ─── */}
+                <div className="flex bg-slate-100 p-1 rounded-2xl mb-6 gap-1">
+                    <button
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold font-montserrat transition-all ${activeTab === 'historico' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => setActiveTab('historico')}
+                    >
+                        Histórico
+                    </button>
+                    <button
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold font-montserrat transition-all ${activeTab === 'comparar' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => setActiveTab('comparar')}
+                    >
+                        Comparar
                     </button>
                 </div>
-                <div className="flex flex-col md:flex-row md:items-end w-full justify-between gap-6 mb-10">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <h1 className="page-title">Histórico</h1>
-                            <p className="page-subtitle">Seus treinos já realizados</p>
-                        </div>
-                        <div className="size-12 rounded-xl flex items-center justify-center bg-primary/10 text-primary shrink-0 mt-1">
-                            <Clock size={24} />
-                        </div>
-                    </div>
-                </div>
 
-                {myHistory.length === 0 ? (
-                    <div className="bg-white rounded-xl card-depth p-10 mt-8 text-center flex flex-col items-center justify-center border border-slate-100">
-                        <Dumbbell size={48} className="text-slate-300 mb-4" />
-                        <p className="text-slate-500 font-bold font-roboto">Nenhum treino finalizado.</p>
-                        <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={() => router.push('/projects')}>
-                            Ir para Treinos
-                        </button>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-6 mb-10">
-                        {myHistory.map(event => {
-                            const workout = store.workouts.find(w => w.id === event.referenceId);
-                            if (!workout) return null;
+                {/* ─── Tab: Histórico ─── */}
+                {activeTab === 'historico' && (
+                    <>
+                        {myHistory.length === 0 ? (
+                            <div className="bg-white rounded-xl card-depth p-10 mt-4 text-center flex flex-col items-center justify-center border border-slate-100">
+                                <Dumbbell size={48} className="text-slate-300 mb-4" />
+                                <p className="text-slate-500 font-bold font-roboto">Nenhum treino finalizado.</p>
+                                <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={() => router.push('/projects')}>
+                                    Ir para Treinos
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-4 mb-10">
+                                {myHistory.map(event => {
+                                    const workout = store.workouts.find(w => w.id === event.referenceId);
+                                    if (!workout) return null;
 
-                            const project = store.projects.find(p => p.id === workout.projectId);
-                            const isHidden = event.eventType === 'WO_COMPLETED_HIDDEN';
-                            const isExpanded = expandedCards.has(event.id);
+                                    const project = store.projects.find(p => p.id === workout.projectId);
+                                    const isHidden = event.eventType === 'WO_COMPLETED_HIDDEN';
+                                    const isExpanded = expandedCards.has(event.id);
 
-                            const eventDateObj = new Date(event.createdAt);
-                            const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
+                                    const eventDateObj = new Date(event.createdAt);
+                                    const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
 
-                            const dayLogs = store.logs.filter(l => l.userId === userId && l.workoutId === workout.id && l.date === localDateStr);
+                                    const dayLogs = store.logs.filter(l => l.userId === userId && l.workoutId === workout.id && l.date === localDateStr);
 
-                            // Stats
-                            const totalPlanned = workout.exercises.length;
-                            const exercisesDone = dayLogs.length;
-                            const completionPercent = totalPlanned > 0 ? Math.round((exercisesDone / totalPlanned) * 100) : 100;
+                                    // Stats
+                                    const totalPlanned = workout.exercises.length;
+                                    const exercisesDone = dayLogs.length;
+                                    const completionPercent = totalPlanned > 0 ? Math.round((exercisesDone / totalPlanned) * 100) : 100;
 
-                            const eventText = project
-                                ? `Treino "${workout.name}" • ${project.name}`
-                                : `Treino "${workout.name}"`;
+                                    const completionColor =
+                                        completionPercent === 100 ? 'text-emerald-500' :
+                                            completionPercent >= 50 ? 'text-amber-500' : 'text-rose-500';
 
-                            return (
-                                <div
-                                    key={event.id}
-                                    className="bg-white rounded-xl card-depth p-6 flex flex-col gap-5 animate-fade border border-transparent hover:border-slate-100 transition-colors"
-                                >
-                                    {/* ── Header: Avatar + Info + Actions ── */}
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                                            {/* Avatar */}
-                                            <div className="size-12 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center shrink-0">
-                                                {currentUser?.photo_url ? (
-                                                    <img src={currentUser.photo_url} alt={currentUser.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="text-lg font-bold text-slate-600">
-                                                        {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
-                                                    </span>
+                                    return (
+                                        <div
+                                            key={event.id}
+                                            className="bg-white rounded-2xl card-depth border border-transparent hover:border-slate-100 transition-colors"
+                                        >
+                                            {/* ── Card Header ── */}
+                                            <div className="flex items-start justify-between gap-3 p-5">
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <h4 className="font-extrabold font-inter text-slate-900 text-base leading-snug line-clamp-1">
+                                                            {project ? `${workout.name}` : workout.name}
+                                                        </h4>
+                                                        <span className="text-xs font-bold text-slate-400 shrink-0 mt-0.5">
+                                                            {timeAgo(event.createdAt)}
+                                                        </span>
+                                                    </div>
+                                                    {project && (
+                                                        <p className="text-xs text-slate-400 font-roboto mt-0.5">{project.name}</p>
+                                                    )}
+                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        {isHidden && (
+                                                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                Oculto
+                                                            </span>
+                                                        )}
+                                                        {project && project.sharedWith.length > 0 && (
+                                                            <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                Compartilhado
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {/* Actions */}
+                                                <div className="flex items-center gap-0.5 shrink-0">
+                                                    <button
+                                                        className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors"
+                                                        title={isHidden ? 'Mostrar na comunidade' : 'Ocultar da comunidade'}
+                                                        onClick={() => toggleVisibility(event)}
+                                                        disabled={saving}
+                                                    >
+                                                        {isHidden ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                    </button>
+                                                    <button
+                                                        className="p-1.5 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
+                                                        title="Excluir treino"
+                                                        onClick={() => setDeleteTarget(event)}
+                                                        disabled={saving}
+                                                    >
+                                                        <Trash2 size={15} />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* ── Stats Row ── */}
+                                            <div className="flex items-center gap-0 border-t border-slate-50">
+                                                <div className="flex-1 px-5 py-3.5 flex flex-col border-r border-slate-50">
+                                                    <span className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest mb-0.5">DURAÇÃO</span>
+                                                    <span className="text-xl font-extrabold font-inter text-slate-900">{formatDurationHMS(event.duration)}</span>
+                                                </div>
+                                                <div className="flex-1 px-5 py-3.5 flex flex-col">
+                                                    <span className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest mb-0.5">CONCLUSÃO</span>
+                                                    <span className={`text-xl font-extrabold font-inter ${completionColor}`}>{completionPercent}%</span>
+                                                </div>
+                                            </div>
+
+                                            {/* ── Expandable Exercises ── */}
+                                            <div className="border-t border-slate-50">
+                                                <button
+                                                    className="flex items-center justify-center gap-1.5 text-primary font-bold text-[11px] uppercase tracking-widest font-montserrat py-2.5 w-full hover:bg-slate-50 rounded-b-2xl transition-colors"
+                                                    onClick={() => toggleExpand(event.id)}
+                                                >
+                                                    {isExpanded ? 'Ocultar' : `Ver exercícios (${exercisesDone})`}
+                                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                </button>
+
+                                                {isExpanded && (
+                                                    <div className="px-5 pb-5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                                        {dayLogs.map((log) => {
+                                                            const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                                            const groups: { count: number; weight: number }[] = [];
+                                                            for (const s of log.sets) {
+                                                                if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                                    groups[groups.length - 1].count++;
+                                                                } else {
+                                                                    groups.push({ count: 1, weight: s.weight });
+                                                                }
+                                                            }
+                                                            const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+
+                                                            return (
+                                                                <div key={log.id} className="flex justify-between items-center text-sm py-1 border-b border-slate-50 last:border-0">
+                                                                    <span className="text-slate-600 font-bold font-inter">{exName}</span>
+                                                                    <span className="text-primary font-normal font-roboto pl-3 shrink-0">{setsDisplay}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {(() => {
+                                                            const loggedIds = dayLogs.map(l => l.exerciseId);
+                                                            const notDone = workout.exercises.filter(ex => !loggedIds.includes(ex.exerciseId));
+                                                            if (notDone.length === 0) return null;
+                                                            return notDone.map((planned, idx) => {
+                                                                const exName = store.exercises.find(e => e.id === planned.exerciseId)?.name || 'Exercício';
+                                                                return (
+                                                                    <div key={`nd-${idx}`} className="flex justify-between items-center text-sm py-1">
+                                                                        <span className="text-slate-300 line-through font-bold font-inter">{exName}</span>
+                                                                        <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                            não feito
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            });
+                                                        })()}
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div className="min-w-0">
-                                                <h4 className="text-lg font-bold font-inter text-slate-900 flex items-center gap-2 flex-wrap">
-                                                    Você
-                                                    {isHidden && (
-                                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                            Oculto do feed
-                                                        </span>
-                                                    )}
-                                                    {project && project.sharedWith.length > 0 && (
-                                                        <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                            Compartilhado
-                                                        </span>
-                                                    )}
-                                                </h4>
-                                                <p className="text-slate-400 text-sm font-normal font-roboto truncate">
-                                                    {timeAgo(event.createdAt)} • {eventText}
-                                                </p>
-                                            </div>
                                         </div>
-
-                                        {/* Action buttons */}
-                                        <div className="flex items-center gap-0.5 shrink-0">
-                                            {project && (
-                                                <button
-                                                    className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto px-2 py-1.5 rounded-lg hover:bg-slate-50 hidden sm:block"
-                                                    onClick={() => router.push(`/projects/${project.id}`)}
-                                                >
-                                                    Mais detalhes
-                                                </button>
-                                            )}
-                                            <button
-                                                className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors focus:outline-none"
-                                                title={isHidden ? 'Mostrar na comunidade' : 'Ocultar da comunidade'}
-                                                onClick={() => toggleVisibility(event)}
-                                                disabled={saving}
-                                            >
-                                                {isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
-                                            <button
-                                                className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors focus:outline-none"
-                                                title="Excluir treino"
-                                                onClick={() => setDeleteTarget(event)}
-                                                disabled={saving}
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* ── Stats Grid: Duração / Exercícios / Conclusão ── */}
-                                    <div className="grid grid-cols-3 gap-4 bg-slate-50 rounded-xl p-5 sm:p-6">
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Duração</span>
-                                            <span className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-1">{formatDurationHMS(event.duration)}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Exercícios</span>
-                                            <span className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-1">
-                                                {exercisesDone} <span className="text-slate-400 text-xs sm:text-sm font-bold">/ {totalPlanned}</span>
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-slate-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider">Conclusão</span>
-                                            <span className={`text-lg sm:text-2xl font-extrabold mt-1 ${completionPercent === 100 ? 'text-emerald-500' : completionPercent >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>
-                                                {completionPercent}%
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* ── Expandable Exercises ── */}
-                                    <div className="flex flex-col">
-                                        <button
-                                            className="flex items-center justify-center gap-2 text-primary font-bold text-xs uppercase tracking-widest font-montserrat py-2 hover:underline transition-colors"
-                                            onClick={() => toggleExpand(event.id)}
-                                        >
-                                            {isExpanded ? 'Ocultar exercícios' : `Ver exercícios (${exercisesDone})`}
-                                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                        </button>
-
-                                        {isExpanded && (
-                                            <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                {/* Exercícios feitos */}
-                                                {dayLogs.map((log) => {
-                                                    const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
-                                                    const groups: { count: number; weight: number }[] = [];
-                                                    for (const s of log.sets) {
-                                                        if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                                            groups[groups.length - 1].count++;
-                                                        } else {
-                                                            groups.push({ count: 1, weight: s.weight });
-                                                        }
-                                                    }
-                                                    const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
-
-                                                    return (
-                                                        <div key={log.id} className="flex justify-between items-center text-sm py-1">
-                                                            <span className="text-slate-600 font-bold font-inter">{exName}</span>
-                                                            <span className="text-primary font-normal font-roboto pl-3 shrink-0">{setsDisplay}</span>
-                                                        </div>
-                                                    );
-                                                })}
-
-                                                {/* Exercícios não feitos */}
-                                                {(() => {
-                                                    const loggedIds = dayLogs.map(l => l.exerciseId);
-                                                    const notDone = workout.exercises.filter(ex => !loggedIds.includes(ex.exerciseId));
-                                                    if (notDone.length === 0) return null;
-
-                                                    return notDone.map((planned, idx) => {
-                                                        const exName = store.exercises.find(e => e.id === planned.exerciseId)?.name || 'Exercício';
-                                                        return (
-                                                            <div key={`nd-${idx}`} className="flex justify-between items-center text-sm py-1">
-                                                                <span className="text-slate-300 line-through font-bold font-inter">{exName}</span>
-                                                                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                                    não feito
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    });
-                                                })()}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* ── Mobile: Mais detalhes link ── */}
-                                    {project && (
-                                        <button
-                                            className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold uppercase tracking-widest font-roboto text-center sm:hidden"
-                                            onClick={() => router.push(`/projects/${project.id}`)}
-                                        >
-                                            Mais detalhes
-                                        </button>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
                 )}
+
+                {/* ─── Tab: Comparar ─── */}
+                {activeTab === 'comparar' && (() => {
+                    const currentUser = store.profiles.find(u => u.id === userId);
+                    const friendUser = store.profiles.find(u => u.id === friendId);
+
+                    // Users that share at least one project with me
+                    const sharedUsers = store.profiles.filter(u => {
+                        if (u.id === userId) return false;
+                        return store.projects.some(p => {
+                            const myAccess = p.ownerId === userId || p.sharedWith.includes(userId);
+                            const theirAccess = p.ownerId === u.id || p.sharedWith.includes(u.id);
+                            return myAccess && theirAccess;
+                        });
+                    });
+
+                    const availableWorkouts = !friendId ? [] : store.workouts.filter(w => {
+                        const proj = store.projects.find(p => p.id === w.projectId);
+                        const myAccess = w.ownerId === userId || (proj?.sharedWith ?? []).includes(userId);
+                        const frAccess = w.ownerId === friendId || (proj?.sharedWith ?? []).includes(friendId);
+                        return myAccess && frAccess;
+                    });
+
+                    const workout = store.workouts.find(w => w.id === workoutId);
+                    const exercises = workout
+                        ? workout.exercises.map(({ exerciseId }) => ({
+                            id: exerciseId,
+                            name: store.exercises.find(e => e.id === exerciseId)?.name ?? 'Exercício',
+                        }))
+                        : [];
+
+                    function buildChartData(exId: string) {
+                        const myLogs = store.logs.filter(l => l.workoutId === workoutId && l.exerciseId === exId && l.userId === userId).sort((a, b) => a.date.localeCompare(b.date));
+                        const frLogs = store.logs.filter(l => l.workoutId === workoutId && l.exerciseId === exId && l.userId === friendId).sort((a, b) => a.date.localeCompare(b.date));
+                        const dates = [...new Set([...myLogs.map(l => l.date), ...frLogs.map(l => l.date)])].sort();
+                        return dates.map(date => {
+                            const m = myLogs.find(l => l.date === date);
+                            const f = frLogs.find(l => l.date === date);
+                            const point: Record<string, unknown> = { date: formatDate(date) };
+                            if (m) point[currentUser?.name ?? 'Você'] = Math.max(...m.sets.map(s => s.weight));
+                            if (f && friendUser) point[friendUser.name] = Math.max(...f.sets.map(s => s.weight));
+                            return point;
+                        });
+                    }
+
+                    return (
+                        <div className="flex flex-col gap-6 mb-10">
+                            {/* Selectors */}
+                            <div className="bg-white rounded-xl card-depth p-5 border border-slate-100">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Comparar com</label>
+                                        <select
+                                            className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white disabled:opacity-50"
+                                            value={friendId}
+                                            onChange={e => { setFriendId(e.target.value); setWorkoutId(''); }}
+                                            disabled={sharedUsers.length === 0}
+                                        >
+                                            {sharedUsers.length === 0 ? (
+                                                <option value="">Nenhum amigo. Compartilhe um treino!</option>
+                                            ) : (
+                                                <>
+                                                    <option value="">Selecione um usuário</option>
+                                                    {sharedUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                </>
+                                            )}
+                                        </select>
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest">Treino</label>
+                                        <select
+                                            className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white disabled:opacity-50"
+                                            value={workoutId}
+                                            onChange={e => setWorkoutId(e.target.value)}
+                                            disabled={!friendId}
+                                        >
+                                            <option value="">Selecione um treino</option>
+                                            {availableWorkouts.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* VS badge */}
+                            {workoutId && friendId && (
+                                <div className="flex gap-4 items-center flex-wrap bg-slate-50 px-6 py-3 rounded-full border border-slate-200 w-fit">
+                                    <div className="flex items-center gap-2">
+                                        <div className="size-2.5 rounded-full bg-primary" />
+                                        <span className="text-sm font-bold font-inter text-slate-900">{currentUser?.name} <span className="text-slate-500 font-normal">(você)</span></span>
+                                    </div>
+                                    <span className="text-xs font-bold font-montserrat tracking-widest text-slate-400 uppercase">VS</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="size-2.5 rounded-full bg-rose-400" />
+                                        <span className="text-sm font-bold font-inter text-slate-900">{friendUser?.name}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Charts */}
+                            {workoutId && exercises.length > 0 ? (
+                                <div className="flex flex-col gap-6">
+                                    {exercises.map(({ id: exId, name: exName }) => {
+                                        const data = buildChartData(exId);
+                                        const myLogs = store.logs.filter(l => l.workoutId === workoutId && l.exerciseId === exId && l.userId === userId);
+                                        const frLogs = store.logs.filter(l => l.workoutId === workoutId && l.exerciseId === exId && l.userId === friendId);
+                                        const myMax = myLogs.length ? Math.max(...myLogs.flatMap(l => l.sets.map(s => s.weight))) : 0;
+                                        const frMax = frLogs.length ? Math.max(...frLogs.flatMap(l => l.sets.map(s => s.weight))) : 0;
+                                        const leader = myMax > frMax ? currentUser?.name : myMax < frMax ? friendUser?.name : 'Empate';
+
+                                        return (
+                                            <div key={exId} className="bg-white rounded-xl card-depth p-6 border border-slate-100 flex flex-col gap-5">
+                                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                                                    <h3 className="text-lg font-bold font-inter text-slate-900">{exName}</h3>
+                                                    {(myMax > 0 || frMax > 0) && (
+                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-montserrat tracking-widest uppercase ${leader === 'Empate' ? 'bg-slate-100 text-slate-600' : leader === currentUser?.name ? 'bg-primary/10 text-primary' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                            🏆 {leader === 'Empate' ? 'Empate!' : `${leader} lidera`}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                                                    <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-100 flex flex-col gap-1 items-center">
+                                                        <div className="text-xs font-roboto text-slate-500">{currentUser?.name}</div>
+                                                        <div className="text-2xl font-black font-inter text-primary">{myMax > 0 ? `${myMax} kg` : '—'}</div>
+                                                        <div className="text-[10px] uppercase tracking-widest font-montserrat text-slate-400">máx registrado</div>
+                                                    </div>
+                                                    <span className="text-sm font-bold font-montserrat tracking-wider text-slate-300 uppercase px-2">VS</span>
+                                                    <div className="bg-slate-50 rounded-xl p-4 text-center border border-slate-100 flex flex-col gap-1 items-center">
+                                                        <div className="text-xs font-roboto text-slate-500">{friendUser?.name}</div>
+                                                        <div className="text-2xl font-black font-inter text-rose-400">{frMax > 0 ? `${frMax} kg` : '—'}</div>
+                                                        <div className="text-[10px] uppercase tracking-widest font-montserrat text-slate-400">máx registrado</div>
+                                                    </div>
+                                                </div>
+
+                                                {data.length > 0 && (
+                                                    <div className="pt-4 border-t border-slate-100">
+                                                        <CompareChart
+                                                            data={data}
+                                                            myName={currentUser?.name ?? 'Você'}
+                                                            friendName={friendUser?.name ?? 'Amigo'}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {data.length === 0 && (
+                                                    <div className="bg-slate-50 rounded-xl p-8 text-center text-slate-500 text-sm border border-slate-100">
+                                                        Nenhum registro ainda para este exercício.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                !workoutId && (
+                                    <div className="bg-white rounded-xl card-depth p-10 text-center flex flex-col items-center justify-center border border-slate-100">
+                                        <BarChart2 size={48} className="text-slate-300 mb-4" />
+                                        <p className="text-slate-500 font-bold font-roboto">Selecione um usuário e um treino para ver a comparação.</p>
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    );
+                })()}
+
             </main>
 
             {/* Delete Modal */}

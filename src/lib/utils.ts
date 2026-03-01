@@ -4,7 +4,10 @@ export function uid(): string {
 
 export function formatDate(iso: string): string {
     if (!iso) return '';
-    const d = new Date(iso);
+    // Parse as local date (add noon time to avoid timezone shift at UTC midnight)
+    const plain = iso.split('T')[0]; // take only YYYY-MM-DD
+    const [year, month, day] = plain.split('-');
+    const d = new Date(Number(year), Number(month) - 1, Number(day), 12, 0, 0);
     return d.toLocaleDateString('pt-BR');
 }
 

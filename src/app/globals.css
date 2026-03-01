@@ -40,6 +40,14 @@
     font-family: var(--font-inter), sans-serif;
     -webkit-font-smoothing: antialiased;
     @apply bg-background-light text-slate-900;
+    /* Compensate for mobile bottom nav */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    }
   }
 
   /* Montserrat para Títulos para dar o peso visual das imagens */

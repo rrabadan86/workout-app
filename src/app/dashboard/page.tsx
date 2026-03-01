@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dumbbell, ListChecks, BarChart2, Users, ChevronRight, TrendingUp, FolderOpen, Clock, Plus } from 'lucide-react';
+import { Plus, Users, ChevronRight, ChevronLeft } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Feed from '@/components/Feed';
 import { useAuth } from '@/lib/AuthContext';
@@ -20,6 +20,7 @@ export default function DashboardPage() {
     }, [ready, userId, router]);
 
     const user = useMemo(() => store.profiles.find((u) => u.id === userId), [store.profiles, userId]);
+
     const myProjects = store.projects.filter((p) =>
         p.ownerId === userId ||
         p.sharedWith.includes(userId || '') ||
@@ -30,13 +31,9 @@ export default function DashboardPage() {
     const myFriendsIds = useMemo(() => {
         if (!userId) return [];
         const set = new Set<string>();
-
-        // 0. Explicitly followed users
         if (user && user.friendIds) {
             user.friendIds.forEach(id => set.add(id));
         }
-
-        // 1. Shared projects
         store.projects.forEach(p => {
             if (p.ownerId === userId) {
                 p.sharedWith.forEach(id => set.add(id));
@@ -44,54 +41,45 @@ export default function DashboardPage() {
                 set.add(p.ownerId);
             }
         });
-        // 2. Personal/Student links (this requires knowing who is linked - since store doesn't have `personal_students`, we can approximate by `projects.prescribed_to` and `projects.prescribed_by` for now, or just rely on projects like we did above, since a personal creates projects for them).
         store.projects.forEach(p => {
             if (p.prescribed_by === userId && p.prescribed_to) set.add(p.prescribed_to);
             if (p.prescribed_to === userId && p.prescribed_by) set.add(p.prescribed_by);
         });
-
         return Array.from(set);
-    }, [store.projects, userId]);
+    }, [store.projects, userId, user]);
 
-    // Find active friends (just top 4 friends who logged recently)
+    // Active friends — check-ins nos últimos 15 dias
     const topActive = useMemo(() => {
         if (!userId || !user) return [];
+        const fifteenDaysAgo = new Date();
+        fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
         const counts: Record<string, number> = {};
         store.feedEvents.forEach(e => {
-            if (e.eventType.startsWith('WO_COMPLETED')) counts[e.userId] = (counts[e.userId] || 0) + 1;
+            if (e.eventType.startsWith('WO_COMPLETED') && new Date(e.createdAt) >= fifteenDaysAgo) {
+                counts[e.userId] = (counts[e.userId] || 0) + 1;
+            }
         });
-        const allRelevantUsers = store.profiles.filter(u => myFriendsIds.includes(u.id) && u.id !== user.id);
-        const sorted = allRelevantUsers.sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0)).slice(0, 4);
-        return sorted.map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
+
+        // include self too
+        const allRelevantIds = [...myFriendsIds, userId];
+        const allRelevantUsers = store.profiles.filter(u => allRelevantIds.includes(u.id));
+        return allRelevantUsers
+            .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0))
+            .map(u => ({ ...u, workoutsCount: counts[u.id] || 0 }));
     }, [store.feedEvents, store.profiles, user, userId, myFriendsIds]);
 
     const activeProject = myProjects
-        .filter(p => !p.prescribed_to || p.prescribed_to === userId) // Only projects for me
+        .filter(p => !p.prescribed_to || p.prescribed_to === userId)
         .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
 
-    // Other users to follow (exclude already-following via friendIds)
-    const peopleToFollow = useMemo(() => {
-        if (!user) return [];
-        const followingIds = user.friendIds || [];
+    // Student count (for personal trainers)
+    const myStudents = useMemo(() => {
+        if (!userId || user?.role !== 'personal') return [];
         return store.profiles.filter(u =>
-            u.id !== user.id &&
-            !myFriendsIds.includes(u.id) &&
-            !followingIds.includes(u.id)
-        ).slice(0, 3);
-    }, [store.profiles, user, myFriendsIds]);
-
-    // Calculate progress
-    const progress = useMemo(() => {
-        if (!activeProject || !activeProject.startDate || !activeProject.endDate) return 0;
-        const start = new Date(activeProject.startDate).getTime();
-        const end = new Date(activeProject.endDate).getTime();
-        const now = new Date().getTime();
-
-        if (now >= end) return 100;
-        if (now <= start) return 0;
-        if (end <= start) return 100; // fallback just in case
-        return Math.round(((now - start) / (end - start)) * 100);
-    }, [activeProject]);
+            store.projects.some(p => p.prescribed_by === userId && p.prescribed_to === u.id)
+        );
+    }, [store.profiles, store.projects, userId, user]);
 
     // Format Date helper
     const formatDateSafe = (dateStr: string) => {
@@ -100,25 +88,18 @@ export default function DashboardPage() {
             const [y, m, d] = dateStr.split('T')[0].split('-');
             if (!y || !m || !d) return dateStr;
             const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            return `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
-        } catch (e) {
+            return `${d} ${months[parseInt(m, 10) - 1]}`;
+        } catch {
             return dateStr;
         }
     };
 
-    // RULES OF HOOKS: All hooks must be called before conditional returns
     if (!mounted || !ready || !userId || loading) return null;
     if (!user) return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
                 <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                 <p className="text-slate-500 font-medium font-roboto">Carregando dados...</p>
-                <button
-                    className="text-xs text-primary underline font-bold"
-                    onClick={() => window.location.reload()}
-                >
-                    Tentar Novamente
-                </button>
             </div>
         </div>
     );
@@ -127,191 +108,157 @@ export default function DashboardPage() {
         <>
             <Navbar />
 
-            <main className="flex-1 w-full max-w-[1440px] mx-auto px-6 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-12 py-6 lg:py-10 flex flex-col gap-6 lg:gap-8">
 
-                {/* 
-                 * MOBILE ORDERING LOGIC (Using Flex/Grid Order):
-                 * On mobile, grid items default to source order. We use order-{n} to re-arrange:
-                 * 1. Active Project Widget (moved from aside)
-                 * 2. Quick Navigation Menu (Atalhos)
-                 * 3. Active Now (Amigos Mais Ativos)
-                 * 4. People to Follow (Pessoas a Seguir)
-                 * 6. Recent Activity (Feed)
-                 * 
-                 * On lg screens, we reset order (lg:order-none) because they are split into 2 columns.
-                 */}
-
-                {/* Main Feed Column (Left Side on Desktop) */}
-                <div className="contents lg:col-span-8 lg:flex lg:flex-col lg:gap-10">
-
-                    {/* Active Now Section (Order 2 on mobile) */}
-                    {topActive.length > 0 && (
-                        <section className="bg-white rounded-xl card-depth p-6 order-3 lg:order-none flex flex-col">
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900">Amigos Mais Ativos</h2>
-                                    <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider">Quantidade de check-ins nos últimos 15 dias</p>
-                                </div>
-                                <a className="text-primary font-bold font-montserrat text-sm hover:underline cursor-pointer" onClick={() => router.push('/community')}>Ver Comunidade</a>
+                {/* ─── TOP ROW: Amigos Mais Ativos ─── */}
+                {topActive.length > 0 && (
+                    <section className="bg-white rounded-2xl card-depth p-5 sm:p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-base font-extrabold font-inter text-slate-900">Amigos Mais Ativos</h2>
+                                <p className="text-slate-400 text-[10px] font-bold font-montserrat uppercase tracking-wider mt-0.5">
+                                    Check-ins nos últimos 15 dias
+                                </p>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {topActive.map((u) => {
-                                    const parts = u.name.split(' ');
-                                    const displayName = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1]}` : parts[0];
-
-                                    return (
-                                        <div key={u.id} className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer group" onClick={() => router.push(`/community?user=${u.id}`)}>
-                                            <div className="size-12 rounded-full story-ring shrink-0">
-                                                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-white text-primary flex items-center justify-center font-extrabold text-lg">
+                            <button
+                                className="text-primary font-bold font-montserrat text-xs hover:underline flex items-center gap-1"
+                                onClick={() => router.push('/community')}
+                            >
+                                Ver Todos <ChevronRight size={13} />
+                            </button>
+                        </div>
+                        {/* Horizontal scroll row */}
+                        <div className="flex gap-4 overflow-x-auto pb-1 no-scrollbar -mx-1 px-1">
+                            {topActive.map((u) => {
+                                const firstName = u.name.split(' ')[0];
+                                const isMe = u.id === userId;
+                                return (
+                                    <button
+                                        key={u.id}
+                                        className="flex flex-col items-center gap-2 shrink-0 cursor-pointer group"
+                                        onClick={() => router.push(isMe ? '/profile' : `/community?user=${u.id}`)}
+                                    >
+                                        <div className="relative">
+                                            <div className={`size-14 sm:size-16 rounded-full ${u.workoutsCount > 0 ? 'story-ring' : 'bg-slate-100'} p-0.5 transition-transform group-hover:scale-105`}>
+                                                <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-slate-100 flex items-center justify-center font-extrabold text-lg text-primary">
                                                     {u.photo_url ? (
                                                         <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        u.name.charAt(0).toUpperCase()
+                                                        <span>{u.name.charAt(0).toUpperCase()}</span>
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col flex-1">
-                                                <span className="text-sm font-bold font-inter text-slate-900 leading-tight" title={u.name}>{displayName}</span>
-                                                <span className="text-[10px] font-bold font-roboto text-primary truncate mt-0.5">{u.workoutsCount} check-ins</span>
-                                            </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Posts / Recent Activity Section (Order 6 on mobile) */}
-                    <section className="flex flex-col gap-8 order-6 lg:order-none mt-2 lg:mt-0">
-                        <h2 className="text-3xl font-extrabold font-inter tracking-tight text-slate-900">Atividade Recente</h2>
-                        <Feed friendIds={myFriendsIds} myId={userId} />
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-xs font-bold font-inter text-slate-800 leading-tight max-w-[72px] truncate">
+                                                {isMe ? 'Você' : firstName}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-primary font-roboto">
+                                                {u.workoutsCount} check-in{u.workoutsCount !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </section>
-                </div>
+                )}
 
-                {/* Sidebar Column (Right Side on Desktop) */}
-                <aside className="contents lg:col-span-4 lg:flex lg:flex-col lg:gap-8 lg:h-full lg:content-start">
+                {/* ─── MAIN GRID: 2 colunas no desktop ─── */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
 
-                    {/* Active Project Widget (Order 1 on mobile) */}
-                    <div className="bg-slate-900 text-white rounded-2xl p-8 flex flex-col gap-8 soft-shadow shrink-0 relative overflow-hidden order-1 lg:order-none">
-                        {/* Decorative background element mimicking the dark theme project widget */}
-                        <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-3xl rounded-full pointer-events-none"></div>
+                    {/* ── LEFT: Feed ── */}
+                    <div className="lg:col-span-8 flex flex-col gap-6">
+                        <div>
+                            <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900 mb-4">Atividade Recente</h2>
+                            <Feed friendIds={myFriendsIds} myId={userId} />
+                        </div>
+                    </div>
 
-                        <div className="relative z-10">
-                            <h3 className="text-2xl font-extrabold font-inter mb-1">{activeProject ? 'Treino Atual' : 'Nenhum Treino'}</h3>
-                            <p className="text-slate-400 text-sm font-bold font-roboto">Resumo Diário</p>
+                    {/* ── RIGHT: Sidebar ── */}
+                    <aside className="lg:col-span-4 flex flex-col gap-4 order-first lg:order-none">
+
+                        {/* Card: Treino Atual */}
+                        <div
+                            className="bg-slate-900 text-white rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+                            onClick={() => router.push(activeProject ? `/projects/${activeProject.id}` : '/projects')}
+                        >
+                            {/* Decorative glow */}
+                            <div className="absolute -top-16 -right-16 w-48 h-48 bg-primary/20 blur-3xl rounded-full pointer-events-none" />
+                            <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none" />
+
+                            <div className="relative z-10">
+                                <p className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest mb-1">
+                                    Treino Atual
+                                </p>
+                                {activeProject ? (
+                                    <>
+                                        <h3 className="text-2xl font-extrabold font-inter leading-tight line-clamp-2">
+                                            {user?.role !== 'personal'
+                                                ? activeProject.name.replace('✨ ', '').replace('✨', '')
+                                                : activeProject.name}
+                                        </h3>
+                                        <div className="flex items-center gap-3 mt-2">
+                                            {activeProject.startDate && (
+                                                <span className="text-xs font-bold text-slate-400">
+                                                    Início {formatDateSafe(activeProject.startDate)}
+                                                </span>
+                                            )}
+                                            {activeProject.endDate && (
+                                                <>
+                                                    <span className="text-slate-700">·</span>
+                                                    <span className="text-xs font-bold text-slate-400">
+                                                        Fim {formatDateSafe(activeProject.endDate)}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <h3 className="text-xl font-extrabold font-inter">Nenhum treino ativo</h3>
+                                )}
+                            </div>
+
+                            <button
+                                className="relative z-10 w-full py-3 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-xl font-bold font-montserrat text-sm transition-colors text-center"
+                                onClick={(e) => { e.stopPropagation(); router.push(activeProject ? `/projects/${activeProject.id}` : '/projects'); }}
+                            >
+                                {activeProject ? 'Ver Detalhes' : 'Criar Treino'}
+                            </button>
                         </div>
 
-                        {activeProject ? (
-                            <div className="flex items-center gap-6 relative z-10 cursor-pointer" onClick={() => router.push(`/projects/${activeProject.id}`)}>
-                                <div className="relative size-20 shrink-0 flex items-center justify-center">
-                                    <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                                        <circle className="stroke-slate-800" cx="18" cy="18" fill="none" r="16" strokeWidth="3"></circle>
-                                        <circle className="stroke-primary" cx="18" cy="18" fill="none" r="16" strokeDasharray={`${progress}, 100`} strokeLinecap="round" strokeWidth="3"></circle>
-                                    </svg>
-                                    <div className="absolute inset-0 flex items-center justify-center text-center">
-                                        <span className="text-xl font-extrabold font-inter text-white leading-none">{progress}%</span>
+                        {/* Cards de Personal Trainer */}
+                        {user.role === 'personal' && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    className="bg-white rounded-2xl card-depth p-4 flex flex-col gap-1 hover:shadow-md transition-shadow text-left"
+                                    onClick={() => router.push('/students')}
+                                >
+                                    <div className="size-8 rounded-xl bg-primary/10 flex items-center justify-center mb-1">
+                                        <Users size={16} className="text-primary" />
                                     </div>
-                                </div>
-                                <div className="flex flex-col gap-3 flex-grow">
-                                    <div>
-                                        <p className="text-[10px] font-bold font-roboto text-slate-500 uppercase tracking-widest leading-none mb-1">Nome do Treino</p>
-                                        <p className="text-lg font-bold font-inter leading-tight line-clamp-2">
-                                            {user?.role !== 'personal' ? activeProject.name.replace('✨ ', '').replace('✨', '') : activeProject.name}
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-col gap-2 mt-1">
-                                        <div className="flex gap-4">
-                                            <div className="flex flex-col gap-1">
-                                                <p className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest leading-none">Início</p>
-                                                <p className="text-xs font-bold font-roboto text-slate-200 leading-none">{formatDateSafe(activeProject.startDate)}</p>
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <p className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest leading-none">Fim</p>
-                                                <p className="text-xs font-bold font-roboto text-slate-200 leading-none">{formatDateSafe(activeProject.endDate)}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="relative z-10 text-center py-4 text-slate-400 text-sm">
-                                Crie um treino para agrupar seus exercícios e acompanhar sua evolução.
+                                    <span className="text-2xl font-extrabold font-inter text-slate-900">{myStudents.length}</span>
+                                    <span className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-wider">Alunos Ativos</span>
+                                </button>
+                                <button
+                                    className="bg-primary/5 border-2 border-dashed border-primary/30 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 hover:bg-primary/10 transition-colors"
+                                    onClick={() => router.push('/projects')}
+                                >
+                                    <Plus size={22} className="text-primary" />
+                                    <span className="text-xs font-bold font-montserrat text-primary uppercase tracking-wide text-center">Criar Treino</span>
+                                </button>
                             </div>
                         )}
-
-                        <button className="relative z-10 w-full py-4 bg-white text-slate-900 rounded-xl font-extrabold font-montserrat hover:bg-primary hover:text-white transition-colors"
-                            onClick={() => router.push(activeProject ? `/projects/${activeProject.id}` : '/projects')}>
-                            {activeProject ? 'Ver Detalhes do Treino' : 'Criar Novo Treino'}
-                        </button>
-                    </div>
-
-                    {/* People to Follow Widget (Order 3 on mobile) */}
-                    {peopleToFollow.length > 0 && (
-                        <div className="bg-white rounded-2xl card-depth p-6 flex flex-col order-4 lg:order-none">
-                            <h3 className="text-xl font-extrabold font-inter mb-4 tracking-tight text-slate-900">Pessoas a Seguir</h3>
-                            <div className="flex flex-col gap-4">
-                                {peopleToFollow.map(u => (
-                                    <div key={u.id} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`size-12 rounded-full ${u.photo_url ? 'bg-transparent' : 'bg-slate-100'} overflow-hidden flex items-center justify-center font-extrabold text-primary shrink-0`}>
-                                                {u.photo_url ? (
-                                                    <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    u.name.charAt(0).toUpperCase()
-                                                )}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold font-inter text-sm text-slate-900">{u.name}</p>
-                                                <p className="text-slate-400 font-roboto text-xs">Membro uFit</p>
-                                            </div>
-                                        </div>
-                                        <button className="size-10 bg-slate-50 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors" onClick={() => router.push('/community')}>
-                                            <Plus size={18} />
-                                        </button>
-                                    </div>
-                                ))}
-
-                                <div className="flex items-center justify-center mt-2 border-t border-slate-50 pt-6">
-                                    <button className="text-slate-500 hover:text-slate-800 transition-colors text-[10px] font-bold font-montserrat uppercase tracking-widest w-full text-center" onClick={() => router.push('/community')}>
-                                        Descobrir mais
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Quick Navigation Menu (Atalhos) - Moved to Order 2 on mobile */}
-                    <div className="bg-white rounded-2xl card-depth p-8 flex flex-col order-2 lg:order-none">
-                        <h3 className="text-xl font-extrabold font-inter mb-6 tracking-tight text-slate-900">Atalhos</h3>
-                        <div className="flex flex-col gap-3">
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/projects')}>
-                                <div className="size-10 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><FolderOpen size={18} /></div>
-                                <span className="flex-1 text-left font-inter">Meus Treinos</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/history')}>
-                                <div className="size-10 rounded-lg bg-emerald-100 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Clock size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Histórico de Treinos</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/community')}>
-                                <div className="size-10 rounded-lg text-amber-500 bg-amber-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><Users size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Comunidade</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                            <button className="flex items-center gap-4 w-full bg-slate-50 p-4 rounded-xl hover:bg-slate-100 transition-all font-bold group" onClick={() => router.push('/challenges')}>
-                                <div className="size-10 rounded-lg text-rose-500 bg-rose-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform"><BarChart2 size={18} /></div>
-                                <span className="flex-1 text-left font-inter leading-tight">Meus Desafios</span>
-                                <ChevronRight className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" size={18} />
-                            </button>
-                        </div>
-                    </div>
-                </aside>
+                    </aside>
+                </div>
             </main>
 
-            {/* Floating Action Button for Start Workout */}
-            <div className="fixed bottom-8 right-8 z-50">
-                <button className="flex items-center justify-center gap-2 bg-primary text-white px-8 py-5 rounded-full font-extrabold font-montserrat shadow-2xl shadow-primary/30 hover:scale-105 transition-transform text-sm tracking-wide" onClick={() => router.push('/projects')}>
+            {/* FAB - Start Workout (desktop only, mobile uses bottom nav) */}
+            <div className="hidden md:block fixed bottom-8 right-8 z-50">
+                <button
+                    className="flex items-center justify-center gap-2 bg-primary text-white px-7 py-4 rounded-full font-extrabold font-montserrat shadow-2xl shadow-primary/30 hover:scale-105 transition-transform text-sm tracking-wide"
+                    onClick={() => router.push('/projects')}
+                >
                     INICIAR TREINO
                 </button>
             </div>

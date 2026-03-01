@@ -1,24 +1,53 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { Users, UserPlus, UserCheck, Search, Activity, Dumbbell, X } from 'lucide-react';
-import type { Profile, FeedEvent, WorkoutLog } from '@/lib/types';
-import Modal from '@/components/Modal';
+import {
+    Users, UserPlus, UserCheck, Search, Activity, X, Trophy,
+    ChevronRight, Plus, Calendar, Lock, Globe
+} from 'lucide-react';
+import type { Profile, FeedEvent, Challenge } from '@/lib/types';
+import { formatDate, today } from '@/lib/utils';
+
+type Tab = 'comunidade' | 'desafios';
+
+// ─── Challenge helpers ────────────────────────────────────────────────────────
+
+function challengeStatus(c: Challenge): 'ativo' | 'inativo' | 'futuro' {
+    const todayStr = today();
+    if (c.status === 'ended') return 'inativo';
+    if (todayStr < c.start_date) return 'futuro';
+    if (todayStr > c.end_date) return 'inativo';
+    return 'ativo';
+}
+
+const STATUS_LABEL = {
+    ativo: { label: 'Ativo', color: '#22c55e', bg: '#22c55e18', dot: '🟢' },
+    inativo: { label: 'Encerrado', color: '#9ca3af', bg: '#9ca3af18', dot: '⚪' },
+    futuro: { label: 'Em breve', color: '#f59e0b', bg: '#f59e0b18', dot: '🟡' },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function CommunityContent() {
     const router = useRouter();
     const { userId, ready } = useAuth();
     const { store, loading, updateProfile } = useStore();
 
+    // Tabs & community filters
+    const [activeTab, setActiveTab] = useState<Tab>('comunidade');
     const [searchName, setSearchName] = useState('');
     const [searchCity, setSearchCity] = useState('');
     const [searchState, setSearchState] = useState('');
     const [filterRole, setFilterRole] = useState<'all' | 'personal' | 'user'>('all');
+
+    // Challenges filters (mirrors /challenges page)
+    const [filterStatus, setFilterStatus] = useState<'Todos' | 'ativos' | 'inativos'>('Todos');
+    const [filterParticipation, setFilterParticipation] = useState<'Todos' | 'Meus' | 'Explorar'>('Meus');
 
     const [saving, setSaving] = useState<string | null>(null);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -30,6 +59,12 @@ function CommunityContent() {
         if (ready && !userId) router.replace('/');
     }, [ready, userId, router]);
 
+    // Auto-open a tab from query params (e.g. ?tab=desafios)
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab === 'desafios') setActiveTab('desafios');
+    }, [searchParams]);
+
     // Auto-open user modal if ?user=id is present in URL
     useEffect(() => {
         const uid = searchParams.get('user');
@@ -37,66 +72,74 @@ function CommunityContent() {
             const userToOpen = store.profiles.find(p => p.id === uid);
             if (userToOpen) {
                 setSelectedUser(userToOpen);
-                // Clean the URL without fully reloading
                 router.replace('/community', { scroll: false });
             }
         }
     }, [searchParams, store.profiles, selectedUser, router]);
 
-    if (!ready || !userId || loading) return null;
+    // ── All hooks before conditional returns ──
+    const me = useMemo(() => store.profiles.find(u => u.id === userId), [store.profiles, userId]);
+    const myFriendIds = me?.friendIds || [];
 
-    const me = store.profiles.find(u => u.id === userId);
+    if (!ready || !userId || loading) return null;
     if (!me) return null;
 
-    // Filter out myself and apply search filters
+    // ── Community: filter users ──
     const otherUsers = store.profiles.filter(u => {
         if (u.id === userId) return false;
-
         const nameMatch = u.name.toLowerCase().includes(searchName.toLowerCase());
         const cityMatch = searchCity ? u.city?.toLowerCase().includes(searchCity.toLowerCase()) : true;
         const stateMatch = searchState ? u.state?.toLowerCase() === searchState.toLowerCase() : true;
-
         let roleMatch = true;
         if (filterRole === 'personal') roleMatch = u.role === 'personal';
         if (filterRole === 'user') roleMatch = u.role === 'user';
-
         return nameMatch && cityMatch && stateMatch && roleMatch;
     });
 
-    const myFriendIds = me.friendIds || [];
+    // ── Challenges: filter challenges (same as /challenges page) ──
+    const displayedChallenges = store.challenges.filter((c) => {
+        const myParticipant = store.challengeParticipants.find(p => p.challenge_id === c.id && p.user_id === userId);
+        const amIParticipant = !!myParticipant;
+        const amIOwner = c.created_by === userId;
 
+        if (filterParticipation === 'Meus' && !amIParticipant && !amIOwner) return false;
+        if (filterParticipation === 'Explorar' && (amIParticipant || c.visibility === 'private' || c.join_rule === 'invite_only')) return false;
+
+        const isActive = challengeStatus(c) === 'ativo';
+        if (filterStatus === 'ativos' && !isActive && challengeStatus(c) !== 'futuro') return false;
+        if (filterStatus === 'inativos' && isActive) return false;
+        if (filterStatus === 'inativos' && challengeStatus(c) === 'futuro') return false;
+
+        return true;
+    });
+
+    // ── Community follow ──
     async function toggleFollow(targetId: string) {
         setSaving(targetId);
-
         let newFriendIds = [...myFriendIds];
         const isFollowing = myFriendIds.includes(targetId);
-
         if (isFollowing) {
             newFriendIds = newFriendIds.filter(id => id !== targetId);
         } else {
             newFriendIds.push(targetId);
         }
-
         try {
-            const updatedProfile = { ...me, friendIds: newFriendIds };
-            await updateProfile(updatedProfile as import('@/lib/types').Profile);
-
+            await updateProfile({ ...me, friendIds: newFriendIds } as Profile);
             setSaving(null);
             setToast({
                 msg: isFollowing ? 'Você deixou de seguir este usuário.' : 'Agora você segue este usuário!',
-                type: 'success'
+                type: 'success',
             });
-        } catch (err: unknown) {
-            console.error(err);
+        } catch {
             setSaving(null);
-            setToast({ msg: 'Erro ao seguir: ' + ((err as Error).message || 'Falha na comunicação com o banco'), type: 'error' });
+            setToast({ msg: 'Erro ao seguir.', type: 'error' });
         }
     }
 
+    // ── User modal: recent activity ──
     function getUserRecentActivity(uid: string) {
         const fifteenDaysAgo = new Date();
         fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-
         return store.feedEvents
             .filter(e => e.userId === uid && e.eventType.startsWith('WO_COMPLETED') && new Date(e.createdAt) >= fifteenDaysAgo)
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -105,113 +148,33 @@ function CommunityContent() {
     function renderModalActivity(event: FeedEvent) {
         const workout = store.workouts.find(w => w.id === event.referenceId);
         if (!workout) return null;
-
         const eventDateObj = new Date(event.createdAt);
         const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
         const formattedDate = eventDateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-
         const dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
-
         return (
             <div key={event.id} className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-3">
                 <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                        <div className="stat-icon stat-icon-green !size-8 rounded-lg"><Dumbbell size={14} /></div>
-                        <div className="font-bold text-sm text-slate-900">{workout.name}</div>
-                    </div>
+                    <div className="font-bold text-sm text-slate-900">{workout.name}</div>
                     <span className="text-xs font-bold text-slate-400">{formattedDate}</span>
                 </div>
-
-                {(() => {
-                    const renderItems: { id: string; exId: string; plannedSets: number; log?: any; isExtra?: boolean }[] = [];
-                    const availableLogs = [...dayLogs];
-
-                    workout.exercises.forEach((planned, idx) => {
-                        const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
-                        let log = undefined;
-                        if (logIdx !== -1) {
-                            log = availableLogs[logIdx];
-                            availableLogs.splice(logIdx, 1);
-                        }
-                        renderItems.push({
-                            id: `planned-${idx}-${planned.exerciseId}`,
-                            exId: planned.exerciseId,
-                            plannedSets: planned.sets.length,
-                            log
-                        });
-                    });
-
-                    availableLogs.forEach((log, idx) => {
-                        renderItems.push({
-                            id: `extra-${idx}-${log.id}`,
-                            exId: log.exerciseId,
-                            plannedSets: 0,
-                            log,
-                            isExtra: true
-                        });
-                    });
-
-                    if (renderItems.length === 0) {
-                        return (
-                            <div className="mt-3 border-t border-slate-200 pt-3 text-center">
-                                <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md font-bold uppercase tracking-wide">
-                                    Concluído (Sem detalhes de exercícios)
-                                </span>
-                            </div>
-                        );
-                    }
-
-                    return (
-                        <div className="mt-3 border-t border-slate-200 pt-3">
-                            <div className="flex flex-col gap-2">
-                                {renderItems.map((item) => {
-                                    const log = item.log;
-                                    const exId = item.exId;
-                                    const exName = store.exercises.find(e => e.id === exId)?.name || 'Exercício';
-                                    const plannedSets = item.plannedSets;
-                                    const completedSets = log ? log.sets.length : 0;
-                                    const skippedSets = Math.max(0, plannedSets - completedSets);
-
-                                    let setsDisplay = '';
-                                    if (log && log.sets.length > 0) {
-                                        const groups: { count: number, weight: number }[] = [];
-                                        for (const s of log.sets) {
-                                            if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                                groups[groups.length - 1].count++;
-                                            } else {
-                                                groups.push({ count: 1, weight: s.weight });
-                                            }
-                                        }
-                                        setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
-                                    } else {
-                                        setsDisplay = '-';
-                                    }
-
-                                    return (
-                                        <div key={item.id} className="flex justify-between items-center text-xs py-1">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`font-bold ${!log ? 'text-slate-300 line-through' : 'text-slate-500'}`}>{exName}</span>
-                                                {log && skippedSets > 0 && (
-                                                    <span className="text-[10px] bg-red-100 text-red-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
-                                                        faltou {skippedSets} {skippedSets === 1 ? 'série' : 'séries'}
-                                                    </span>
-                                                )}
-                                                {!log && (
-                                                    <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
-                                                        não feito
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span className="text-primary font-bold text-right pl-3">
-                                                {setsDisplay}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    );
-                })()}
+                {dayLogs.length === 0 ? (
+                    <div className="mt-2 text-center">
+                        <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded-md font-bold uppercase">Concluído</span>
+                    </div>
+                ) : (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                        {dayLogs.slice(0, 5).map(log => {
+                            const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                            return (
+                                <div key={log.id} className="flex justify-between text-xs">
+                                    <span className="font-bold text-slate-500">{exName}</span>
+                                    <span className="text-primary">{log.sets.length} séries</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         );
     }
@@ -220,212 +183,335 @@ function CommunityContent() {
         <>
             <Navbar />
 
-            <main className="flex-1 w-full max-w-[1000px] mx-auto px-6 lg:px-12 py-8">
-                <div className="mb-2 pt-8">
-                    <button className="text-sm font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1" onClick={() => router.push('/dashboard')}>
-                        ← Voltar ao Dashboard
+            <main className="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-8">
+
+                {/* ─── Page Header ─── */}
+                <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-2xl font-extrabold font-inter tracking-tight text-slate-900">Social</h1>
+                    <div className="size-10 rounded-xl flex items-center justify-center bg-rose-100 text-rose-500 shrink-0">
+                        <Users size={20} />
+                    </div>
+                </div>
+
+                {/* ─── Tabs ─── */}
+                <div className="flex bg-slate-100 p-1 rounded-2xl mb-6 gap-1">
+                    <button
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold font-montserrat transition-all ${activeTab === 'comunidade' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => setActiveTab('comunidade')}
+                    >
+                        Comunidade
+                    </button>
+                    <button
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold font-montserrat transition-all ${activeTab === 'desafios' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => setActiveTab('desafios')}
+                    >
+                        Desafios
                     </button>
                 </div>
 
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-4xl font-extrabold font-inter tracking-tight text-slate-900">Comunidade</h1>
-                        <p className="text-sm font-bold font-montserrat text-slate-400 uppercase tracking-widest mt-2">Encontre amigos para acompanhar</p>
-                    </div>
-                    <div className="size-16 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center">
-                        <Users size={28} />
-                    </div>
-                </div>
+                {/* ════════════════════════════════════════
+                    Tab: Comunidade
+                ════════════════════════════════════════ */}
+                {activeTab === 'comunidade' && (
+                    <>
+                        {/* Search & Filters */}
+                        <div className="mb-6 flex flex-col gap-3">
+                            <div className="flex items-center gap-3 bg-white card-depth border border-slate-100 rounded-xl px-4 py-3">
+                                <Search size={18} className="text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar pelo nome..."
+                                    value={searchName}
+                                    onChange={(e) => setSearchName(e.target.value)}
+                                    className="border-none bg-transparent outline-none w-full text-slate-900 placeholder:text-slate-400 font-medium text-sm"
+                                />
+                            </div>
 
-                <div className="mb-8 flex flex-col gap-3">
-                    <div className="flex items-center gap-3 bg-white card-depth border border-slate-100 rounded-xl px-4 py-3">
-                        <Search size={20} className="text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar pelo nome..."
-                            value={searchName}
-                            onChange={(e) => setSearchName(e.target.value)}
-                            className="border-none bg-transparent outline-none w-full text-slate-900 placeholder:text-slate-400 font-medium"
-                        />
-                    </div>
-
-                    <div className="flex flex-col md:flex-row gap-3">
-                        <div className="flex-1 flex gap-3">
-                            <select
-                                value={searchState}
-                                onChange={(e) => setSearchState(e.target.value)}
-                                className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 outline-none w-[100px] sm:w-[120px]"
-                            >
-                                <option value="">UF</option>
-                                <option value="AC">AC</option>
-                                <option value="AL">AL</option>
-                                <option value="AP">AP</option>
-                                <option value="AM">AM</option>
-                                <option value="BA">BA</option>
-                                <option value="CE">CE</option>
-                                <option value="DF">DF</option>
-                                <option value="ES">ES</option>
-                                <option value="GO">GO</option>
-                                <option value="MA">MA</option>
-                                <option value="MT">MT</option>
-                                <option value="MS">MS</option>
-                                <option value="MG">MG</option>
-                                <option value="PA">PA</option>
-                                <option value="PB">PB</option>
-                                <option value="PR">PR</option>
-                                <option value="PE">PE</option>
-                                <option value="PI">PI</option>
-                                <option value="RJ">RJ</option>
-                                <option value="RN">RN</option>
-                                <option value="RS">RS</option>
-                                <option value="RO">RO</option>
-                                <option value="RR">RR</option>
-                                <option value="SC">SC</option>
-                                <option value="SP">SP</option>
-                                <option value="SE">SE</option>
-                                <option value="TO">TO</option>
-                            </select>
-
-                            <input
-                                type="text"
-                                placeholder="Cidade..."
-                                value={searchCity}
-                                onChange={(e) => setSearchCity(e.target.value)}
-                                className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 outline-none"
-                            />
-                        </div>
-
-                        <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 font-roboto self-start md:self-auto w-full md:w-auto">
-                            <button
-                                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterRole === 'all' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                onClick={() => setFilterRole('all')}
-                            >
-                                Todos
-                            </button>
-                            <button
-                                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterRole === 'personal' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                onClick={() => setFilterRole('personal')}
-                            >
-                                Personais
-                            </button>
-                            <button
-                                className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all ${filterRole === 'user' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                onClick={() => setFilterRole('user')}
-                            >
-                                Alunos
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {otherUsers.length === 0 ? (
-                    <div className="bg-white rounded-xl card-depth p-10 text-center flex flex-col items-center">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-slate-300 mb-2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><line x1="18" y1="8" x2="23" y2="13" /><line x1="23" y1="8" x2="18" y2="13" /></svg>
-                        <p className="text-slate-500 font-bold mb-1">Nenhum usuário encontrado.</p>
-                        <p className="text-xs text-slate-400">Tente buscar por outro nome.</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-4">
-                        {otherUsers.map((u) => {
-                            const isFollowing = myFriendIds.includes(u.id);
-                            const isLoading = saving === u.id;
-
-                            return (
-                                <div key={u.id} className="bg-white rounded-xl card-depth p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer border border-transparent hover:border-primary/20 transition-all group"
-                                    onClick={() => setSelectedUser(u)}
+                            <div className="flex gap-3 flex-wrap">
+                                <select
+                                    value={searchState}
+                                    onChange={(e) => setSearchState(e.target.value)}
+                                    className="bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-roboto text-slate-900 outline-none w-[90px]"
                                 >
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className={`size-12 rounded-full ${u.photo_url ? 'bg-transparent' : 'bg-slate-100 group-hover:bg-primary/10 transition-colors'} overflow-hidden flex items-center justify-center font-extrabold text-primary shrink-0 text-lg`}>
-                                            {u.photo_url ? (
-                                                <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                u.name.charAt(0).toUpperCase()
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0 pr-2">
-                                            <div className="font-extrabold font-inter text-slate-900 group-hover:text-primary transition-colors flex items-center gap-2 flex-wrap min-w-0">
-                                                <span className="truncate">{u.name}</span>
-                                                {u.city && u.state && (
-                                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide shrink-0">
-                                                        📍 {u.city}, {u.state}
-                                                    </span>
-                                                )}
-                                                {u.role === 'personal' && u.cref && (
-                                                    <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide border border-sky-200 shrink-0">
-                                                        CREF: {u.cref}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="text-xs font-bold font-roboto text-slate-400 uppercase tracking-wide mt-0.5 truncate">
-                                                {u.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="shrink-0 pl-2">
+                                    <option value="">UF</option>
+                                    {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => (
+                                        <option key={uf} value={uf}>{uf}</option>
+                                    ))}
+                                </select>
+                                <input
+                                    type="text"
+                                    placeholder="Cidade..."
+                                    value={searchCity}
+                                    onChange={(e) => setSearchCity(e.target.value)}
+                                    className="flex-1 bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-roboto text-slate-900 placeholder:text-slate-400 outline-none"
+                                />
+                                <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
+                                    {(['all', 'personal', 'user'] as const).map((role) => (
                                         <button
-                                            className={`btn font-montserrat ${isFollowing ? 'btn-ghost' : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02]'} !px-4 sm:!px-6 !py-3 w-32 sm:w-40`}
-                                            onClick={(e) => { e.stopPropagation(); toggleFollow(u.id); }}
-                                            disabled={isLoading}
+                                            key={role}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${filterRole === role ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            onClick={() => setFilterRole(role)}
                                         >
-                                            {isLoading ? 'Aguarde...' : isFollowing ? (
-                                                <><UserCheck size={16} /> Seguindo</>
-                                            ) : (
-                                                <><UserPlus size={16} /> Seguir</>
-                                            )}
+                                            {role === 'all' ? 'Todos' : role === 'personal' ? 'Personais' : 'Alunos'}
                                         </button>
-                                    </div>
+                                    ))}
                                 </div>
-                            );
-                        })}
+                            </div>
+                        </div>
+
+                        {/* User List */}
+                        {otherUsers.length === 0 ? (
+                            <div className="bg-white rounded-xl card-depth p-10 text-center flex flex-col items-center">
+                                <p className="text-slate-500 font-bold mb-1">Nenhum usuário encontrado.</p>
+                                <p className="text-xs text-slate-400">Tente buscar por outro nome.</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                {otherUsers.map((u) => {
+                                    const isFollowing = myFriendIds.includes(u.id);
+                                    const isLoading = saving === u.id;
+                                    return (
+                                        <div
+                                            key={u.id}
+                                            className="bg-white rounded-xl card-depth p-4 flex items-center justify-between gap-4 cursor-pointer border border-transparent hover:border-primary/20 transition-all group"
+                                            onClick={() => setSelectedUser(u)}
+                                        >
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className={`size-11 rounded-full ${u.photo_url ? 'bg-transparent' : 'bg-slate-100 group-hover:bg-primary/10'} overflow-hidden flex items-center justify-center font-extrabold text-primary shrink-0`}>
+                                                    {u.photo_url
+                                                        ? <img src={u.photo_url} alt={u.name} className="w-full h-full object-cover" />
+                                                        : u.name.charAt(0).toUpperCase()
+                                                    }
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold font-inter text-sm text-slate-900 truncate">{u.name}</p>
+                                                    <p className="text-xs text-slate-400 font-roboto">{u.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                className={`btn font-montserrat text-xs ${isFollowing
+                                                    ? 'btn-ghost border border-slate-200 text-slate-600 px-4 py-2'
+                                                    : 'bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.02] px-4 py-2'}`}
+                                                onClick={(e) => { e.stopPropagation(); toggleFollow(u.id); }}
+                                                disabled={isLoading}
+                                            >
+                                                {isLoading ? '...' : isFollowing
+                                                    ? <><UserCheck size={13} /> Seguindo</>
+                                                    : <><UserPlus size={13} /> Seguir</>}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* ════════════════════════════════════════
+                    Tab: Desafios — conteúdo completo da página /challenges
+                ════════════════════════════════════════ */}
+                {activeTab === 'desafios' && (
+                    <div className="flex flex-col gap-5">
+
+                        {/* Action + Filters row */}
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <button
+                                    className="btn bg-amber-500 text-white hover:scale-[1.02] shadow-xl shadow-amber-500/30 px-5 py-3 flex-none"
+                                    style={{ border: 'none' }}
+                                    onClick={() => router.push('/challenges/new')}
+                                >
+                                    <Plus size={16} /> Criar Desafio
+                                </button>
+                                <p className="text-slate-400 text-xs font-bold font-roboto">
+                                    {displayedChallenges.length} desafio(s)
+                                </p>
+                            </div>
+
+                            <div className="flex gap-2 flex-wrap">
+                                <select
+                                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none min-w-0 flex-1 sm:flex-none"
+                                    value={filterParticipation}
+                                    onChange={e => setFilterParticipation(e.target.value as typeof filterParticipation)}
+                                >
+                                    <option value="Meus">Meus Desafios</option>
+                                    <option value="Explorar">Explorar Públicos</option>
+                                    <option value="Todos">Todos</option>
+                                </select>
+                                <select
+                                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 shadow-sm outline-none min-w-0 flex-1 sm:flex-none"
+                                    value={filterStatus}
+                                    onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}
+                                >
+                                    <option value="Todos">Todos (Status)</option>
+                                    <option value="ativos">Ativos / Futuros</option>
+                                    <option value="inativos">Encerrados</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Challenge cards list */}
+                        {displayedChallenges.length === 0 ? (
+                            <div className="bg-white rounded-xl card-depth p-10 text-center flex flex-col items-center justify-center border border-slate-100">
+                                <Trophy size={48} className="text-slate-300 mb-4" />
+                                <p className="text-slate-500 font-bold font-roboto">Nenhum desafio encontrado.</p>
+                                <button
+                                    className="btn bg-amber-500 text-white hover:scale-[1.02] shadow-xl shadow-amber-500/30 px-6 py-4 mt-6 border-none"
+                                    onClick={() => router.push('/challenges/new')}
+                                >
+                                    Criar meu primeiro desafio
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-3 mb-6">
+                                {displayedChallenges.map((c) => {
+                                    const cStatusLabel = challengeStatus(c);
+                                    const st = STATUS_LABEL[cStatusLabel];
+                                    const participantCount = store.challengeParticipants.filter(p => p.challenge_id === c.id).length;
+
+                                    const myParticipant = store.challengeParticipants.find(p => p.challenge_id === c.id && p.user_id === userId);
+                                    const role = myParticipant?.role || (c.created_by === userId ? 'owner' : null);
+
+                                    const ownerParticipant = store.challengeParticipants.find(p => p.challenge_id === c.id && p.role === 'owner');
+                                    const creatorId = ownerParticipant?.user_id ?? c.created_by;
+                                    const creator = creatorId ? store.profiles.find(u => u.id === creatorId) : null;
+                                    const creatorLabel = creatorId === userId ? 'Você' : (creator?.name?.split(' ')[0] ?? null);
+
+                                    return (
+                                        <div
+                                            key={c.id}
+                                            className="group bg-white card-depth rounded-xl border border-transparent hover:border-amber-500/20 hover:shadow-lg cursor-pointer active:scale-[0.99] transition-all duration-200"
+                                            onClick={() => router.push(`/challenges/${c.id}`)}
+                                        >
+                                            {/* Card content */}
+                                            <div className="p-4 sm:p-5">
+                                                {/* Row 1: Icon + Title + Badges */}
+                                                <div className="flex items-start gap-3">
+                                                    <div className="size-10 sm:size-12 rounded-xl flex items-center justify-center bg-slate-100 text-2xl shrink-0 mt-0.5">
+                                                        {c.emoji || '🏆'}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="item-card-title text-[0.95rem] sm:text-base font-bold text-slate-900 leading-snug line-clamp-2">
+                                                            {c.title}
+                                                        </h3>
+
+                                                        {/* Badges */}
+                                                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                            <span
+                                                                className="inline-flex items-center gap-1 text-[0.65rem] font-bold rounded-full px-2 py-0.5"
+                                                                style={{ color: st.color, background: st.bg }}
+                                                            >
+                                                                {st.dot} {st.label}
+                                                            </span>
+                                                            {creatorLabel && (
+                                                                <span className="inline-flex items-center gap-1 text-[0.65rem] font-bold text-violet-700 bg-violet-50 border border-violet-100 rounded-full px-2 py-0.5">
+                                                                    👑 {creatorLabel}
+                                                                </span>
+                                                            )}
+                                                            {role === 'admin' && (
+                                                                <span className="inline-flex items-center text-[0.65rem] font-bold text-blue-500 bg-blue-50 rounded-full px-2 py-0.5">
+                                                                    🛡️ Admin
+                                                                </span>
+                                                            )}
+                                                            {!role && filterParticipation === 'Explorar' && (
+                                                                <span className="inline-flex items-center text-[0.65rem] font-bold text-slate-500 bg-slate-100 rounded-full px-2 py-0.5">
+                                                                    Não inscrito
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 hidden sm:block mt-2" />
+                                                </div>
+
+                                                {/* Row 2: Metadata */}
+                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 ml-[52px] sm:ml-[60px] text-[0.75rem] text-slate-500">
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <Calendar size={12} className="text-slate-400" />
+                                                        {formatDate(c.start_date)} → {formatDate(c.end_date)}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <Users size={12} className="text-slate-400" />
+                                                        {participantCount}{c.max_participants ? `/${c.max_participants}` : ''} inscritos
+                                                    </span>
+                                                </div>
+
+                                                {/* Row 3: Visibility */}
+                                                <div className="ml-[52px] sm:ml-[60px] mt-1.5">
+                                                    {c.visibility === 'private' ? (
+                                                        <span className="text-[0.72rem] text-slate-400 inline-flex items-center gap-1">
+                                                            <Lock size={11} /> Privado
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[0.72rem] text-slate-400 inline-flex items-center gap-1">
+                                                            <Globe size={11} /> Público
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Mobile: explicit "Abrir" link */}
+                                            <div className="flex items-center gap-1 px-4 sm:hidden py-2.5 border-t border-slate-100/80">
+                                                <button className="ml-auto inline-flex items-center gap-1 text-[0.72rem] font-medium text-slate-400 hover:text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                                                    {role ? 'Abrir' : 'Ver Detalhes'} <ChevronRight size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
-            {/* User Profile Modal */}
+            {/* ─── User Profile Modal ─── */}
             {selectedUser && (
-                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setSelectedUser(null)}>
+                <div
+                    className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={(e) => e.target === e.currentTarget && setSelectedUser(null)}
+                >
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-y-auto px-6 py-8 relative animate-in fade-in zoom-in-95 duration-200">
-                        <button className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors" onClick={() => setSelectedUser(null)}><X size={20} /></button>
-                        <div className="text-center mb-8 flex flex-col items-center">
+                        <button
+                            className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                            onClick={() => setSelectedUser(null)}
+                        >
+                            <X size={20} />
+                        </button>
+
+                        {/* Avatar + Name */}
+                        <div className="text-center mb-6 flex flex-col items-center">
                             <div className={`size-20 rounded-full overflow-hidden ${selectedUser.photo_url ? 'bg-transparent' : 'bg-primary/10 text-primary'} flex items-center justify-center font-extrabold text-3xl mb-4`}>
-                                {selectedUser.photo_url ? (
-                                    <img src={selectedUser.photo_url} alt={selectedUser.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    selectedUser.name.charAt(0).toUpperCase()
-                                )}
+                                {selectedUser.photo_url
+                                    ? <img src={selectedUser.photo_url} alt={selectedUser.name} className="w-full h-full object-cover" />
+                                    : selectedUser.name.charAt(0).toUpperCase()
+                                }
                             </div>
                             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUser.name}</h2>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
                                 {selectedUser.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}
                             </p>
-                            <div className="flex gap-2 mt-3 flex-wrap justify-center">
-                                {selectedUser.city && selectedUser.state && (
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold uppercase tracking-wide">
-                                        📍 {selectedUser.city}, {selectedUser.state}
-                                    </span>
-                                )}
-                                {selectedUser.role === 'personal' && selectedUser.cref && (
-                                    <span className="text-[10px] bg-sky-100 text-sky-600 px-2 py-1 rounded-md font-bold uppercase tracking-wide border border-sky-200">
-                                        📋 CREF: {selectedUser.cref}
-                                    </span>
-                                )}
-                            </div>
+                            {(selectedUser.city || selectedUser.state) && (
+                                <span className="mt-2 text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold uppercase tracking-wide">
+                                    📍 {[selectedUser.city, selectedUser.state].filter(Boolean).join(', ')}
+                                </span>
+                            )}
                         </div>
 
-                        <div className="w-full mt-6 mb-4 flex items-center justify-center md:justify-start gap-2 border-t border-slate-100 pt-6">
-                            <Activity size={18} className="text-primary" />
+                        {/* Recent Activity */}
+                        <div className="w-full flex items-center gap-2 border-t border-slate-100 pt-5 mb-4">
+                            <Activity size={16} className="text-primary" />
                             <span className="font-extrabold text-sm text-slate-900 uppercase tracking-wide">Atividade Recente (15 Dias)</span>
                         </div>
 
                         {getUserRecentActivity(selectedUser.id).length === 0 ? (
-                            <div className="text-center p-8 bg-slate-50 rounded-xl border border-slate-100">
-                                <p className="text-slate-500 font-bold text-sm">Nenhuma atividade registrada nos últimos 15 dias.</p>
+                            <div className="text-center p-6 bg-slate-50 rounded-xl border border-slate-100">
+                                <p className="text-slate-500 font-bold text-sm">Nenhuma atividade nos últimos 15 dias.</p>
                             </div>
                         ) : (
-                            <div className="flex flex-col max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                            <div className="flex flex-col max-h-[400px] overflow-y-auto pr-1 no-scrollbar">
                                 {getUserRecentActivity(selectedUser.id).map(renderModalActivity)}
                             </div>
                         )}
@@ -442,7 +528,7 @@ export default function CommunityPage() {
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
                 <div className="flex flex-col items-center gap-4">
                     <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-slate-500 font-medium font-roboto text-sm max-w-xs text-center">Carregando comunidade...</p>
+                    <p className="text-slate-500 font-medium font-roboto text-sm">Carregando...</p>
                 </div>
             </div>
         }>

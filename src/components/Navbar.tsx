@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, Trophy, Bell } from 'lucide-react';
+import { Bell, Home, Dumbbell, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { UFitLogo } from '@/components/UFitLogo';
@@ -10,12 +10,17 @@ import { UFitLogo } from '@/components/UFitLogo';
 const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
 const BASE_NAV_ITEMS = [
-    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/dashboard', label: 'Início' },
     { href: '/projects', label: 'Treinos' },
-    { href: '/history', label: 'Histórico' },
-    { href: '/community', label: 'Comunidade' },
-    { href: '/compare', label: 'Comparar' },
-    { href: '/challenges', label: 'Desafios', icon: true },
+    { href: '/history', label: 'Evolução' },
+    { href: '/community', label: 'Social' },
+];
+
+const MOBILE_NAV_ITEMS = [
+    { href: '/dashboard', label: 'Início', Icon: Home },
+    { href: '/projects', label: 'Treinos', Icon: Dumbbell },
+    { href: '/history', label: 'Evolução', Icon: TrendingUp },
+    { href: '/community', label: 'Social', Icon: Users },
 ];
 
 export default function Navbar() {
@@ -25,7 +30,6 @@ export default function Navbar() {
     const { store, markNotificationRead, markAllNotificationsRead } = useStore();
 
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const [showMobileMenu, setShowMobileMenu] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const bellRef = useRef<HTMLDivElement>(null);
@@ -42,10 +46,6 @@ export default function Navbar() {
         document.addEventListener('mousedown', handleClick);
         return () => document.removeEventListener('mousedown', handleClick);
     }, []);
-
-    useEffect(() => {
-        setShowMobileMenu(false);
-    }, [pathname]);
 
     if (!userId) return null;
 
@@ -83,24 +83,11 @@ export default function Navbar() {
         return '🔔';
     }
 
-    function NavLink({ href, label, icon }: { href: string; label: string; icon?: boolean }) {
+    function NavLink({ href, label }: { href: string; label: string }) {
         const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
         return (
             <a href={href}
                 className={`font-bold font-roboto text-sm flex items-center gap-1.5 transition-colors ${isActive ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}>
-                {icon && <Trophy size={16} className={isActive ? 'text-primary' : 'text-slate-400'} />}
-                {label}
-            </a>
-        );
-    }
-
-    function MobileNavLink({ href, label, icon }: { href: string; label: string; icon?: boolean }) {
-        const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
-        return (
-            <a href={href}
-                className={`flex items-center gap-2 px-6 py-3.5 font-bold text-sm transition-colors ${isActive ? 'text-primary bg-blue-50/50' : 'text-slate-700 hover:text-primary hover:bg-slate-50'}`}
-                onClick={() => setShowMobileMenu(false)}>
-                {icon && <Trophy size={18} className={isActive ? 'text-primary' : 'text-slate-400'} />}
                 {label}
             </a>
         );
@@ -108,47 +95,41 @@ export default function Navbar() {
 
     return (
         <>
-            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-50 px-6 lg:px-12 py-4">
-                <div className="max-w-[1440px] mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-12">
+            {/* ─── Top Navbar (Desktop + Mobile header) ─── */}
+            <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 lg:px-12 py-3.5">
+                <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+                    {/* Logo + Desktop Nav */}
+                    <div className="flex items-center gap-10">
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/dashboard')}>
-                            <UFitLogo width={40} height={40} className="drop-shadow-sm -ml-2" />
-                            <h2 className="text-2xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-1px' }}>
+                            <UFitLogo width={36} height={36} className="drop-shadow-sm -ml-1" />
+                            <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-0.8px' }}>
                                 <span className="text-blue-600">u</span><span className="text-cyan-500">Fit</span>
                             </h2>
                         </div>
 
                         {/* Desktop nav */}
-                        <nav className="hidden md:flex items-center gap-8">
-                            {allNavItems.map(({ href, label, icon }) => (
-                                <NavLink key={href} href={href} label={label} icon={icon} />
+                        <nav className="hidden md:flex items-center gap-7">
+                            {allNavItems.map(({ href, label }) => (
+                                <NavLink key={href} href={href} label={label} />
                             ))}
                         </nav>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {/* Mobile hamburger button */}
-                        <button
-                            className="md:hidden size-10 flex items-center justify-center bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors"
-                            onClick={() => setShowMobileMenu(!showMobileMenu)}
-                            aria-label="Menu"
-                        >
-                            {showMobileMenu ? <X size={20} /> : <Menu size={20} />}
-                        </button>
-
+                    {/* Right side: Bell + Avatar */}
+                    <div className="flex items-center gap-2.5">
                         {/* 🔔 Bell Notification Button */}
                         <div className="relative" ref={bellRef}>
                             <button
-                                className="relative size-10 flex items-center justify-center bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors"
+                                className="relative size-9 flex items-center justify-center bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-colors"
                                 onClick={() => {
                                     setShowNotifications(prev => !prev);
                                     setShowUserMenu(false);
                                 }}
                                 aria-label="Notificações"
                             >
-                                <Bell size={20} />
+                                <Bell size={18} />
                                 {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black leading-none size-4 flex items-center justify-center rounded-full">
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black leading-none size-4 flex items-center justify-center rounded-full">
                                         {unreadCount > 9 ? '9+' : unreadCount}
                                     </span>
                                 )}
@@ -199,7 +180,7 @@ export default function Navbar() {
                         {/* Profile avatar + dropdown */}
                         <div className="relative" ref={menuRef}>
                             <div
-                                className={`size-10 rounded-xl ${user.photo_url ? 'bg-transparent hover:opacity-80' : 'bg-slate-200 hover:bg-slate-300'} overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none transition-all`}
+                                className={`size-9 rounded-xl ${user.photo_url ? 'bg-transparent hover:opacity-80' : 'bg-slate-200 hover:bg-slate-300'} overflow-hidden flex items-center justify-center cursor-pointer font-bold font-inter text-slate-600 shrink-0 select-none transition-all`}
                                 title={user.name}
                                 onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}
                             >
@@ -238,19 +219,29 @@ export default function Navbar() {
                 </div>
             </header>
 
-            {/* Mobile menu dropdown */}
-            {showMobileMenu && (
-                <div className="md:hidden fixed inset-0 top-[73px] z-40 bg-black/20 backdrop-blur-sm" onClick={() => setShowMobileMenu(false)}>
-                    <nav
-                        className="bg-white border-b border-slate-100 shadow-xl py-2 animate-in slide-in-from-top-2 duration-200"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {allNavItems.map(({ href, label, icon }) => (
-                            <MobileNavLink key={href} href={href} label={label} icon={icon} />
-                        ))}
-                    </nav>
+            {/* ─── Mobile Bottom Navigation ─── */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-100 safe-area-bottom">
+                <div className="flex items-center justify-around px-2 py-2">
+                    {MOBILE_NAV_ITEMS.map(({ href, label, Icon }) => {
+                        const isActive = pathname.startsWith(href) && (href !== '/dashboard' || pathname === '/dashboard');
+                        return (
+                            <a
+                                key={href}
+                                href={href}
+                                className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all ${isActive
+                                    ? 'text-primary'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                    }`}
+                            >
+                                <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                                <span className={`text-[10px] font-bold font-montserrat transition-all ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+                                    {label}
+                                </span>
+                            </a>
+                        );
+                    })}
                 </div>
-            )}
+            </nav>
         </>
     );
 }
