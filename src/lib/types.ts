@@ -1,6 +1,7 @@
 export interface NotificationPrefs {
   challenge_alerts: boolean;
   rank_changes: boolean;
+  comment_on_post: boolean;
 }
 
 export interface Profile {
@@ -25,7 +26,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'challenge_alert' | 'rank_down' | 'rank_top1';
+  type: 'challenge_alert' | 'rank_down' | 'rank_top1' | 'comment_on_post';
   reference_id?: string | null;
   read: boolean;
   created_at: string;
@@ -173,6 +174,7 @@ export interface ChallengeComment {
   challenge_id: string;
   user_id: string;
   content: string;
+  feed_event_id?: string | null;
   created_at: string;
 }
 

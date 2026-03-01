@@ -332,6 +332,25 @@ export function useStore() {
         await refresh();
     }, [refresh]);
 
+    // ─── Challenge Comments (optimistic updates) ──────────────────────────────
+    const addChallengeComment = useCallback(async (comment: ChallengeComment) => {
+        // Optimistic: add immediately so UI feels instant
+        setStore(prev => ({ ...prev, challengeComments: [...prev.challengeComments, comment] }));
+        const { error } = await supabase.from('challenge_comments').insert(comment);
+        if (error) {
+            // Rollback
+            setStore(prev => ({ ...prev, challengeComments: prev.challengeComments.filter(c => c.id !== comment.id) }));
+            throw new Error(error.message);
+        }
+    }, []);
+
+    const deleteChallengeComment = useCallback(async (id: string) => {
+        // Optimistic remove
+        setStore(prev => ({ ...prev, challengeComments: prev.challengeComments.filter(c => c.id !== id) }));
+        const { error } = await supabase.from('challenge_comments').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+    }, []);
+
     // ─── Notifications ─────────────────────────────────────────────────────
     const createNotification = useCallback(async (n: Omit<Notification, 'created_at' | 'read'>) => {
         const { error } = await supabase.from('notifications').insert({ ...n, read: false });
@@ -368,6 +387,7 @@ export function useStore() {
         addLog, updateLog, deleteLog,
         addFeedEvent, updateFeedEvent, deleteFeedEvent, toggleKudo,
         addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge,
+        addChallengeComment, deleteChallengeComment,
         createNotification, markNotificationRead, markAllNotificationsRead,
     };
 }

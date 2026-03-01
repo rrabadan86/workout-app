@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ChevronLeft, Trophy, Flame, ShieldAlert, BadgeCheck, Users, Calendar, Medal, CheckCircle2, MessageSquare, Share2, Cog, UserPlus, X, Trash2, Edit3 } from 'lucide-react';
+import { ChevronLeft, Trophy, Flame, ShieldAlert, Users, Calendar, Medal, CheckCircle2, MessageSquare, Share2, Cog, UserPlus, X, Trash2, Edit3 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Feed from '@/components/Feed';
 import Modal from '@/components/Modal';
@@ -20,7 +20,7 @@ export default function ChallengeDetailsPage() {
     const id = params.id as string;
 
     const { userId, ready } = useAuth();
-    const { store, refresh, addFeedEvent, addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, createNotification } = useStore();
+    const { store, refresh, addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, createNotification } = useStore();
 
     const [challenge, setChallenge] = useState<Challenge | null>(null);
     const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
@@ -29,6 +29,9 @@ export default function ChallengeDetailsPage() {
     const [activeTab, setActiveTab] = useState<'ranking' | 'feed' | 'rules' | 'admin'>('ranking');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [saving, setSaving] = useState(false);
+
+    // Comments
+    // (comment state is now managed inside FeedItemCard in Feed.tsx)
 
     // Check-in modal
     const [showCheckinModal, setShowCheckinModal] = useState(false);
@@ -67,8 +70,9 @@ export default function ChallengeDetailsPage() {
     const syncingRef = useRef(false);
 
     // --- Retroactive / Auto Check-in Sync ---
+    // NOTE: uses syncingRef exclusively; intentionally does NOT touch `saving` so admin UI stays responsive
     useEffect(() => {
-        if (!challenge || !isParticipant || !isActive || hasCheckedInToday || saving || !userId || syncingRef.current) return;
+        if (!challenge || !isParticipant || !isActive || hasCheckedInToday || !userId || syncingRef.current) return;
 
         const syncCheckin = async () => {
             syncingRef.current = true;
@@ -109,7 +113,6 @@ export default function ChallengeDetailsPage() {
 
                 if (hasValidWorkoutToday) {
                     console.log('[Challenge Sync] User has a valid workout today. Performing retroactive check-in for challenge:', challenge.id);
-                    setSaving(true);
 
                     // Search for the workout's feed event to link to the check-in
                     const workoutFeedEvent = store.feedEvents.find(e => e.userId === userId && e.referenceId === validWorkoutId && e.eventType.startsWith('WO_COMPLETED'));
@@ -136,13 +139,12 @@ export default function ChallengeDetailsPage() {
             } catch (err) {
                 console.error('[Challenge Sync] Error during retroactive auto check-in:', err);
             } finally {
-                setSaving(false);
                 syncingRef.current = false;
             }
         };
 
         syncCheckin();
-    }, [challenge, isParticipant, isActive, hasCheckedInToday, saving, store.logs, userId, todayStr, store.challengeCheckins, store.challengeBadges, refresh]);
+    }, [challenge, isParticipant, isActive, hasCheckedInToday, store.logs, userId, todayStr, store.challengeCheckins, store.challengeBadges, refresh]);
 
     // Challenge Finalization Logic (Auto-award completion badges)
     const finalizationRef = useRef(false);
@@ -279,16 +281,20 @@ export default function ChallengeDetailsPage() {
         e.preventDefault();
         setSaving(true);
         try {
-            let feedEventId = null;
+            // Build all DB operations in parallel, then do a SINGLE refresh at the end
+            let feedEventId: string | null = null;
+
             if (challenge?.visibility === 'public') {
                 feedEventId = uid();
-                await addFeedEvent({
+                // Insert directly — avoid calling addFeedEvent() which triggers its own refresh()
+                const { error: feErr } = await supabase.from('feed_events').insert({
                     id: feedEventId,
                     userId,
                     eventType: `CHALLENGE_CHECKIN|${challenge.title}`,
                     referenceId: challenge.id,
                     createdAt: new Date().toISOString()
                 });
+                if (feErr) throw feErr;
             }
 
             const newCheckin = {
@@ -316,7 +322,7 @@ export default function ChallengeDetailsPage() {
             const afterCheckins = [...checkins, newCheckin as any];
             const afterRanks = rankSnapshot(afterCheckins);
 
-            // For each person whose rank dropped, send a rank_down notification
+            // For each person whose rank dropped, send a rank_down notification (fire-and-forget)
             afterRanks.forEach((entry, newIdx) => {
                 const oldIdx = beforeRanks.findIndex(r => r.user_id === entry.user_id);
                 if (newIdx > oldIdx && entry.user_id !== userId) {
@@ -353,8 +359,10 @@ export default function ChallengeDetailsPage() {
             }
 
             const updatedCheckins = [...store.challengeCheckins, newCheckin as any];
+            // evaluateBadges only inserts if needed — still a single extra round-trip
             await evaluateBadges(userId, challenge!.id, updatedCheckins, store.challengeBadges);
 
+            // ONE refresh at the very end
             await refresh();
             setShowCheckinModal(false);
             setCheckinNote('');
@@ -516,6 +524,11 @@ export default function ChallengeDetailsPage() {
     });
 
     const participantIds = new Set(participants.map(p => p.user_id));
+
+    // Comments for this challenge, sorted newest first
+    const challengeComments = store.challengeComments
+        .filter(c => c.challenge_id === id)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     const challengeFeedEvents = store.feedEvents
         .filter(event => {
@@ -719,9 +732,16 @@ export default function ChallengeDetailsPage() {
                     {activeTab === 'feed' && (
                         <div className="animate-in fade-in duration-200">
                             <h3 className="text-lg font-bold text-slate-800 mb-6 px-2">Atividade Recente</h3>
-                            <Feed friendIds={participants.map(p => p.user_id).filter(id => id !== userId)} myId={userId} customEvents={challengeFeedEvents} />
+                            <Feed
+                                friendIds={participants.map(p => p.user_id).filter(uid => uid !== userId)}
+                                myId={userId}
+                                customEvents={challengeFeedEvents}
+                                challengeId={isParticipant ? id : undefined}
+                                isAdmin={isAdmin}
+                            />
                         </div>
                     )}
+
 
                     {activeTab === 'rules' && (() => {
                         const specificWorkout = challenge.specific_workout_id

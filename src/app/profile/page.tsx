@@ -25,6 +25,7 @@ export default function ProfilePage() {
     const [photoUrl, setPhotoUrl] = useState('');
     const [notifChallengeAlerts, setNotifChallengeAlerts] = useState(true);
     const [notifRankChanges, setNotifRankChanges] = useState(true);
+    const [notifCommentOnPost, setNotifCommentOnPost] = useState(true);
 
     const [ufs, setUfs] = useState<{ id: number, sigla: string, nome: string }[]>([]);
     const [cities, setCities] = useState<{ id: number, nome: string }[]>([]);
@@ -51,6 +52,7 @@ export default function ProfilePage() {
             setPhotoUrl(me.photo_url || '');
             setNotifChallengeAlerts(me.notification_prefs?.challenge_alerts ?? true);
             setNotifRankChanges(me.notification_prefs?.rank_changes ?? true);
+            setNotifCommentOnPost(me.notification_prefs?.comment_on_post ?? true);
         }
     }, [me]);
 
@@ -97,6 +99,7 @@ export default function ProfilePage() {
                 notification_prefs: {
                     challenge_alerts: notifChallengeAlerts,
                     rank_changes: notifRankChanges,
+                    comment_on_post: notifCommentOnPost,
                 },
             };
             // @ts-ignore
@@ -266,6 +269,18 @@ export default function ProfilePage() {
                                         type="checkbox"
                                         checked={notifRankChanges}
                                         onChange={e => setNotifRankChanges(e.target.checked)}
+                                        className="w-5 h-5 rounded accent-blue-600 shrink-0 ml-4"
+                                    />
+                                </label>
+                                <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-slate-100/70 transition-colors">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">Comentários nas atividades</p>
+                                        <p className="text-xs text-slate-500">Notificar quando alguém comentar em uma atividade que você compartilhou.</p>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={notifCommentOnPost}
+                                        onChange={e => setNotifCommentOnPost(e.target.checked)}
                                         className="w-5 h-5 rounded accent-blue-600 shrink-0 ml-4"
                                     />
                                 </label>
