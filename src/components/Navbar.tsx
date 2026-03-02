@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Bell, Home, Dumbbell, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { UFitLogo } from '@/components/UFitLogo';
+import { VimoLogo } from '@/components/UFitLogo';
 
 const SUPERVISOR_EMAIL = 'rodrigorabadan@gmail.com';
 
@@ -101,9 +101,9 @@ export default function Navbar() {
                     {/* Logo + Desktop Nav */}
                     <div className="flex items-center gap-10">
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push('/dashboard')}>
-                            <UFitLogo width={36} height={36} className="drop-shadow-sm -ml-1" />
-                            <h2 className="text-xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-0.8px' }}>
-                                <span className="text-blue-600">u</span><span className="text-cyan-500">Fit</span>
+                            <VimoLogo width={36} height={36} className="drop-shadow-sm -ml-1" />
+                            <h2 className="text-xl font-extrabold font-inter tracking-tight" style={{ letterSpacing: '-0.8px', color: '#2d3436' }}>
+                                vimu
                             </h2>
                         </div>
 

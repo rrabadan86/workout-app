@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { getSession } from '@/lib/store';
-import { UFitLogo } from '@/components/UFitLogo';
+import { VimoLogo } from '@/components/UFitLogo';
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useStore } from '@/lib/store';
@@ -278,9 +278,9 @@ export default function LoginPage() {
       <div className="auth-card animate-in fade-in zoom-in-95 duration-500">
         <div className="auth-logo flex flex-col items-center mb-6">
           <div className="flex items-center justify-center gap-3">
-            <UFitLogo width={64} height={64} className="hover:scale-105 transition-transform duration-500" />
-            <h2 className="text-5xl font-extrabold font-inter tracking-tight text-slate-900" style={{ letterSpacing: '-1.5px' }}>
-              <span className="text-blue-600">u</span><span className="text-cyan-500">Fit</span>
+            <VimoLogo width={64} height={64} className="hover:scale-105 transition-transform duration-500" />
+            <h2 className="text-5xl font-extrabold font-inter tracking-tight" style={{ letterSpacing: '-1.5px', color: '#2d3436' }}>
+              vimu
             </h2>
           </div>
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest font-montserrat mt-2">Registre. Evolua. Compare.</p>

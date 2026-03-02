@@ -285,7 +285,7 @@ function CommunityContent() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold font-inter text-sm text-slate-900 truncate">{u.name}</p>
-                                                    <p className="text-xs text-slate-400 font-roboto">{u.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}</p>
+                                                    <p className="text-xs text-slate-400 font-roboto">{u.role === 'personal' ? 'Personal Trainer' : 'Membro VIMU'}</p>
                                                 </div>
                                             </div>
                                             <button
@@ -491,7 +491,7 @@ function CommunityContent() {
                             </div>
                             <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">{selectedUser.name}</h2>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                {selectedUser.role === 'personal' ? 'Personal Trainer' : 'Membro uFit'}
+                                {selectedUser.role === 'personal' ? 'Personal Trainer' : 'Membro VIMU'}
                             </p>
                             {(selectedUser.city || selectedUser.state) && (
                                 <span className="mt-2 text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold uppercase tracking-wide">

@@ -7,7 +7,7 @@ import { StoreProvider } from "@/lib/store";
 const fontInter = Inter({ subsets: ['latin'], variable: '--font-inter', weight: ['400', '500', '600', '700', '800', '900'] });
 
 export const metadata: Metadata = {
-  title: "uFit — App de Treinos",
+  title: "VIMU — App de Treinos",
   description: "Crie treinos, registre seu progresso e compare sua evolução com amigos.",
 };
 
