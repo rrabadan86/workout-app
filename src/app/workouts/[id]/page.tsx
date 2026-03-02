@@ -80,7 +80,7 @@ export default function WorkoutDetailPage() {
             return next;
         });
 
-        localStorage.removeItem(`fitsync_active_${id}`);
+        localStorage.removeItem(`vimu_active_${id}`);
 
         if (workout) {
             try {
@@ -175,7 +175,7 @@ export default function WorkoutDetailPage() {
     useEffect(() => {
         if (!workout) return;
         try {
-            const saved = localStorage.getItem(`fitsync_active_${id}`);
+            const saved = localStorage.getItem(`vimu_active_${id}`);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (parsed.weights && Object.keys(parsed.weights).length > 0) {
@@ -211,7 +211,7 @@ export default function WorkoutDetailPage() {
 
     useEffect(() => {
         if (!workout || !loadedStorage || isFinished) return;
-        localStorage.setItem(`fitsync_active_${id}`, JSON.stringify({
+        localStorage.setItem(`vimu_active_${id}`, JSON.stringify({
             timerRunning,
             startedAt: startedAtRef.current,
             weights

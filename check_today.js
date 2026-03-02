@@ -20,7 +20,7 @@ envContent.split('\n').forEach(line => {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
-    console.log("== Consultando o Banco de Dados do uFit ==");
+    console.log("== Consultando o Banco de Dados do vimo ==");
     const userId = "d4f799bc-b23b-419a-9a88-2234a80787c4"; // O ID do rrabadan do script anterior
 
     // Pegar logs do dia 25/02/2026

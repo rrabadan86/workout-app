@@ -395,7 +395,7 @@ export function useStore() {
 // ─── Session helpers ──────────────────────────────────────────────────────────
 export function getSession(): string | null {
     if (typeof window === 'undefined') return null;
-    return sessionStorage.getItem('fitsync_user');
+    return sessionStorage.getItem('vimu_user');
 }
-export function setSession(userId: string) { sessionStorage.setItem('fitsync_user', userId); }
-export function clearSession() { sessionStorage.removeItem('fitsync_user'); }
+export function setSession(userId: string) { sessionStorage.setItem('vimu_user', userId); }
+export function clearSession() { sessionStorage.removeItem('vimu_user'); }

@@ -283,7 +283,7 @@ export default function LoginPage() {
               vimu
             </h2>
           </div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest font-montserrat mt-2">Registre. Evolua. Compare.</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest font-montserrat mt-2">Registre. Evolua. Compartilhe.</p>
         </div>
 
         {needsOnboarding ? (
