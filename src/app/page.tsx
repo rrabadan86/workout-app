@@ -63,9 +63,21 @@ export default function LoginPage() {
   const [oboUser, setOboUser] = useState<any>(null);
 
   useEffect(() => {
-    if (ready && getSession()) {
-      router.replace('/dashboard');
-    }
+    if (!ready) return;
+    const sid = getSession();
+    if (!sid) return;
+
+    // Before auto-redirecting, check if this user needs onboarding
+    (async () => {
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', sid).maybeSingle();
+      if (profile && !profile.onboarding_done) {
+        setOboUser(profile);
+        setNeedsOnboarding(true);
+      } else if (profile) {
+        router.replace('/dashboard');
+      }
+      // If no profile exists yet, let onAuthStateChange handle it
+    })();
   }, [router, ready]);
 
   // Handle Google OAuth response when returning to this page
@@ -98,7 +110,7 @@ export default function LoginPage() {
             photo_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || null
           };
 
-          const { error } = await supabase.from('profiles').insert(newProfile);
+          const { error } = await supabase.from('profiles').upsert(newProfile, { onConflict: 'id', ignoreDuplicates: true });
           if (error) {
             setToast({ msg: 'Erro ao criar perfil Google.', type: 'error' });
             setLoading(false);
@@ -136,9 +148,8 @@ export default function LoginPage() {
         } else if (profile) {
           const googleAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
           if (googleAvatar && profile.photo_url !== googleAvatar) {
-            await supabase.from('profiles').update({ photo_url: googleAvatar }).eq('id', user.id);
+            supabase.from('profiles').update({ photo_url: googleAvatar }).eq('id', user.id); // fire-and-forget
           }
-          await refresh(); // Load the newly created profile data before navigating
           login(user.id);
           router.push('/dashboard');
         }
@@ -260,9 +271,21 @@ export default function LoginPage() {
     }
   }
 
-  async function finishOnboarding(role_choice: 'personal' | 'user') {
+  async function finishOnboarding() {
+    if (!role) { setToast({ msg: 'Escolha seu perfil.', type: 'error' }); return; }
+    if (!sex) { setToast({ msg: 'Selecione o sexo.', type: 'error' }); return; }
+    if (!stateUF || !city) { setToast({ msg: 'Preencha estado e cidade.', type: 'error' }); return; }
+    if (role === 'personal' && !cref.trim()) { setToast({ msg: 'Informe o CREF.', type: 'error' }); return; }
     setLoading(true);
-    const { error } = await supabase.from('profiles').update({ role: role_choice, onboarding_done: true }).eq('id', oboUser.id);
+    const { error } = await supabase.from('profiles').update({
+      role,
+      onboarding_done: true,
+      sex: sex || null,
+      birth_date: birthDate || null,
+      state: stateUF,
+      city,
+      cref: role === 'personal' ? cref.trim() : null
+    }).eq('id', oboUser.id);
     if (error) {
       setToast({ msg: 'Erro ao salvar perfil.', type: 'error' });
       setLoading(false);
@@ -287,16 +310,100 @@ export default function LoginPage() {
         </div>
 
         {needsOnboarding ? (
-          <div className="auth-form" style={{ textAlign: 'center' }}>
-            <h2 className="text-lg mb-6 font-bold font-inter text-slate-800">Como você quer usar o app?</h2>
-            <div className="flex flex-col gap-3">
-              <button className="btn bg-primary text-white hover:opacity-90 py-3 shadow-md border-0" onClick={() => finishOnboarding('user')} disabled={loading}>
-                Sou Aluno
-              </button>
-              <button className="btn bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 py-3" onClick={() => finishOnboarding('personal')} disabled={loading}>
-                Sou Personal
-              </button>
+          <div className="auth-form flex flex-col gap-4">
+            <h2 className="text-lg font-bold font-inter text-slate-800 text-center mb-2">Complete seu cadastro</h2>
+
+            {/* Perfil */}
+            <div className="field">
+              <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Perfil</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${role === 'user' ? 'bg-primary text-white border-primary shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                  onClick={() => setRole('user')}
+                >Sou Aluno</button>
+                <button
+                  type="button"
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all border ${role === 'personal' ? 'bg-primary text-white border-primary shadow-md' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                  onClick={() => setRole('personal')}
+                >Sou Personal</button>
+              </div>
             </div>
+
+            {/* CREF (se personal) */}
+            {role === 'personal' && (
+              <div className="field">
+                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">CREF</label>
+                <input
+                  type="text"
+                  className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all"
+                  placeholder="000000-G/UF"
+                  value={cref}
+                  onChange={(e) => setCref(e.target.value)}
+                />
+              </div>
+            )}
+
+            {/* Sexo + Data Nasc */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="field">
+                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Sexo</label>
+                <select
+                  className="bg-slate-50 border border-slate-200 focus:border-primary rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none appearance-none"
+                  value={sex}
+                  onChange={(e) => setSex(e.target.value as any)}
+                >
+                  <option value="">Selecione...</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de Nasc.</label>
+                <input
+                  type="date"
+                  className="bg-slate-50 border border-slate-200 focus:border-primary rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Estado + Cidade */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="field">
+                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Estado</label>
+                <select
+                  className="bg-slate-50 border border-slate-200 focus:border-primary rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none appearance-none"
+                  value={stateUF}
+                  onChange={(e) => setStateUF(e.target.value)}
+                >
+                  <option value="">Selecione...</option>
+                  {ufs.map(uf => <option key={uf.sigla} value={uf.sigla}>{uf.sigla}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Cidade</label>
+                <select
+                  className="bg-slate-50 border border-slate-200 focus:border-primary rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none appearance-none"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  disabled={!stateUF}
+                >
+                  <option value="">Selecione...</option>
+                  {cities.map(c => <option key={c.id} value={c.nome}>{c.nome}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <button
+              className="btn bg-primary text-white hover:opacity-90 py-3 shadow-md border-0 rounded-xl font-extrabold text-sm w-full mt-2"
+              onClick={() => finishOnboarding()}
+              disabled={loading}
+            >
+              {loading ? 'Salvando...' : 'Concluir Cadastro'}
+            </button>
           </div>
         ) : (
           <>

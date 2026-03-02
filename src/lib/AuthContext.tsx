@@ -66,17 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
                 const authUserId = session.user.id;
-
-                // Garante que o usuário existe em public.profiles
-                await supabase.from('profiles').upsert({
-                    id: authUserId,
-                    name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuário',
-                    email: session.user.email,
-                    role: 'user',
-                    onboarding_done: true,
-                    photo_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
-                }, { onConflict: 'id', ignoreDuplicates: true });
-
                 setSession(authUserId);
                 setUserId(authUserId);
                 setUserEmail(session.user.email || '');
