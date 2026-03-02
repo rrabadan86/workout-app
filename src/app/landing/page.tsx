@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { VimoLogo } from '@/components/UFitLogo';
 
 /* ─── Icons (inline SVGs to avoid extra deps) ─── */
 function IconBolt() {
@@ -170,10 +171,8 @@ export default function LandingPage() {
                 }
                 .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
                 .nav-logo-icon {
-                    width: 36px; height: 36px; border-radius: 10px;
-                    background: var(--primary);
+                    width: 36px; height: 36px;
                     display: flex; align-items: center; justify-content: center;
-                    color: white;
                 }
                 .nav-logo-text {
                     font-family: 'Montserrat', sans-serif;
@@ -622,9 +621,9 @@ export default function LandingPage() {
                 }
                 .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
                 .footer-logo-icon {
-                    width: 30px; height: 30px; border-radius: 8px;
-                    background: var(--primary); display: flex; align-items: center;
-                    justify-content: center; color: white;
+                    width: 30px; height: 30px;
+                    display: flex; align-items: center;
+                    justify-content: center;
                 }
                 .footer-logo-text {
                     font-family: 'Montserrat', sans-serif; font-weight: 900;
@@ -645,12 +644,12 @@ export default function LandingPage() {
             {/* ── NAVBAR ── */}
             <nav className="nav">
                 <Link href="/landing" className="nav-logo">
-                    <div className="nav-logo-icon"><IconBolt /></div>
-                    <span className="nav-logo-text">VIMU</span>
+                    <div className="nav-logo-icon"><VimoLogo width={36} height={36} /></div>
+                    <span className="nav-logo-text">vimu</span>
                 </Link>
                 <div className="nav-actions">
                     <Link href="/" className="btn-ghost">Entrar</Link>
-                    <Link href="/signup" className="btn-primary">Comece Grátis</Link>
+                    <Link href="/" className="btn-primary">Comece Grátis</Link>
                 </div>
             </nav>
 
@@ -676,7 +675,7 @@ export default function LandingPage() {
                             Simples, motivador e gratuito.
                         </p>
                         <div className="hero-actions">
-                            <Link href="/signup" className="btn-hero-primary">Comece Grátis →</Link>
+                            <Link href="/" className="btn-hero-primary">Comece Grátis →</Link>
                             <Link href="#como-funciona" className="btn-hero-ghost">Ver Como Funciona</Link>
                         </div>
                         <div className="hero-stats">
@@ -844,7 +843,7 @@ export default function LandingPage() {
                                 </div>
                             ))}
                         </div>
-                        <Link href="/signup" className="btn-hero-primary" style={{ display: 'inline-block', marginTop: '32px' }}>
+                        <Link href="/" className="btn-hero-primary" style={{ display: 'inline-block', marginTop: '32px' }}>
                             Comece como Personal →
                         </Link>
                     </div>
@@ -924,7 +923,7 @@ export default function LandingPage() {
                     <p className="section-sub section-sub-dark" style={{ margin: '0 auto' }}>
                         Junte-se a quem já treina mais inteligente. Cadastre-se agora e comece gratuitamente.
                     </p>
-                    <Link href="/signup" className="btn-cta">
+                    <Link href="/" className="btn-cta">
                         <IconDumbbell />
                         Começar Agora — É Grátis!
                     </Link>
@@ -935,13 +934,13 @@ export default function LandingPage() {
             {/* ── FOOTER ── */}
             <footer className="footer">
                 <Link href="/landing" className="footer-logo">
-                    <div className="footer-logo-icon" style={{ width: 28, height: 28 }}><IconBolt /></div>
-                    <span className="footer-logo-text">VIMU</span>
+                    <div className="footer-logo-icon" style={{ width: 28, height: 28 }}><VimoLogo width={28} height={28} /></div>
+                    <span className="footer-logo-text">vimu</span>
                 </Link>
                 <div className="footer-links">
                     <Link href="/landing" className="footer-link">Início</Link>
                     <Link href="#como-funciona" className="footer-link">Como Funciona</Link>
-                    <Link href="/signup" className="footer-link">Cadastrar</Link>
+                    <Link href="/" className="footer-link">Cadastrar</Link>
                 </div>
                 <span className="footer-copy">© 2026 VIMU. Todos os direitos reservados.</span>
             </footer>
