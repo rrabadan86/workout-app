@@ -238,7 +238,12 @@ export default function WorkoutDetailPage() {
         ? store.profiles.find((u) => u.id === comparisonFriendId)?.name ?? 'Amigo'
         : '';
 
-    const hasAccess = workout.ownerId === userId || projectSharedWith.includes(userId);
+    const hasAccess = workout.ownerId === userId || projectSharedWith.includes(userId) || project?.prescribed_to === userId;
+    // Personal que prescreveu → pode VER mas NÃO executar
+    const isPersonalViewing = !!(project?.prescribed_by === userId && project?.prescribed_to);
+    const canExecute = hasAccess && !isPersonalViewing;
+    // Quem é o dono dos registros que vamos exibir?
+    const targetUserId = isPersonalViewing ? project!.prescribed_to! : userId;
 
     function getUserLogs(exId: string, uid: string): WorkoutLog[] {
         return store.logs
@@ -247,7 +252,7 @@ export default function WorkoutDetailPage() {
     }
 
     function buildChartData(exId: string) {
-        const myLogs = getUserLogs(exId, userId);
+        const myLogs = getUserLogs(exId, targetUserId);
         const frLogs = comparisonFriendId ? getUserLogs(exId, comparisonFriendId) : [];
         const dates = [...new Set([...myLogs.map((l) => l.date), ...frLogs.map((l) => l.date)])].sort();
         return dates.map((date) => {
@@ -320,7 +325,7 @@ export default function WorkoutDetailPage() {
                         const exName = exObj?.name ?? 'Exercício';
                         const isAerobico = exObj?.muscle === 'Aeróbico';
                         const isOpen = expanded === slotKey;
-                        const myLogs = getUserLogs(exerciseId, userId);
+                        const myLogs = getUserLogs(exerciseId, targetUserId);
                         const lastLog = myLogs[myLogs.length - 1];
                         const lastFriendLog = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId).slice(-1)[0] : undefined;
                         const chartData = buildChartData(exerciseId);
@@ -367,18 +372,20 @@ export default function WorkoutDetailPage() {
                                         )}
 
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                                            {/* Weight inputs */}
-                                            {hasAccess && (
-                                                <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
-                                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">Registrar Hoje</p>
-                                                    <div className="flex flex-col gap-3 flex-1">
-                                                        {sets.map((setDef, sIdx) => (
-                                                            <div key={sIdx} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                                                <div className="flex items-center gap-4">
-                                                                    <span className="w-16 text-sm font-bold text-slate-700">{setDef.label || `Série ${sIdx + 1}`}</span>
-                                                                    {!isAerobico && <span className="w-20 text-sm font-bold text-slate-400">× {setDef.reps} reps</span>}
-                                                                </div>
-                                                                <div className="flex items-center gap-3">
+                                            {/* Exercise structure + optional weight inputs */}
+                                            <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-full">
+                                                <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-4">
+                                                    {canExecute ? 'Registrar Hoje' : 'Séries Planejadas'}
+                                                </p>
+                                                <div className="flex flex-col gap-3 flex-1">
+                                                    {sets.map((setDef, sIdx) => (
+                                                        <div key={sIdx} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <span className="min-w-[4rem] shrink-0 text-sm font-bold text-slate-700">{setDef.label || `Série ${sIdx + 1}`}</span>
+                                                                {!isAerobico && <span className="w-20 text-sm font-bold text-slate-400">× {setDef.reps} reps</span>}
+                                                            </div>
+                                                            <div className="flex items-center gap-3">
+                                                                {canExecute && (
                                                                     <input
                                                                         className="w-24 h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-slate-900 text-base"
                                                                         type="number" min={0} step={0.5} placeholder={unitLabel}
@@ -389,11 +396,13 @@ export default function WorkoutDetailPage() {
                                                                             setWeights((prev) => ({ ...prev, [slotKey]: arr }));
                                                                         }}
                                                                     />
-                                                                    {setDef.notes && <span className="text-xs font-bold text-indigo-400 opacity-80 max-w-[120px] leading-tight">💬 {setDef.notes}</span>}
-                                                                </div>
+                                                                )}
+                                                                {setDef.notes && <span className="text-xs font-bold text-indigo-400 opacity-80 max-w-[120px] leading-tight">💬 {setDef.notes}</span>}
                                                             </div>
-                                                        ))}
-                                                    </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {canExecute && (
                                                     <button
                                                         className="mt-8 w-full flex items-center justify-center gap-2 bg-primary text-white py-4 rounded-xl font-extrabold hover:bg-primary/90 transition-colors active:scale-95 shadow-md shadow-primary/20"
                                                         onClick={() => handleSaveLog(slotKey, exerciseId, sets)}
@@ -401,8 +410,8 @@ export default function WorkoutDetailPage() {
                                                     >
                                                         <Save size={18} /> {saving === slotKey ? 'Salvando...' : 'Salvar Registro'}
                                                     </button>
-                                                </div>
-                                            )}
+                                                )}
+                                            </div>
 
                                             <div className="flex flex-col gap-5 h-full">
                                                 {/* History */}
@@ -415,24 +424,26 @@ export default function WorkoutDetailPage() {
                                                                     <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
                                                                         <span className="text-sm font-extrabold text-slate-700">{formatDate(log.date)}</span>
                                                                         <div className="flex items-center gap-2">
-                                                                            <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-primary transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Carregar valores para hoje" onClick={() => {
-                                                                                const arr = Array(sets.length).fill('');
-                                                                                log.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
-                                                                                setWeights(prev => ({ ...prev, [slotKey]: arr }));
-                                                                                setToast({ msg: 'Valores carregados. Clique em Salvar para registrar hoje.', type: 'success' });
-                                                                            }}>
-                                                                                <Edit2 size={16} />
-                                                                            </button>
-                                                                            <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-red-500 transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Excluir este registro" onClick={async () => {
-                                                                                if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
-                                                                                    setSaving(log.id);
-                                                                                    await deleteLog(log.id);
-                                                                                    setSaving(null);
-                                                                                    setToast({ msg: 'Registro excluído.', type: 'success' });
-                                                                                }
-                                                                            }}>
-                                                                                <Trash2 size={16} />
-                                                                            </button>
+                                                                            {canExecute && (<>
+                                                                                <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-primary transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Carregar valores para hoje" onClick={() => {
+                                                                                    const arr = Array(sets.length).fill('');
+                                                                                    log.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
+                                                                                    setWeights(prev => ({ ...prev, [slotKey]: arr }));
+                                                                                    setToast({ msg: 'Valores carregados. Clique em Salvar para registrar hoje.', type: 'success' });
+                                                                                }}>
+                                                                                    <Edit2 size={16} />
+                                                                                </button>
+                                                                                <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-red-500 transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Excluir este registro" onClick={async () => {
+                                                                                    if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
+                                                                                        setSaving(log.id);
+                                                                                        await deleteLog(log.id);
+                                                                                        setSaving(null);
+                                                                                        setToast({ msg: 'Registro excluído.', type: 'success' });
+                                                                                    }
+                                                                                }}>
+                                                                                    <Trash2 size={16} />
+                                                                                </button>
+                                                                            </>)}
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -470,7 +481,7 @@ export default function WorkoutDetailPage() {
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
             {/* Sticky Floating Action Bar */}
-            {hasAccess && (
+            {canExecute && (
                 <div className="fixed bottom-[70px] md:bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40">
                     <div className="max-w-[600px] mx-auto flex items-center justify-center gap-3 md:gap-4">
                         {!timerRunning && elapsedSeconds === 0 ? (
