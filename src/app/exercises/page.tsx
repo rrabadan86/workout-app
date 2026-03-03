@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Dumbbell, Search, X, Pencil, Trash2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import ExerciseThumbnail from '@/components/ExerciseThumbnail';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
@@ -33,6 +34,8 @@ export default function ExercisesPage() {
     const [exName, setExName] = useState('');
     const [exMuscle, setExMuscle] = useState('Peito');
     const [exDesc, setExDesc] = useState('');
+    const [exThumbUrl, setExThumbUrl] = useState('');
+    const [exGifUrl, setExGifUrl] = useState('');
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
@@ -56,12 +59,14 @@ export default function ExercisesPage() {
     function openCreate() {
         setEditTarget(null);
         setExName(''); setExMuscle('Peito'); setExDesc('');
+        setExThumbUrl(''); setExGifUrl('');
         setShowModal(true);
     }
 
     function openEdit(ex: Exercise) {
         setEditTarget(ex);
         setExName(ex.name); setExMuscle(ex.muscle); setExDesc(ex.description);
+        setExThumbUrl(ex.thumbnail_url || ''); setExGifUrl(ex.gif_url || '');
         setShowModal(true);
     }
 
@@ -69,13 +74,13 @@ export default function ExercisesPage() {
         e.preventDefault();
         setSaving(true);
         if (editTarget) {
-            await updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc });
+            await updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc, thumbnail_url: exThumbUrl || null, gif_url: exGifUrl || null });
             setToast({ msg: 'Exercício atualizado!', type: 'success' });
         } else {
-            await addExercise({ id: uid(), name: exName, muscle: exMuscle, description: exDesc, createdBy: userId });
+            await addExercise({ id: uid(), name: exName, muscle: exMuscle, description: exDesc, createdBy: userId, thumbnail_url: exThumbUrl || null, gif_url: exGifUrl || null });
             setToast({ msg: 'Exercício criado!', type: 'success' });
         }
-        setExName(''); setExMuscle('Peito'); setExDesc('');
+        setExName(''); setExMuscle('Peito'); setExDesc(''); setExThumbUrl(''); setExGifUrl('');
         setSaving(false);
         setShowModal(false);
     }
@@ -134,19 +139,17 @@ export default function ExercisesPage() {
                             return (
                                 <div key={ex.id} className="flex flex-col gap-4 bg-white card-depth p-5 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all relative">
                                     <div className="flex gap-4">
-                                        <div className="size-12 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 shrink-0"><Dumbbell size={20} /></div>
+                                        <ExerciseThumbnail thumbnailUrl={ex.thumbnail_url} gifUrl={ex.gif_url} name={ex.name} size={48} />
                                         <div className="flex-1 min-w-0 pr-12">
                                             <div className="item-card-title text-base sm:text-lg mb-1 truncate" title={ex.name}>{ex.name}</div>
                                             <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold font-montserrat tracking-widest uppercase ${muscleColors[ex.muscle] === 'badge-purple' ? 'bg-[#C084FC]/10 text-[#C084FC]' : muscleColors[ex.muscle] === 'badge-green' ? 'bg-emerald-500/10 text-emerald-500' : muscleColors[ex.muscle] === 'badge-red' ? 'bg-rose-500/10 text-rose-500' : muscleColors[ex.muscle] === 'badge-orange' ? 'bg-orange-500/10 text-orange-500' : 'bg-[#C084FC]/10 text-[#C084FC]'}`}>{ex.muscle}</span>
                                         </div>
                                     </div>
                                     {ex.description && <div className="text-sm font-roboto text-slate-500 line-clamp-3">{ex.description}</div>}
-                                    {isOwner && (
-                                        <div className="absolute top-4 right-4 flex gap-1">
-                                            <button className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Editar" onClick={() => openEdit(ex)}><Pencil size={16} /></button>
-                                            <button className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" title="Excluir" onClick={() => setDeleteTarget(ex)}><Trash2 size={16} /></button>
-                                        </div>
-                                    )}
+                                    <div className="absolute top-4 right-4 flex gap-1">
+                                        <button className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors" title="Editar" onClick={() => openEdit(ex)}><Pencil size={16} /></button>
+                                        <button className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors" title="Excluir" onClick={() => setDeleteTarget(ex)}><Trash2 size={16} /></button>
+                                    </div>
                                 </div>
                             );
                         })}
@@ -181,6 +184,22 @@ export default function ExercisesPage() {
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Descrição (opcional)</label>
                             <textarea className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white min-h-[100px]" placeholder="Dicas de execução, ritmo, foco..." value={exDesc} onChange={(e) => setExDesc(e.target.value)} />
                         </div>
+                        <div className="w-full h-px bg-slate-100 my-1" />
+                        <p className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest">Mídia (opcional)</p>
+                        <div className="field">
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">URL da Thumbnail</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="https://..." type="url" value={exThumbUrl} onChange={(e) => setExThumbUrl(e.target.value)} />
+                        </div>
+                        <div className="field">
+                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">URL do GIF de execução</label>
+                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="https://..." type="url" value={exGifUrl} onChange={(e) => setExGifUrl(e.target.value)} />
+                        </div>
+                        {(exThumbUrl || exGifUrl) && (
+                            <div className="flex gap-4 items-center">
+                                {exThumbUrl && <img src={exThumbUrl} alt="Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />}
+                                {exGifUrl && <img src={exGifUrl} alt="GIF Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-200" />}
+                            </div>
+                        )}
                     </form>
                 </Modal >
             )

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Plus, Dumbbell, Pencil, Trash2, ChevronRight, FolderOpen, X, ArrowUp, ArrowDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
+import ExerciseThumbnail from '@/components/ExerciseThumbnail';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -361,6 +362,15 @@ export default function ProjectDetailPage() {
                                                     <ArrowDown size={14} />
                                                 </button>
                                             </div>
+                                            {exInfo && (
+                                                <ExerciseThumbnail
+                                                    thumbnailUrl={exInfo.thumbnail_url}
+                                                    gifUrl={exInfo.gif_url}
+                                                    name={exInfo.name}
+                                                    size={36}
+                                                    className="hidden sm:flex"
+                                                />
+                                            )}
                                             <span className="font-extrabold font-inter text-slate-900 text-sm md:text-base">{exInfo?.name ?? 'Exercício'}</span>
                                         </div>
                                         <button type="button" onClick={() => removeEx(exIdx)}

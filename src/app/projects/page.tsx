@@ -6,13 +6,13 @@ import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Spark
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
+import AIWorkoutWizard from '@/components/AIWorkoutWizard';
+import type { AIWizardPayload } from '@/components/AIWorkoutWizard';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { uid, formatDate } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
 import type { Project } from '@/lib/types';
-
-const MUSCLES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Pernas', 'Abdômen', 'Glúteos', 'Panturrilha', 'Antebraço', 'Aeróbico'];
 
 function projectStatus(p: Project): 'ativo' | 'inativo' | 'futuro' {
     const today = new Date().toISOString().slice(0, 10);
@@ -30,7 +30,7 @@ const STATUS_LABEL = {
 export default function ProjectsPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addProject, updateProject, deleteProject, addWorkout, refresh, loading, createNotification } = useStore();
+    const { store, addProject, updateProject, deleteProject, addWorkout, refresh, loading, createNotification, updateProfile } = useStore();
     const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [showModal, setShowModal] = useState(false);
@@ -49,20 +49,8 @@ export default function ProjectsPage() {
     const [pPrescribeEmail, setPPrescribeEmail] = useState('');
     const [pIsEvolution, setPIsEvolution] = useState(false);
 
-    const [aiFocus, setAiFocus] = useState('');
-    const [aiDays, setAiDays] = useState('4');
-    const [aiTime, setAiTime] = useState('60');
-    const [aiExperience, setAiExperience] = useState('Iniciante');
-    const [aiLimitations, setAiLimitations] = useState('');
-    const [aiUsePrevious, setAiUsePrevious] = useState(false);
     const [aiGenerating, setAiGenerating] = useState(false);
     const [aiCooldown, setAiCooldown] = useState(0);
-    const [aiPrescribeEmail, setAiPrescribeEmail] = useState('');
-    const [aiStart, setAiStart] = useState('');
-    const [aiEnd, setAiEnd] = useState('');
-    const [aiMuscleFilter, setAiMuscleFilter] = useState<string[]>([...MUSCLES]);
-    const [showMuscleDropdown, setShowMuscleDropdown] = useState(false);
-    const [showAiStudentDropdown, setShowAiStudentDropdown] = useState(false);
     const [showPStudentDropdown, setShowPStudentDropdown] = useState(false);
 
     const [filterStatus, setFilterStatus] = useState<'Todos' | 'ativos' | 'inativos'>('ativos');
@@ -87,7 +75,7 @@ export default function ProjectsPage() {
     useEffect(() => {
         if (aiCooldown <= 0) return;
         const timer = setInterval(() => {
-            setAiCooldown(prev => {
+            setAiCooldown((prev: number) => {
                 if (prev <= 1) { clearInterval(timer); return 0; }
                 return prev - 1;
             });
@@ -155,16 +143,6 @@ export default function ProjectsPage() {
     ]));
 
     function openAIModal() {
-        setAiFocus('');
-        setAiLimitations('');
-        setAiPrescribeEmail('');
-        setAiMuscleFilter([...MUSCLES]);
-        const today = new Date().toISOString().slice(0, 10);
-        const future = new Date();
-        future.setDate(future.getDate() + 30);
-        const end = future.toISOString().slice(0, 10);
-        setAiStart(today);
-        setAiEnd(end);
         setShowAIModal(true);
     }
 
@@ -266,23 +244,56 @@ export default function ProjectsPage() {
         setToast({ msg: 'Acesso removido.', type: 'success' });
     }
 
-    async function handleGenerateAI(e: React.FormEvent) {
-        e.preventDefault();
+    async function handleGenerateAI(payload: AIWizardPayload) {
         setAiGenerating(true);
         setAiCooldown(0);
         try {
+            // Persist biometric data on the user profile
+            if (currentUser && (payload.birthDate || payload.weightKg || payload.heightCm)) {
+                const profileUpdates: Record<string, unknown> = {};
+                if (payload.birthDate) profileUpdates.birth_date = payload.birthDate;
+                if (payload.weightKg) profileUpdates.weight_kg = payload.weightKg;
+                if (payload.heightCm) profileUpdates.height_cm = payload.heightCm;
+                await updateProfile({ ...currentUser, ...profileUpdates } as any);
+            }
+
             let lastProjectInfo = '';
             const myProjs = store.projects.filter(p => p.ownerId === userId);
-            if (aiUsePrevious && myProjs.length > 0) {
+            if (payload.evolvePrevious && myProjs.length > 0) {
                 lastProjectInfo = myProjs[myProjs.length - 1].name;
             }
+
+            // Compute age from birthDate
+            let age: number | undefined;
+            if (payload.birthDate) {
+                const b = new Date(payload.birthDate);
+                const today = new Date();
+                age = today.getFullYear() - b.getFullYear();
+                const m = today.getMonth() - b.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+            }
+
+            // Filter exercises by selected muscle groups (empty = all)
+            const filteredExercises = payload.muscleGroups.length > 0
+                ? store.exercises.filter(ex => payload.muscleGroups.includes(ex.muscle))
+                : store.exercises;
+
             const res = await fetch('/api/generate-project', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    focus: aiFocus, daysPerWeek: parseInt(aiDays), maxTimeMins: parseInt(aiTime),
-                    experienceLevel: aiExperience, limitations: aiLimitations, lastProjectInfo,
-                    existingExercises: store.exercises
-                        .filter(ex => aiMuscleFilter.includes(ex.muscle))
+                    goals: payload.goals,
+                    daysPerWeek: payload.daysPerWeek,
+                    maxTimeMins: payload.duration,
+                    experienceLevel: payload.level,
+                    limitations: payload.limitations,
+                    lastProjectInfo,
+                    location: payload.location,
+                    style: payload.style,
+                    extraNotes: payload.extraNotes,
+                    age,
+                    weightKg: payload.weightKg,
+                    heightCm: payload.heightCm,
+                    existingExercises: filteredExercises
                         .map(ex => ({ id: ex.id, name: ex.name, muscle: ex.muscle, description: ex.description }))
                 })
             });
@@ -292,8 +303,8 @@ export default function ProjectsPage() {
             const newProjectId = uid();
             let prescribedTo: string | null = null;
             let studentMsg = '';
-            if (currentUser?.role === 'personal' && aiPrescribeEmail) {
-                const emailToSearch = aiPrescribeEmail.trim().toLowerCase();
+            if (currentUser?.role === 'personal' && payload.prescribeEmail) {
+                const emailToSearch = payload.prescribeEmail.trim().toLowerCase();
                 const studentAccount = store.profiles.find((u) => u.email.toLowerCase() === emailToSearch);
                 if (studentAccount) {
                     prescribedTo = studentAccount.id;
@@ -309,13 +320,14 @@ export default function ProjectsPage() {
                 }
             }
 
+            const goalLabel = payload.goals.join(' + ');
             await addProject({
-                id: newProjectId, name: `✨ ${data.projectName || `Treino IA (${aiFocus})`}`,
+                id: newProjectId, name: `✨ ${data.projectName || `Treino IA (${goalLabel})`}`,
                 ownerId: userId,
-                startDate: aiStart || new Date().toISOString().slice(0, 10),
-                endDate: aiEnd || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+                startDate: payload.startDate || new Date().toISOString().slice(0, 10),
+                endDate: payload.endDate || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
                 sharedWith: [],
-                prescribed_by: currentUser?.role === 'personal' && aiPrescribeEmail ? userId : null,
+                prescribed_by: currentUser?.role === 'personal' && payload.prescribeEmail ? userId : null,
                 prescribed_to: prescribedTo, status: 'active'
             });
 
@@ -325,7 +337,7 @@ export default function ProjectsPage() {
             // Notificar a aluna sobre o treino prescrito via IA
             if (prescribedTo) {
                 const personalName = currentUser?.name ?? 'Seu personal';
-                const projName = data.projectName || `Treino IA (${aiFocus})`;
+                const projName = data.projectName || `Treino IA (${goalLabel})`;
                 createNotification({
                     id: uid(),
                     user_id: prescribedTo,
@@ -337,10 +349,9 @@ export default function ProjectsPage() {
             }
             setToast({ msg: `${studentMsg}Treino Gerado! 🚀`, type: 'success' });
             setShowAIModal(false);
-            setAiFocus(''); setAiLimitations(''); setAiPrescribeEmail(''); setAiMuscleFilter([...MUSCLES]);
         } catch (err: unknown) {
             setToast({ msg: (err as Error).message || 'Falha ao gerar treino.', type: 'error' });
-            setAiCooldown(60); // Start 60s cooldown after any error
+            setAiCooldown(60);
         } finally { setAiGenerating(false); }
     }
 
@@ -713,159 +724,20 @@ export default function ProjectsPage() {
                 </Modal>
             )}
 
-            {/* ─── AI Generation Modal ─── */}
-            {showAIModal && (
-                <Modal title="✨ Novo treino por IA" onClose={() => { setShowAIModal(false); setAiPrescribeEmail(''); }}
-                    footer={
-                        <div className="flex justify-end gap-3 mt-8 items-center">
-                            {aiGenerating && (
-                                <span className="text-xs text-slate-500 font-roboto mr-auto flex items-center">
-                                    Isso pode levar até 3 minutos...
-                                </span>
-                            )}
-                            <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4" onClick={() => setShowAIModal(false)} disabled={aiGenerating}>Cancelar</button>
-                            <button className="btn bg-[#C084FC] text-white hover:bg-[#A855F7] hover:scale-[1.02] shadow-xl shadow-[#C084FC]/30 px-6 py-4 flex items-center gap-2" form="ai-form" type="submit" disabled={aiGenerating || aiCooldown > 0}>
-                                {aiGenerating ? 'Criando a mágica...' : aiCooldown > 0 ? `Aguarde ${aiCooldown}s...` : 'Gerar Programa Mágico'}
-                            </button>
-                        </div>
-                    }
-                >
-                    <form id="ai-form" onSubmit={handleGenerateAI} className="flex flex-col gap-5 mt-6">
-                        <div className="field">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Qual o seu objetivo principal? *</label>
-                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Hipertrofia, Emagrecimento, Força..." value={aiFocus} onChange={(e) => setAiFocus(e.target.value)} required />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Dias por semana *</label>
-                                <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiDays} onChange={(e) => setAiDays(e.target.value)} required>
-                                    {[1, 2, 3, 4, 5, 6, 7].map(num => (<option key={num} value={num}>{num} dias</option>))}
-                                </select>
-                            </div>
-                            <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Nível de experiência *</label>
-                                <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiExperience} onChange={(e) => setAiExperience(e.target.value)} required>
-                                    <option value="Iniciante">Iniciante</option>
-                                    <option value="Intermediário">Intermediário</option>
-                                    <option value="Avançado">Avançado</option>
-                                </select>
-                            </div>
-                            <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Duração do treino (aprox.) *</label>
-                                <select className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white" value={aiTime} onChange={(e) => setAiTime(e.target.value)} required>
-                                    <option value="30">30 minutos</option>
-                                    <option value="45">45 minutos</option>
-                                    <option value="60">60 minutos</option>
-                                    <option value="90">90 minutos</option>
-                                    <option value="120">120 minutos</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de início *</label>
-                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={aiStart} onChange={(e) => setAiStart(e.target.value)} required />
-                            </div>
-                            <div className="field">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data de término *</label>
-                                <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" type="date" value={aiEnd} onChange={(e) => setAiEnd(e.target.value)} required min={aiStart} />
-                            </div>
-                        </div>
-                        <div className="field relative">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Grupos musculares incluídos</label>
-                            <button
-                                type="button"
-                                onClick={() => setShowMuscleDropdown(prev => !prev)}
-                                className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 w-full outline-none transition-all focus:bg-white text-left flex items-center justify-between"
-                            >
-                                <span className={aiMuscleFilter.length === MUSCLES.length ? 'text-slate-900' : aiMuscleFilter.length === 0 ? 'text-rose-500 font-semibold' : 'text-[#C084FC] font-semibold'}>
-                                    {aiMuscleFilter.length === MUSCLES.length
-                                        ? `Todos os grupos (${store.exercises.length} exercícios)`
-                                        : aiMuscleFilter.length === 0
-                                            ? 'Nenhum grupo selecionado!'
-                                            : `${aiMuscleFilter.length} grupo(s) — ${store.exercises.filter(ex => aiMuscleFilter.includes(ex.muscle)).length} exercícios`
-                                    }
-                                </span>
-                                <svg className={`w-4 h-4 text-slate-400 transition-transform ${showMuscleDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                            </button>
-                            {showMuscleDropdown && (
-                                <div
-                                    className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden"
-                                    style={{ top: '100%', left: 0 }}
-                                    onMouseDown={(e) => e.preventDefault()}
-                                >
-                                    <div className="flex gap-2 px-3 py-2 border-b border-slate-100 bg-slate-50/50">
-                                        <button type="button" onClick={() => setAiMuscleFilter([...MUSCLES])} className="text-[11px] font-bold text-[#C084FC] hover:underline">Marcar Todos</button>
-                                        <span className="text-slate-300">|</span>
-                                        <button type="button" onClick={() => setAiMuscleFilter([])} className="text-[11px] font-bold text-slate-400 hover:text-rose-500 hover:underline">Desmarcar Todos</button>
-                                    </div>
-                                    <div className="max-h-48 overflow-auto py-1">
-                                        {MUSCLES.map(m => {
-                                            const checked = aiMuscleFilter.includes(m);
-                                            const count = store.exercises.filter(ex => ex.muscle === m).length;
-                                            return (
-                                                <label
-                                                    key={m}
-                                                    className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={checked}
-                                                        onChange={() => setAiMuscleFilter(prev => checked ? prev.filter(x => x !== m) : [...prev, m])}
-                                                        className="w-4 h-4 rounded border-slate-300"
-                                                        style={{ accentColor: '#C084FC' }}
-                                                    />
-                                                    <span className="text-sm font-roboto text-slate-800 flex-1">{m}</span>
-                                                    <span className="text-[11px] text-slate-400 font-semibold">{count}</span>
-                                                </label>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="field">
-                            <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Possui alguma limitação física ou preferência? (Opcional)</label>
-                            <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white" placeholder="Ex: Dor no joelho, fortalecer lombar, não colocar supino..." value={aiLimitations} onChange={(e) => setAiLimitations(e.target.value)} />
-                        </div>
-                        {currentUser?.role === 'personal' && (
-                            <div className="field relative">
-                                <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Para quem é este treino? (Informe o nome do aluno ou e-mail caso não tenha histórico com você)</label>
-                                <input
-                                    className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-4 py-3 text-sm font-roboto text-slate-900 placeholder:text-slate-400 w-full outline-none transition-all focus:bg-white"
-                                    type="text" placeholder="Opcional. Ex: aluno@email.com" value={aiPrescribeEmail}
-                                    onChange={(e) => { setAiPrescribeEmail(e.target.value); setShowAiStudentDropdown(true); }}
-                                    onFocus={() => setShowAiStudentDropdown(true)}
-                                    onBlur={() => setTimeout(() => setShowAiStudentDropdown(false), 200)}
-                                />
-                                {showAiStudentDropdown && aiPrescribeEmail && (
-                                    <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-auto" style={{ top: '100%', left: 0 }}>
-                                        {(() => {
-                                            const search = aiPrescribeEmail.toLowerCase();
-                                            const filtered = uniqueStudents.map(id => store.profiles.find(u => u.id === id)).filter(u => u && (u.name.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)));
-                                            if (filtered.length === 0) return null;
-                                            return filtered.map(u => (
-                                                <div key={u!.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex flex-col border-b border-slate-100 last:border-0"
-                                                    onMouseDown={(e) => { e.preventDefault(); setAiPrescribeEmail(u!.email); setShowAiStudentDropdown(false); }}>
-                                                    <span className="text-sm font-bold text-slate-800">{u!.name}</span>
-                                                    <span className="text-xs text-slate-500">{u!.email}</span>
-                                                </div>
-                                            ));
-                                        })()}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {store.projects.filter(p => p.ownerId === userId).length > 0 && (
-                            <div className="field" style={{ marginTop: 8 }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 'normal', color: 'var(--text-secondary)' }}>
-                                    <input type="checkbox" checked={aiUsePrevious} onChange={(e) => setAiUsePrevious(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
-                                    Evoluir a partir do meu treino: &quot;{store.projects.filter(p => p.ownerId === userId).at(-1)?.name}&quot;
-                                </label>
-                            </div>
-                        )}
-                    </form>
-                </Modal>
+            {/* ─── AI Workout Wizard ─── */}
+            {showAIModal && currentUser && (
+                <AIWorkoutWizard
+                    onClose={() => setShowAIModal(false)}
+                    onGenerate={handleGenerateAI}
+                    exercises={store.exercises}
+                    profiles={store.profiles}
+                    uniqueStudents={uniqueStudents}
+                    isPersonal={currentUser.role === 'personal'}
+                    currentUser={currentUser}
+                    existingProjects={store.projects.filter(p => p.ownerId === userId)}
+                    generating={aiGenerating}
+                    cooldown={aiCooldown}
+                />
             )}
 
             {/* ─── Delete Modal ─── */}

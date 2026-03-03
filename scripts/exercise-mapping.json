@@ -1,0 +1,890 @@
+{
+  "matched": [
+    {
+      "dbId": "56645ec4-a4a0-4597-a9e4-038b0ce99e08",
+      "dbName": "CADEIRA EXTENSORA",
+      "apiId": "0489",
+      "apiName": "hyperextension",
+      "score": 5
+    },
+    {
+      "dbId": "4eca5891-d45d-45af-8c3f-eb4b72435734",
+      "dbName": "SUPINO INCLINADO (BARRA)",
+      "apiId": "0047",
+      "apiName": "barbell incline bench press",
+      "score": 0
+    },
+    {
+      "dbId": "26089f59-2dc2-4eab-8734-9f44f98dd9d5",
+      "dbName": "SUPINO INCLINADO (HALTERES)",
+      "apiId": "0314",
+      "apiName": "dumbbell incline bench press",
+      "score": 0
+    },
+    {
+      "dbId": "855b1fb9-232e-406e-aa1e-44068d2d3f26",
+      "dbName": "SUPINO DECLINADO",
+      "apiId": "0151",
+      "apiName": "cable bench press",
+      "score": 5
+    },
+    {
+      "dbId": "539f5ed0-c506-40aa-98db-48de7205a3d2",
+      "dbName": "CRUCIFIXO RETO (HALTERES)",
+      "apiId": "0308",
+      "apiName": "dumbbell fly",
+      "score": 0
+    },
+    {
+      "dbId": "7564c4a1-6e70-463a-b1c4-cdb2becefe09",
+      "dbName": "CROSSOVER POLIA ALTA",
+      "apiId": "0247",
+      "apiName": "cable wrist curl",
+      "score": 7
+    },
+    {
+      "dbId": "076c9753-2954-449a-a218-f8e504c6fa91",
+      "dbName": "CROSSOVER POLIA BAIXA",
+      "apiId": "0247",
+      "apiName": "cable wrist curl",
+      "score": 7
+    },
+    {
+      "dbId": "cf557c7d-14f8-48e8-861e-dd23dfd4d9f9",
+      "dbName": "FLEXÃO DE BRAÇO",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 0
+    },
+    {
+      "dbId": "73b45d09-5539-44b2-880d-52d036440332",
+      "dbName": "BARRA FIXA",
+      "apiId": "0652",
+      "apiName": "pull-up",
+      "score": 0
+    },
+    {
+      "dbId": "4cdc8553-3a88-4fe6-9dda-22de4c774e99",
+      "dbName": "PUXADA FRONTAL SUPINADA",
+      "apiId": "0198",
+      "apiName": "cable pulldown",
+      "score": 4
+    },
+    {
+      "dbId": "15a88614-89c1-498b-9c0b-826f7c361bc9",
+      "dbName": "REMADA CURVADA (BARRA)",
+      "apiId": "0027",
+      "apiName": "barbell bent over row",
+      "score": 0
+    },
+    {
+      "dbId": "11ba6651-da51-4b37-a808-6ba9653e2855",
+      "dbName": "REMADA CURVADA (HALTERES)",
+      "apiId": "0293",
+      "apiName": "dumbbell bent over row",
+      "score": 0
+    },
+    {
+      "dbId": "5238815e-7fb4-4b0b-adea-0b305be5864d",
+      "dbName": "REMADA UNILATERAL",
+      "apiId": "0308",
+      "apiName": "dumbbell fly",
+      "score": 3
+    },
+    {
+      "dbId": "a1abfae8-5453-4d03-bb49-e4b84f52f375",
+      "dbName": "PULLDOWN",
+      "apiId": "0652",
+      "apiName": "pull-up",
+      "score": 4
+    },
+    {
+      "dbId": "ba5d0906-8fc9-490a-9a70-243d15a62860",
+      "dbName": "LEVANTAMENTO TERRA",
+      "apiId": "0276",
+      "apiName": "dead bug",
+      "score": 4
+    },
+    {
+      "dbId": "987553d8-ba45-45fc-b7ca-1ea0a01fd937",
+      "dbName": "EXTENSÃO LOMBAR",
+      "apiId": "0489",
+      "apiName": "hyperextension",
+      "score": 5
+    },
+    {
+      "dbId": "66ab3c43-db93-4a5e-97a3-ef46bb01c5c9",
+      "dbName": "MESA FLEXORA",
+      "apiId": "0455",
+      "apiName": "finger curls",
+      "score": 6
+    },
+    {
+      "dbId": "50d07f7e-4a82-4c5f-98a5-d3e0c6dfee46",
+      "dbName": "STIFF",
+      "apiId": "1362",
+      "apiName": "sphinx",
+      "score": 4
+    },
+    {
+      "dbId": "e63417ee-dac4-4328-8859-d23ed2c233c1",
+      "dbName": "AFUNDO (HALTERES)",
+      "apiId": "0336",
+      "apiName": "dumbbell lunge",
+      "score": 0
+    },
+    {
+      "dbId": "44ac1187-6040-4a88-a402-5ebabbc90b44",
+      "dbName": "AFUNDO (BARRA)",
+      "apiId": "0054",
+      "apiName": "barbell lunge",
+      "score": 0
+    },
+    {
+      "dbId": "c69f0119-93e3-49f4-b705-b228b57eae80",
+      "dbName": "PASSADA",
+      "apiId": "1460",
+      "apiName": "walking lunge",
+      "score": 0
+    },
+    {
+      "dbId": "5f3d0d34-590d-420b-87e5-386507e2c85d",
+      "dbName": "DESENVOLVIMENTO COM HALTERES",
+      "apiId": "0997",
+      "apiName": "band shoulder press",
+      "score": 5
+    },
+    {
+      "dbId": "50229e64-e889-4b7f-8377-c08a7b0964c6",
+      "dbName": "DESENVOLVIMENTO NA MÁQUINA",
+      "apiId": "0997",
+      "apiName": "band shoulder press",
+      "score": 5
+    },
+    {
+      "dbId": "cb6bd21a-bdf3-45ec-9d0a-3b19da05ebe3",
+      "dbName": "ELEVAÇÃO LATERAL NA POLIA",
+      "apiId": "0178",
+      "apiName": "cable lateral raise",
+      "score": 6
+    },
+    {
+      "dbId": "f5bde5ef-0a69-436b-8b71-9e69e2acb44f",
+      "dbName": "CRUCIFIXO INVERSO (MÁQUINA)",
+      "apiId": "0672",
+      "apiName": "reverse dip",
+      "score": 3
+    },
+    {
+      "dbId": "6e4773c0-531f-4b11-afc6-113e590c6f0e",
+      "dbName": "CRUCIFIXO INVERSO (HALTERES)",
+      "apiId": "0672",
+      "apiName": "reverse dip",
+      "score": 3
+    },
+    {
+      "dbId": "3fa3c8b7-5cb0-4b7b-8f54-bf4c4660bdd7",
+      "dbName": "ENCOLHIMENTO (HALTERES)",
+      "apiId": "0406",
+      "apiName": "dumbbell shrug",
+      "score": 0
+    },
+    {
+      "dbId": "2037b0fd-2645-43df-90de-87eb1832bb26",
+      "dbName": "CADEIRA FLEXORA",
+      "apiId": "0868",
+      "apiName": "cable curl",
+      "score": 4
+    },
+    {
+      "dbId": "52bdc105-3113-4528-963c-547066c6cc23",
+      "dbName": "CADEIRA FLEXORA",
+      "apiId": "0868",
+      "apiName": "cable curl",
+      "score": 4
+    },
+    {
+      "dbId": "3bba11b9-7c0a-46e1-b01b-1e69baec7030",
+      "dbName": "ELEVAÇÃO FRONTAL NA POLIA",
+      "apiId": "0978",
+      "apiName": "band front raise",
+      "score": 5
+    },
+    {
+      "dbId": "ae948c24-9f2c-45b2-8968-89859e03ca75",
+      "dbName": "ROSCA ALTERNADA (HALTERES)",
+      "apiId": "0575",
+      "apiName": "lever bicep curl",
+      "score": 7
+    },
+    {
+      "dbId": "8f04f390-f761-4e3f-921f-b3619d308cd2",
+      "dbName": "ROSCA MARTELO (HALTERES)",
+      "apiId": "0313",
+      "apiName": "dumbbell hammer curl",
+      "score": 0
+    },
+    {
+      "dbId": "27171f02-b3e9-43ec-8f6d-040b8612fb29",
+      "dbName": "ROSCA MARTELO (CORDA)",
+      "apiId": "0868",
+      "apiName": "cable curl",
+      "score": 4
+    },
+    {
+      "dbId": "1cde800c-6351-459c-ab79-9d6939e3b669",
+      "dbName": "ROSCA SCOTT (MÁQUINA)",
+      "apiId": "0195",
+      "apiName": "cable preacher curl",
+      "score": 6
+    },
+    {
+      "dbId": "da00707b-cfe3-41f6-a263-8e7f4a88715b",
+      "dbName": "ROSCA SCOTT (BARRA W)",
+      "apiId": "0195",
+      "apiName": "cable preacher curl",
+      "score": 6
+    },
+    {
+      "dbId": "e3cdc786-3488-4537-a2fd-d43abe1550c5",
+      "dbName": "ROSCA CONCENTRADA",
+      "apiId": "0976",
+      "apiName": "band concentration curl",
+      "score": 5
+    },
+    {
+      "dbId": "902f029a-7422-49ee-952b-6f17f5174045",
+      "dbName": "ROSCA DIRETA NA POLIA BAIXA",
+      "apiId": "0031",
+      "apiName": "barbell curl",
+      "score": 0
+    },
+    {
+      "dbId": "988f6a4d-b225-46fe-95a4-88a6d2045e79",
+      "dbName": "TRÍCEPS PULLEY (CORDA)",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 4
+    },
+    {
+      "dbId": "161f98a9-e2f2-414b-b45e-495863b0eeab",
+      "dbName": "TRÍCEPS PULLEY (BARRA RETA)",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 4
+    },
+    {
+      "dbId": "a40ce91f-63dd-4b49-ac2c-9b4fd6904584",
+      "dbName": "TRÍCEPS PULLEY (BARRA V)",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 4
+    },
+    {
+      "dbId": "3218f08a-bc51-4784-a4ca-560c02b74593",
+      "dbName": "TRÍCEPS TESTA (BARRA W)",
+      "apiId": "0607",
+      "apiName": "lever triceps extension",
+      "score": 4
+    },
+    {
+      "dbId": "387a90d7-5a62-4c53-bdcc-1bf42714c67f",
+      "dbName": "TRÍCEPS TESTA (HALTERES)",
+      "apiId": "0607",
+      "apiName": "lever triceps extension",
+      "score": 4
+    },
+    {
+      "dbId": "c480a1e8-7549-4d07-b098-5f59a82c78ae",
+      "dbName": "TRÍCEPS FRANCÊS (HALTERA)",
+      "apiId": "0607",
+      "apiName": "lever triceps extension",
+      "score": 6
+    },
+    {
+      "dbId": "9c94e0c3-f7d3-41ee-8893-21fe63fbed3d",
+      "dbName": "TRÍCEPS FRANCÊS (POLIA)",
+      "apiId": "0607",
+      "apiName": "lever triceps extension",
+      "score": 6
+    },
+    {
+      "dbId": "0e2988ef-288c-46ba-a4ec-6e63eced9417",
+      "dbName": "ABDOMINAL INFRA",
+      "apiId": "0872",
+      "apiName": "reverse crunch",
+      "score": 0
+    },
+    {
+      "dbId": "f88b6737-e642-4198-a20f-84407a6a89b5",
+      "dbName": "ABDOMINAL OBLÍQUO (POLIA)",
+      "apiId": "1495",
+      "apiName": "oblique crunch v. 2",
+      "score": 4
+    },
+    {
+      "dbId": "f786e2d8-2229-4a94-a32e-545ab782b20b",
+      "dbName": "ABDOMINAL OBLÍQUO (SOLO)",
+      "apiId": "1495",
+      "apiName": "oblique crunch v. 2",
+      "score": 4
+    },
+    {
+      "dbId": "17312cd7-09c8-4c36-aa75-50e907f2f245",
+      "dbName": "PANTURRILHA SENTADO (SÓLEO)",
+      "apiId": "0689",
+      "apiName": "seated leg raise",
+      "score": 4
+    },
+    {
+      "dbId": "e24ab70d-7cce-4bd1-bea3-97dae3402c75",
+      "dbName": "PANTURRILHA EM PÉ (MÁQUINA)",
+      "apiId": "0605",
+      "apiName": "lever standing calf raise",
+      "score": 6
+    },
+    {
+      "dbId": "0e8efce0-8e67-4670-b9ae-56f568485b50",
+      "dbName": "PANTURRILHA EM PÉ (DEGRAU)",
+      "apiId": "0605",
+      "apiName": "lever standing calf raise",
+      "score": 6
+    },
+    {
+      "dbId": "983a658a-d511-4e0d-8f0b-337af8052e69",
+      "dbName": "PANTURRILHA NO LEG PRESS",
+      "apiId": "0243",
+      "apiName": "cable twist",
+      "score": 5
+    },
+    {
+      "dbId": "ea7ee193-c524-4d52-a169-4be20dbfbb0e",
+      "dbName": "BICICLETA ERGOMÉTRICA",
+      "apiId": "0798",
+      "apiName": "stationary bike walk",
+      "score": 5
+    },
+    {
+      "dbId": "f27625b5-0d78-494f-816e-fff3b49bb372",
+      "dbName": "PULAR CORDA",
+      "apiId": "0514",
+      "apiName": "jump squat",
+      "score": 5
+    },
+    {
+      "dbId": "6457f7b2-384d-4c81-b3fd-e1b35778717f",
+      "dbName": "FLEXÃO PLANTAR SENTADO",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 0
+    },
+    {
+      "dbId": "837c1d75-fa2d-42a2-bf71-361d4c47bf6b",
+      "dbName": "PUXADA ABERTA FRONTAL",
+      "apiId": "1367",
+      "apiName": "wide grip rear pull-up",
+      "score": 7
+    },
+    {
+      "dbId": "ad9ea54f-068f-4e74-9fd7-b9438b2195fd",
+      "dbName": "SUPINO RETO",
+      "apiId": "1254",
+      "apiName": "band bench press",
+      "score": 5
+    },
+    {
+      "dbId": "ac774869-f6b4-41d7-915a-fd9aacacff1a",
+      "dbName": "SUPINO RETO C/ HALTERES",
+      "apiId": "1254",
+      "apiName": "band bench press",
+      "score": 5
+    },
+    {
+      "dbId": "c44b2628-90dc-4079-844a-3504c0f07d9e",
+      "dbName": "REMADA SENTADA C/ PEGADA FECHADA*",
+      "apiId": "0861",
+      "apiName": "cable seated row",
+      "score": 0
+    },
+    {
+      "dbId": "fde60ef7-2108-40c6-a81b-9de3a81cb9e7",
+      "dbName": "CRUCIFIXO Voador C/HALTERES",
+      "apiId": "0308",
+      "apiName": "dumbbell fly",
+      "score": 0
+    },
+    {
+      "dbId": "8b5f05fa-15e2-40e5-b0e7-28a71cba5b5f",
+      "dbName": "PUXADA FECHADA FRONTAL",
+      "apiId": "0205",
+      "apiName": "cable rear pulldown",
+      "score": 9
+    },
+    {
+      "dbId": "34f539c2-88fa-4175-807d-76e23fc68eec",
+      "dbName": "ELEVAÇÃO LATERAL C/ HALTERES",
+      "apiId": "0178",
+      "apiName": "cable lateral raise",
+      "score": 6
+    },
+    {
+      "dbId": "2ac61095-5d84-45d5-bb21-05e329f3a0ee",
+      "dbName": "ELEVAÇÃO FRONTAL C/BARRA RETA",
+      "apiId": "0978",
+      "apiName": "band front raise",
+      "score": 5
+    },
+    {
+      "dbId": "efbdb5bc-0c4b-45f9-8635-02ebbedad790",
+      "dbName": "DESENVOLVIMENTO C/ HALTERES",
+      "apiId": "0997",
+      "apiName": "band shoulder press",
+      "score": 5
+    },
+    {
+      "dbId": "78d9fd03-f25d-4d43-9ba9-964b966c4a04",
+      "dbName": "ROSCA DIRETA C/BARRA RETA",
+      "apiId": "0031",
+      "apiName": "barbell curl",
+      "score": 0
+    },
+    {
+      "dbId": "ffb96b94-f60a-4db0-9a0c-0d4c01f58d5d",
+      "dbName": "GLÚTEO 4 APOIOS (SOLO)",
+      "apiId": "0860",
+      "apiName": "cable kickback",
+      "score": 4
+    },
+    {
+      "dbId": "cbc40b12-782a-4cc6-b615-90482389e050",
+      "dbName": "AGACHAMENTO BÚLGARO",
+      "apiId": "0809",
+      "apiName": "suspended split squat",
+      "score": 8
+    },
+    {
+      "dbId": "4595e0bf-febf-4ff2-b8b1-700031f1bc54",
+      "dbName": "FLEXÃO DE BRAÇO FECHADA",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 0
+    },
+    {
+      "dbId": "2b3f6e15-727a-4e51-b989-ccc2c2f8c9cc",
+      "dbName": "CORRIDA NO LUGAR",
+      "apiId": "0685",
+      "apiName": "run",
+      "score": 0
+    },
+    {
+      "dbId": "95063b4a-d4aa-4d06-aa54-cf4de9acacbe",
+      "dbName": "PRANCHA LATERAL",
+      "apiId": "0717",
+      "apiName": "side push-up",
+      "score": 6
+    },
+    {
+      "dbId": "3ef6a574-d00c-4fdb-87f2-6fb9b3f3c0f8",
+      "dbName": "FLEXÃO DE BRAÇO DECLINADA",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 0
+    },
+    {
+      "dbId": "8fab54a3-deb4-4ad6-bfb9-203dcbb3500c",
+      "dbName": "REMADA INVERTIDA (BARRA FIXA)",
+      "apiId": "0652",
+      "apiName": "pull-up",
+      "score": 0
+    },
+    {
+      "dbId": "3b9ce7f5-38a5-4d56-8697-cddc4422f367",
+      "dbName": "GLÚTEO 4 APOIOS (MÁQUINA)",
+      "apiId": "0860",
+      "apiName": "cable kickback",
+      "score": 4
+    },
+    {
+      "dbId": "9d643e6b-147e-42fb-bfc6-4923b9575206",
+      "dbName": "FACE PULL (POLIA)",
+      "apiId": "0776",
+      "apiName": "snatch pull",
+      "score": 4
+    },
+    {
+      "dbId": "ccb93c9b-4a77-4b85-9a56-7a7c78e177b3",
+      "dbName": "MOUNTAIN CLIMBER",
+      "apiId": "0630",
+      "apiName": "mountain climber",
+      "score": 0
+    },
+    {
+      "dbId": "e668a6dd-fff7-4e2c-8cd8-6d2f85fe5947",
+      "dbName": "BICICLETA (SOLO)",
+      "apiId": "0798",
+      "apiName": "stationary bike walk",
+      "score": 5
+    },
+    {
+      "dbId": "7209244c-a94a-447c-b58f-41bdc9f66f13",
+      "dbName": "FLEXÃO DE BRAÇO DIAMANTE",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 0
+    },
+    {
+      "dbId": "d22c6f24-a19a-414a-a14e-c67a8672f550",
+      "dbName": "ELEVAÇÃO LATERAL (HALTERES)",
+      "apiId": "0178",
+      "apiName": "cable lateral raise",
+      "score": 6
+    },
+    {
+      "dbId": "c8320ef8-8397-4a99-8d26-c058057da752",
+      "dbName": "AGACHAMENTO LIVRE (BARRA)",
+      "apiId": "0031",
+      "apiName": "barbell curl",
+      "score": 4
+    },
+    {
+      "dbId": "16bdf4a7-d393-4740-883e-a0dd71ecf7e3",
+      "dbName": "DESENVOLVIMENTO (BARRA)",
+      "apiId": "0219",
+      "apiName": "cable shoulder press",
+      "score": 4
+    },
+    {
+      "dbId": "17f8db8a-7478-41f1-89c8-7c18a1c1aefd",
+      "dbName": "ELEVAÇÃO FRONTAL (HALTERES)",
+      "apiId": "0310",
+      "apiName": "dumbbell front raise",
+      "score": 0
+    },
+    {
+      "dbId": "22af49a0-80f9-4f4a-8610-a83d62066ee3",
+      "dbName": "FLEXÃO DE BRAÇO INCLINADA",
+      "apiId": "0662",
+      "apiName": "push-up",
+      "score": 0
+    },
+    {
+      "dbId": "7a341812-587f-46fc-b5a2-718ee639d110",
+      "dbName": "TRÍCEPS BANCO (PESO CORPORAL)",
+      "apiId": "0251",
+      "apiName": "chest dip",
+      "score": 5
+    },
+    {
+      "dbId": "b073a194-ab19-4f4c-ac59-b056bee4a06b",
+      "dbName": "HACK SQUAT (MÁQUINA)",
+      "apiId": "1004",
+      "apiName": "band squat",
+      "score": 3
+    },
+    {
+      "dbId": "e10ca705-8896-45ac-86d7-ad3b56629ba2",
+      "dbName": "BURPEE",
+      "apiId": "1160",
+      "apiName": "burpee",
+      "score": 0
+    },
+    {
+      "dbId": "904f62df-727e-4423-9325-ad7b8e2938e3",
+      "dbName": "AGACHAMENTO SUMÔ",
+      "apiId": "0514",
+      "apiName": "jump squat",
+      "score": 2
+    }
+  ],
+  "unmatched": [
+    {
+      "dbId": "049f76c7-527f-43c4-a19f-fb799027d91a",
+      "dbName": "CRUCIFIXO INCLINADO",
+      "muscle": "Peito",
+      "enName": "incline dumbbell fly",
+      "closestApi": "dumbbell fly",
+      "score": 8
+    },
+    {
+      "dbId": "5e081226-5e0e-433b-b82a-4efabb658443",
+      "dbName": "LEG PRESS 45º",
+      "muscle": "Pernas",
+      "enName": "leg press",
+      "closestApi": "smith leg press",
+      "score": 6
+    },
+    {
+      "dbId": "d4b0f9fb-1057-4872-a40a-9387638be428",
+      "dbName": "LEG PRESS HORIZONTAL",
+      "muscle": "Pernas",
+      "enName": "leg press",
+      "closestApi": "smith leg press",
+      "score": 6
+    },
+    {
+      "dbId": "d653f8ac-899b-403b-90c6-97314e7586bb",
+      "dbName": "LEVANTAMENTO PÉLVICO",
+      "muscle": "Pernas",
+      "enName": null,
+      "closestApi": "lever bent over row",
+      "score": 13
+    },
+    {
+      "dbId": "9031aa5a-f8bc-4ee7-9358-92b5197cef1e",
+      "dbName": "CADEIRA ADUTORA",
+      "muscle": "Pernas",
+      "enName": null,
+      "closestApi": "cable curl",
+      "score": 10
+    },
+    {
+      "dbId": "ab636b73-67d4-40fc-9a27-c936f0b2ebfa",
+      "dbName": "CADEIRA ABDUTORA",
+      "muscle": "Pernas",
+      "enName": null,
+      "closestApi": "side hip abduction",
+      "score": 10
+    },
+    {
+      "dbId": "3da4d975-8d02-4c84-92c2-3e7f08e0e8d3",
+      "dbName": "ENCOLHIMENTO (BARRA)",
+      "muscle": "Ombros",
+      "enName": "shrug",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "edf23198-fc5a-4e35-91ea-12a63930f9a1",
+      "dbName": "AGACHAMENTO",
+      "muscle": "Pernas",
+      "enName": "squat",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "f4c2630f-043b-4e17-8f74-bfd86b3fe18d",
+      "dbName": "MERGULHO (MÁQUINA)",
+      "muscle": "Tríceps",
+      "enName": "dip",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "7cc3f13a-9cf3-415e-bdc6-1cfedc2700b4",
+      "dbName": "TRÍCEPS COICE (HALTERES)",
+      "muscle": "Tríceps",
+      "enName": "kickback",
+      "closestApi": "air bike",
+      "score": 6
+    },
+    {
+      "dbId": "10d80e12-ec2c-44b6-a4d4-967b6d39303b",
+      "dbName": "TRÍCEPS COICE (POLIA)",
+      "muscle": "Tríceps",
+      "enName": "kickback",
+      "closestApi": "air bike",
+      "score": 6
+    },
+    {
+      "dbId": "dc31559c-010f-41a2-8343-94925ecd7697",
+      "dbName": "PRANCHA ISOMÉTRICA",
+      "muscle": "Abdômen",
+      "enName": "plank",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "aa244a33-5889-4b01-8897-b71c2bd46766",
+      "dbName": "ABDOMINAL MÁQUINA",
+      "muscle": "Abdômen",
+      "enName": "crunch",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "ad577c8a-1b0e-4e79-bcbd-937e283b1a52",
+      "dbName": "ABDOMINAL REMADOR",
+      "muscle": "Abdômen",
+      "enName": "crunch",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "00729f48-c01b-4e57-ae67-0b88151ebfd8",
+      "dbName": "ESTEIRA (CAMINHADA)",
+      "muscle": "Aeróbico",
+      "enName": "treadmill",
+      "closestApi": "dead bug",
+      "score": 6
+    },
+    {
+      "dbId": "dd6faeb3-227c-4135-bac7-cb44c106dbc8",
+      "dbName": "ESTEIRA (CORRIDA)",
+      "muscle": "Aeróbico",
+      "enName": "treadmill",
+      "closestApi": "dead bug",
+      "score": 6
+    },
+    {
+      "dbId": "c9dc912b-6fb1-4928-96a2-129b611b257a",
+      "dbName": "TRANSPORT / ELÍPTICO",
+      "muscle": "Aeróbico",
+      "enName": "elliptical",
+      "closestApi": "sphinx",
+      "score": 8
+    },
+    {
+      "dbId": "3f7fe2ed-2319-46d6-a0c6-aa2aff45a730",
+      "dbName": "MÁQUINA DE ESCADA",
+      "muscle": "Aeróbico",
+      "enName": null,
+      "closestApi": "45° side bend",
+      "score": 12
+    },
+    {
+      "dbId": "8fd70276-3b1c-4523-b6c0-a01b590f0607",
+      "dbName": "ELEVAÇÃO DE PERNAS EM APARELHO",
+      "muscle": "Abdômen",
+      "enName": null,
+      "closestApi": "cable preacher curl",
+      "score": 19
+    },
+    {
+      "dbId": "e4317373-60bf-4bb3-b3b3-c417bdd315d1",
+      "dbName": "CROSSOVER",
+      "muscle": "Peito",
+      "enName": "cable crossover",
+      "closestApi": "cocoons",
+      "score": 6
+    },
+    {
+      "dbId": "e9794650-ee86-4576-a780-1f80c6d6e8af",
+      "dbName": "EXTENSÃO EM PÉ NO CABO",
+      "muscle": "Bíceps",
+      "enName": null,
+      "closestApi": "alternate heel touchers",
+      "score": 16
+    },
+    {
+      "dbId": "cf61a08b-5200-4a0c-85f5-c60dd4c98ec3",
+      "dbName": "CONTRAÇÃO AJOELHADA NO CABO",
+      "muscle": "Abdômen",
+      "enName": null,
+      "closestApi": "one arm against wall",
+      "score": 19
+    },
+    {
+      "dbId": "abc7b1f3-719b-40d1-9f08-3499e102e5db",
+      "dbName": "ESTEIRA",
+      "muscle": "Aeróbico",
+      "enName": "treadmill",
+      "closestApi": "sphinx",
+      "score": 5
+    },
+    {
+      "dbId": "6814507b-665e-48c8-978d-9d43b3b009de",
+      "dbName": "SUPERMAN",
+      "muscle": "Costas",
+      "enName": null,
+      "closestApi": "run",
+      "score": 6
+    },
+    {
+      "dbId": "a68173ff-ad12-4d08-805a-b1ef376a9cf6",
+      "dbName": "AGACHAMENTO ISOMÉTRICO (PAREDE)",
+      "muscle": "Glúteo",
+      "enName": "squat",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "99b71410-c037-423c-a691-26803bfca372",
+      "dbName": "AFUNDO (PESO CORPORAL)",
+      "muscle": "Pernas",
+      "enName": "lunge",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "9e35d439-c6b5-4c5d-a5f7-1be1a70d3da8",
+      "dbName": "AGACHAMENTO (HALTERES)",
+      "muscle": "Pernas",
+      "enName": "squat",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "a602f0ab-8b10-47a0-ac4e-a77e978ed8fc",
+      "dbName": "ELEVAÇÃO PÉLVICA (SOLO)",
+      "muscle": "Glúteo",
+      "enName": "hip thrust",
+      "closestApi": "jump squat",
+      "score": 7
+    },
+    {
+      "dbId": "b82af5c5-0003-447b-8e85-71f60d9522d2",
+      "dbName": "AGACHAMENTO (PESO CORPORAL)",
+      "muscle": "Pernas",
+      "enName": "squat",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "ab9caf0a-97bb-4da7-a99a-061d6e7442d2",
+      "dbName": "DIPS (PARALELAS)",
+      "muscle": "Tríceps",
+      "enName": null,
+      "closestApi": "triceps press",
+      "score": 9
+    },
+    {
+      "dbId": "70fcc409-9e71-41b6-8164-031821fb932c",
+      "dbName": "ABDOMINAL RODA (AB WHEEL)",
+      "muscle": "Abdômen",
+      "enName": "crunch",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "f2beff51-6b43-439a-9b71-d59d11991203",
+      "dbName": "ELEVAÇÃO DE PERNAS (SOLO)",
+      "muscle": "Abdômen",
+      "enName": null,
+      "closestApi": "lever seated fly",
+      "score": 15
+    },
+    {
+      "dbId": "659584c2-99df-4ddf-9eb0-8f6515bfed36",
+      "dbName": "ABDOMINAL CRUNCH (SOLO)",
+      "muscle": "Abdômen",
+      "enName": "crunch",
+      "closestApi": "run",
+      "score": 3
+    },
+    {
+      "dbId": "1e569fa7-0504-4038-a051-3a8eeeda7fae",
+      "dbName": "AGACHAMENTO COM SALTO",
+      "muscle": "Aeróbico",
+      "enName": "squat",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "ae02c6d7-5db2-4a58-841a-dbd4d0b3f1f5",
+      "dbName": "AGACHAMENTO GOBLET",
+      "muscle": "Pernas",
+      "enName": "squat",
+      "closestApi": "run",
+      "score": 4
+    },
+    {
+      "dbId": "5ea73402-b08e-4000-8941-e541dee1e057",
+      "dbName": "JUMPING JACK",
+      "muscle": "Aeróbico",
+      "enName": null,
+      "closestApi": "jump squat",
+      "score": 7
+    }
+  ],
+  "savedAt": "2026-03-03T15:02:27.731Z"
+}

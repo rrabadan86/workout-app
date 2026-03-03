@@ -38,7 +38,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { focus, daysPerWeek, maxTimeMins, experienceLevel, limitations, lastProjectInfo, existingExercises } = body;
+    const {
+      goals, focus, daysPerWeek, maxTimeMins, experienceLevel, limitations,
+      lastProjectInfo, existingExercises,
+      location, style, extraNotes, age, weightKg, heightCm,
+    } = body;
+
+    // Use goals array (new wizard) or fallback to focus (legacy)
+    const objective = Array.isArray(goals) && goals.length > 0 ? goals.join(' e ') : (focus || 'Musculação geral');
 
     // Build exercise list — only include description when it adds value (non-empty)
     const exerciseList = existingExercises
@@ -48,15 +55,25 @@ export async function POST(req: NextRequest) {
       })
       .join('\n');
 
+    // Build optional biometric/context sections
+    const bioLines: string[] = [];
+    if (age) bioLines.push(`- Idade: ${age} anos`);
+    if (weightKg) bioLines.push(`- Peso: ${weightKg} kg`);
+    if (heightCm) bioLines.push(`- Altura: ${heightCm} cm`);
+    const bioSection = bioLines.length > 0 ? `\nPerfil biométrico do aluno:\n${bioLines.join('\n')}` : '';
+
     const prompt = `Você é o Vimu, educador físico com mais de 15 anos de experiência prática, especialista em musculação, biomecânica e periodização de treinos. Possui pós-graduação em Fisiologia do Exercício e já atuou com atletas amadores e profissionais de alto rendimento. Você aplica as metodologias mais modernas da ciência do esporte, como princípios de sobrecarga progressiva, especificidade, variação de estímulos e recuperação adequada. Sua missão é criar programas de treino altamente eficazes, seguros e 100% personalizados ao perfil do aluno.
 
 Crie um programa completo de Musculação para um usuário com as seguintes características:
-- Foco/Objetivo: ${focus}
+- Foco/Objetivo: ${objective}
 - Dias por semana: ${daysPerWeek}
 - Tempo máximo por treino: ${maxTimeMins} minutos
 - Nível de Experiência: ${experienceLevel}
+${location ? `- Local de treino: ${location}` : ''}
+${style && style !== 'IA decide' ? `- Estilo de treino preferido: ${style}` : ''}
 ${limitations ? `- Limitações ou restrições físicas: ${limitations}` : ''}
 ${lastProjectInfo ? `- Contexto do treino anterior (para evolução progressiva): ${lastProjectInfo}` : ''}
+${extraNotes ? `- Preferências adicionais do aluno: ${extraNotes}` : ''}${bioSection}
 
 Diretrizes obrigatórias que você deve seguir ao montar o programa:
 1. Respeite o princípio da sobrecarga progressiva: distribua o volume e a intensidade de forma coerente com o nível de experiência do aluno.
@@ -67,6 +84,8 @@ Diretrizes obrigatórias que você deve seguir ao montar o programa:
 6. Se houver limitações físicas, substitua exercícios que possam agravar a condição. Use a descrição dos exercícios para entender o equipamento e biomecânica envolvida.
 7. Se houver treino anterior, evolua o programa com variação de exercícios ou aumento de volume para evitar estagnação. Não repita exatamente os mesmos exercícios e séries — mude ângulos, ordens ou técnicas.
 8. REGRA CRÍTICA DE COERÊNCIA: Cada treino deve conter SOMENTE exercícios dos grupos musculares indicados no nome do treino. Se o treino se chama "Treino A - Peito, Costas e Ombros", ele NÃO pode conter exercícios de Bíceps, Tríceps, Pernas ou qualquer outro grupo não listado no nome. Verifique o campo "Músculo" de cada exercício da lista antes de incluí-lo. Exercícios de músculos secundários (como bíceps em treino de costas) NÃO devem ser adicionados separadamente — eles já serão ativados indiretamente nos exercícios compostos.
+${location ? `9. O aluno treina em "${location}". Selecione apenas exercícios compatíveis com esse ambiente (verifique a descrição dos exercícios para identificar equipamento necessário).` : ''}
+${style && style !== 'IA decide' ? `10. Use a metodologia "${style}" como estilo principal de montagem dos treinos.` : ''}
 
 Você tem a seguinte lista de exercícios disponíveis no banco de dados do aplicativo (Listados como 'ID | Nome | Músculo | Descrição'):
 ${exerciseList}

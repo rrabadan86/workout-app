@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { ChevronDown, ChevronUp, Dumbbell, Save, Play, Square, Timer, Trash2, Edit2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import ExerciseThumbnail from '@/components/ExerciseThumbnail';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
@@ -336,9 +337,12 @@ export default function WorkoutDetailPage() {
                             <div key={slotKey} className="bg-white rounded-2xl card-depth overflow-hidden animate-fade transition-all">
                                 <div className="p-4 md:p-5 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors" onClick={() => setExpanded(isOpen ? null : slotKey)}>
                                     <div className="flex items-center gap-4">
-                                        <div className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                            <Dumbbell size={20} />
-                                        </div>
+                                        <ExerciseThumbnail
+                                            thumbnailUrl={exObj?.thumbnail_url}
+                                            gifUrl={exObj?.gif_url}
+                                            name={exName}
+                                            size={40}
+                                        />
                                         <div className="flex flex-col">
                                             <h3 className="text-base font-extrabold text-slate-900 leading-tight">{exName}</h3>
                                             <p className="text-[11px] font-bold text-slate-500 mt-1">
@@ -357,6 +361,18 @@ export default function WorkoutDetailPage() {
 
                                 {isOpen && (
                                     <div className="p-4 md:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-6">
+                                        {/* Embedded GIF for Active Workout */}
+                                        {exObj?.gif_url && (
+                                            <div className="w-full bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm flex items-center justify-center relative p-2 md:p-4">
+                                                <img
+                                                    src={exObj.gif_url}
+                                                    alt={`Execução de ${exName}`}
+                                                    className="w-full h-auto object-contain rounded-xl"
+                                                    style={{ maxHeight: '250px' }}
+                                                    loading="lazy"
+                                                />
+                                            </div>
+                                        )}
                                         {/* Friend comparison */}
                                         {lastFriendLog && (
                                             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">

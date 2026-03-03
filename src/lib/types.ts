@@ -18,6 +18,8 @@ export interface Profile {
   birth_date?: string;
   photo_url?: string;
   created_at?: string;
+  weight_kg?: number;
+  height_cm?: number;
   notification_prefs?: NotificationPrefs;
 }
 
@@ -54,6 +56,8 @@ export interface Exercise {
   muscle: string;
   description: string;
   createdBy: string; // userId (profile.id)
+  thumbnail_url?: string | null;
+  gif_url?: string | null;
 }
 
 export interface WorkoutSet {
