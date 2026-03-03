@@ -32,12 +32,12 @@ export default function ExerciseThumbnail({
     const actualThumbUrl = (thumbnailUrl || gifUrl)?.trim();
     const actualGifUrl = gifUrl?.trim();
 
-    // Reset error state if the URL changes
+    // Reset error/proxy state if the URL changes
     useEffect(() => {
         setImgError(false);
         setUseProxy(false);
         setUseGifProxy(false);
-    }, [actualThumbUrl]);
+    }, [actualThumbUrl, actualGifUrl]);
 
     const hasThumb = !!actualThumbUrl && !imgError;
     const hasGif = !!actualGifUrl;
@@ -50,11 +50,11 @@ export default function ExerciseThumbnail({
 
     return (
         <>
-            {/* Thumbnail / Placeholder */}
+            {/* Thumbnail / Placeholder — MUST be relative to contain the absolute Play overlay */}
             <button
                 type="button"
                 onClick={(e) => { if (hasGif) { e.stopPropagation(); setShowGif(true); setGifLoaded(false); } }}
-                className={`shrink-0 flex items-center justify-center overflow-hidden transition-all ${rounded} ${className} ${hasGif ? 'cursor-pointer hover:ring-2 hover:ring-primary/40 hover:scale-105 active:scale-95' : 'cursor-default'}`}
+                className={`relative shrink-0 flex items-center justify-center overflow-hidden transition-all ${rounded} ${className} ${hasGif ? 'cursor-pointer hover:ring-2 hover:ring-primary/40 hover:scale-105 active:scale-95' : 'cursor-default'}`}
                 style={{ width: size, height: size }}
                 title={hasGif ? `Ver execução de ${name}` : name}
             >
@@ -66,11 +66,10 @@ export default function ExerciseThumbnail({
                         height={size}
                         loading="lazy"
                         className={`object-cover w-full h-full ${rounded}`}
-                        onError={(e) => {
+                        onError={() => {
                             if (!useProxy && actualThumbUrl && !actualThumbUrl.includes('supabase.co')) {
-                                setUseProxy(true); // Retry with proxy!
+                                setUseProxy(true);
                             } else {
-                                console.error('Thumbnail load error:', e);
                                 setImgError(true);
                             }
                         }}
@@ -81,7 +80,7 @@ export default function ExerciseThumbnail({
                     </div>
                 )}
 
-                {/* Play indicator overlay */}
+                {/* Play indicator overlay — stays inside this relative button */}
                 {hasGif && hasThumb && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors rounded-xl">
                         <Play size={size * 0.35} className="text-white opacity-0 group-hover:opacity-80 drop-shadow transition-opacity" fill="white" />
@@ -119,16 +118,16 @@ export default function ExerciseThumbnail({
                                 </div>
                             )}
                             <img
+                                key={actualGifUrl}
                                 src={useGifProxy ? getProxiedUrl(actualGifUrl) : actualGifUrl!}
                                 alt={`Execução de ${name}`}
                                 className={`w-full max-h-[60vh] object-contain transition-opacity ${gifLoaded ? 'opacity-100' : 'opacity-0'}`}
                                 onLoad={() => setGifLoaded(true)}
-                                onError={(e) => {
+                                onError={() => {
                                     if (!useGifProxy && actualGifUrl && !actualGifUrl.includes('supabase.co')) {
-                                        setUseGifProxy(true); // Retry with proxy!
+                                        setUseGifProxy(true);
                                     } else {
-                                        console.error('GIF load error:', e);
-                                        setGifLoaded(true);
+                                        setGifLoaded(true); // hide spinner even on fail
                                     }
                                 }}
                             />

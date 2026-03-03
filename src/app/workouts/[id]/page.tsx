@@ -21,6 +21,38 @@ const ExerciseChart = dynamic(() => import('@/components/ExerciseChart'), {
     loading: () => <div className="h-48 w-full bg-slate-50 rounded-2xl animate-pulse" />,
 });
 
+function ActiveWorkoutGif({ url, name }: { url: string; name: string }) {
+    const [useProxy, setUseProxy] = useState(false);
+
+    useEffect(() => {
+        setUseProxy(false);
+    }, [url]);
+
+    if (!url) return null;
+
+    const actualUrl = url.trim();
+    const getProxiedUrl = (u: string) => {
+        if (u.includes('supabase.co')) return u;
+        return `/api/proxy-image?url=${encodeURIComponent(u)}`;
+    };
+
+    return (
+        <img
+            key={actualUrl}
+            src={useProxy ? getProxiedUrl(actualUrl) : actualUrl}
+            alt={`Execução de ${name}`}
+            className="w-full h-auto object-contain rounded-xl"
+            style={{ maxHeight: '250px' }}
+            loading="lazy"
+            onError={() => {
+                if (!useProxy && !actualUrl.includes('supabase.co')) {
+                    setUseProxy(true);
+                }
+            }}
+        />
+    );
+}
+
 export default function WorkoutDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
@@ -203,7 +235,20 @@ export default function WorkoutDetailPage() {
                 const next = { ...prev };
                 workout!.exercises.forEach(({ exerciseId, sets }, idx) => {
                     const key = `${exerciseId}-${idx}`;
-                    if (!next[key]) next[key] = Array(sets.length).fill('');
+                    if (!next[key]) {
+                        // Pre-fill with last workout values
+                        const lastLogs = store.logs
+                            .filter((l) => l.workoutId === id && l.exerciseId === exerciseId && l.userId === userId)
+                            .sort((a, b) => a.date.localeCompare(b.date));
+                        const lastLog = lastLogs[lastLogs.length - 1];
+                        if (lastLog && lastLog.sets.length > 0) {
+                            next[key] = sets.map((_, sIdx) =>
+                                lastLog.sets[sIdx] ? String(lastLog.sets[sIdx].weight) : ''
+                            );
+                        } else {
+                            next[key] = Array(sets.length).fill('');
+                        }
+                    }
                 });
                 return next;
             });
@@ -218,6 +263,33 @@ export default function WorkoutDetailPage() {
             weights
         }));
     }, [id, workout?.id, timerRunning, weights, loadedStorage, isFinished]);
+
+    // Pre-fill weights from last workout once logs are available
+    useEffect(() => {
+        if (!workout || !loadedStorage || store.logs.length === 0) return;
+        setWeights((prev) => {
+            const next = { ...prev };
+            let changed = false;
+            workout.exercises.forEach(({ exerciseId, sets }, idx) => {
+                const key = `${exerciseId}-${idx}`;
+                const current = next[key];
+                // Only pre-fill if all values are empty (user hasn't typed anything)
+                if (current && current.every((v) => v === '')) {
+                    const lastLogs = store.logs
+                        .filter((l) => l.workoutId === id && l.exerciseId === exerciseId && l.userId === userId)
+                        .sort((a, b) => a.date.localeCompare(b.date));
+                    const lastLog = lastLogs[lastLogs.length - 1];
+                    if (lastLog && lastLog.sets.length > 0) {
+                        next[key] = sets.map((_, sIdx) =>
+                            lastLog.sets[sIdx] ? String(lastLog.sets[sIdx].weight) : ''
+                        );
+                        changed = true;
+                    }
+                }
+            });
+            return changed ? next : prev;
+        });
+    }, [workout?.id, loadedStorage, store.logs.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!ready || !userId || loading) return null;
 
@@ -328,7 +400,8 @@ export default function WorkoutDetailPage() {
                         const isOpen = expanded === slotKey;
                         const myLogs = getUserLogs(exerciseId, targetUserId);
                         const lastLog = myLogs[myLogs.length - 1];
-                        const lastFriendLog = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId).slice(-1)[0] : undefined;
+                        const friendLogs = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId) : [];
+                        const lastFriendLog = friendLogs.length > 0 ? friendLogs[friendLogs.length - 1] : undefined;
                         const chartData = buildChartData(exerciseId);
                         const repsSummary = sets.map((s) => s.reps).join(', ');
                         const unitLabel = isAerobico ? 'min' : 'kg';
@@ -361,31 +434,6 @@ export default function WorkoutDetailPage() {
 
                                 {isOpen && (
                                     <div className="p-4 md:p-6 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-6">
-                                        {/* Embedded GIF for Active Workout */}
-                                        {exObj?.gif_url && (
-                                            <div className="w-full bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm flex items-center justify-center relative p-2 md:p-4">
-                                                <img
-                                                    src={exObj.gif_url}
-                                                    alt={`Execução de ${exName}`}
-                                                    className="w-full h-auto object-contain rounded-xl"
-                                                    style={{ maxHeight: '250px' }}
-                                                    loading="lazy"
-                                                />
-                                            </div>
-                                        )}
-                                        {/* Friend comparison */}
-                                        {lastFriendLog && (
-                                            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
-                                                <p className="text-xs font-extrabold text-indigo-500 uppercase tracking-widest mb-3">📊 Último treino de {friendName}</p>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {lastFriendLog.sets.map((s, i) => (
-                                                        <span key={i} className="text-xs font-bold bg-white text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 shadow-sm">
-                                                            S{i + 1}: <strong className="text-indigo-900">{s.weight} {unitLabel}</strong>{!isAerobico && <> × {s.reps}</>}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
 
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                                             {/* Exercise structure + optional weight inputs */}
@@ -430,51 +478,64 @@ export default function WorkoutDetailPage() {
                                             </div>
 
                                             <div className="flex flex-col gap-5 h-full">
-                                                {/* History */}
-                                                {myLogs.length > 0 && (
-                                                    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex-1">
-                                                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-3">Histórico Recente</p>
-                                                        <div className="flex flex-col gap-2">
-                                                            {myLogs.slice().reverse().slice(0, 5).map((log) => (
-                                                                <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 transition-colors hover:border-slate-200">
-                                                                    <div className="flex items-center justify-between sm:justify-start gap-4 w-full sm:w-auto">
-                                                                        <span className="text-sm font-extrabold text-slate-700">{formatDate(log.date)}</span>
-                                                                        <div className="flex items-center gap-2">
-                                                                            {canExecute && (<>
-                                                                                <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-primary transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Carregar valores para hoje" onClick={() => {
+                                                {/* Unified History: user logs + friend last log */}
+                                                {(myLogs.length > 0 || lastFriendLog) && (() => {
+                                                    const historyEntries: { id: string; date: string; sets: { weight: number; reps: number }[]; owner: 'me' | 'friend'; ownerName: string }[] = [];
+                                                    myLogs.slice().reverse().slice(0, 3).forEach((log) => {
+                                                        historyEntries.push({ id: log.id, date: log.date, sets: log.sets, owner: 'me', ownerName: 'Você' });
+                                                    });
+                                                    if (lastFriendLog) {
+                                                        historyEntries.push({ id: `friend-${lastFriendLog.id}`, date: lastFriendLog.date, sets: lastFriendLog.sets, owner: 'friend', ownerName: friendName });
+                                                    }
+                                                    historyEntries.sort((a, b) => b.date.localeCompare(a.date));
+
+                                                    return (
+                                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex-1">
+                                                            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">Histórico Recente</p>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                {historyEntries.map((entry) => (
+                                                                    <div key={entry.id} className={`flex items-center gap-2 py-2 px-3 rounded-lg transition-colors ${entry.owner === 'friend' ? 'bg-indigo-50/60 hover:bg-indigo-50' : 'bg-slate-50 hover:bg-slate-100'}`}>
+                                                                        {/* Color dot indicator */}
+                                                                        <span className={`shrink-0 w-2 h-2 rounded-full ${entry.owner === 'friend' ? 'bg-indigo-400' : 'bg-primary'}`} />
+                                                                        <span className="text-[11px] font-bold text-slate-500 shrink-0 w-[72px]">{formatDate(entry.date)}</span>
+                                                                        {entry.owner === 'friend' && (
+                                                                            <span className="text-[9px] font-extrabold text-indigo-400 uppercase shrink-0">{entry.ownerName}</span>
+                                                                        )}
+                                                                        <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+                                                                            {entry.sets.map((s, i) => (
+                                                                                <span key={i} className={`text-[10px] font-bold px-2 py-0.5 rounded border ${entry.owner === 'friend' ? 'text-indigo-600 bg-white border-indigo-200' : 'text-slate-600 bg-white border-slate-200'}`}>
+                                                                                    {s.weight}{unitLabel}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                        {entry.owner === 'me' && canExecute && (
+                                                                            <div className="flex items-center gap-0.5 shrink-0">
+                                                                                <button className="p-1.5 text-slate-400 hover:text-primary rounded-md hover:bg-white transition-colors" title="Carregar valores" onClick={() => {
                                                                                     const arr = Array(sets.length).fill('');
-                                                                                    log.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
+                                                                                    entry.sets.forEach((s, idx) => { if (idx < arr.length) arr[idx] = String(s.weight); });
                                                                                     setWeights(prev => ({ ...prev, [slotKey]: arr }));
-                                                                                    setToast({ msg: 'Valores carregados. Clique em Salvar para registrar hoje.', type: 'success' });
+                                                                                    setToast({ msg: 'Valores carregados!', type: 'success' });
                                                                                 }}>
-                                                                                    <Edit2 size={16} />
+                                                                                    <Edit2 size={13} />
                                                                                 </button>
-                                                                                <button className="flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-red-500 transition-colors hover:bg-white rounded-lg shadow-sm border border-transparent hover:border-slate-200" title="Excluir este registro" onClick={async () => {
-                                                                                    if (confirm('Tem certeza que deseja excluir este registro de treino?')) {
-                                                                                        setSaving(log.id);
-                                                                                        await deleteLog(log.id);
+                                                                                <button className="p-1.5 text-slate-400 hover:text-red-500 rounded-md hover:bg-white transition-colors" title="Excluir" onClick={async () => {
+                                                                                    if (confirm('Excluir este registro?')) {
+                                                                                        setSaving(entry.id);
+                                                                                        await deleteLog(entry.id);
                                                                                         setSaving(null);
                                                                                         setToast({ msg: 'Registro excluído.', type: 'success' });
                                                                                     }
                                                                                 }}>
-                                                                                    <Trash2 size={16} />
+                                                                                    <Trash2 size={13} />
                                                                                 </button>
-                                                                            </>)}
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                                                                        {log.sets.map((s, i) => (
-                                                                            <div key={i} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm text-xs font-bold">
-                                                                                <span className="text-slate-400">S{i + 1}</span>
-                                                                                <span className="text-slate-900">{s.weight}{unitLabel}</span>
                                                                             </div>
-                                                                        ))}
+                                                                        )}
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                ))}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    );
+                                                })()}
 
                                                 {/* Chart — lazy loaded para reduzir bundle inicial */}
                                                 {chartData.length > 0 && (
