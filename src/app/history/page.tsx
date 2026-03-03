@@ -171,18 +171,55 @@ export default function HistoryPage() {
                                     if (!workout) return null;
 
                                     const project = store.projects.find(p => p.id === workout.projectId);
-                                    const isHidden = event.eventType === 'WO_COMPLETED_HIDDEN';
+                                    const isHidden = event.eventType.startsWith('WO_COMPLETED_HIDDEN');
                                     const isExpanded = expandedCards.has(event.id);
 
                                     const eventDateObj = new Date(event.createdAt);
                                     const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
 
-                                    const dayLogs = store.logs.filter(l => l.userId === userId && l.workoutId === workout.id && l.date === localDateStr);
+                                    // Parse payload log IDs from eventType (same logic as Feed.tsx)
+                                    const rawType = event.eventType.replace('WO_COMPLETED_HIDDEN', 'WO_COMPLETED');
+                                    const payloadParts = rawType.split('|');
+                                    const lastSeg = payloadParts[payloadParts.length - 1];
+                                    const hasLogIds = payloadParts.length >= 5 && !/^\d+$/.test(lastSeg);
+                                    const payloadLogIds = hasLogIds ? lastSeg.split(',').filter(Boolean) : [];
 
-                                    // Stats
-                                    const totalPlanned = workout.exercises.length;
-                                    const exercisesDone = dayLogs.length;
-                                    const completionPercent = totalPlanned > 0 ? Math.round((exercisesDone / totalPlanned) * 100) : 100;
+                                    const allDateLogs = store.logs.filter(l => l.userId === userId && l.workoutId === workout.id && l.date === localDateStr);
+
+                                    let dayLogs;
+                                    if (payloadLogIds.length > 0) {
+                                        dayLogs = store.logs.filter(l => payloadLogIds.includes(l.id));
+                                    } else {
+                                        dayLogs = allDateLogs;
+                                    }
+
+                                    // Build render items matching planned exercises to logs (same logic as Feed)
+                                    const renderItems: { id: string; exId: string; plannedSets: number; log?: typeof store.logs[0]; isExtra?: boolean }[] = [];
+                                    const availableLogs = [...dayLogs];
+
+                                    workout.exercises.forEach((planned, idx) => {
+                                        const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
+                                        let log = undefined;
+                                        if (logIdx !== -1) {
+                                            log = availableLogs[logIdx];
+                                            availableLogs.splice(logIdx, 1);
+                                        } else if (payloadLogIds.length > 0) {
+                                            // Secondary lookup: log may not be in payload due to race condition
+                                            const fallbackLog = allDateLogs.find(l => l.exerciseId === planned.exerciseId && !dayLogs.some(dl => dl.id === l.id));
+                                            if (fallbackLog) log = fallbackLog;
+                                        }
+                                        renderItems.push({ id: `planned-${idx}-${planned.exerciseId}`, exId: planned.exerciseId, plannedSets: planned.sets.length, log });
+                                    });
+
+                                    // Extra exercises not in the plan
+                                    availableLogs.forEach((log, idx) => {
+                                        renderItems.push({ id: `extra-${idx}-${log.id}`, exId: log.exerciseId, plannedSets: 0, log, isExtra: true });
+                                    });
+
+                                    const totalSets = renderItems.reduce((sum, item) => sum + item.plannedSets, 0);
+                                    const completedSets = renderItems.reduce((sum, item) => sum + (item.log ? item.log.sets.length : 0), 0);
+                                    const completionPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 100;
+                                    const formattedPercentage = completionPercent.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
 
                                     const completionColor =
                                         completionPercent === 100 ? 'text-emerald-500' :
@@ -247,9 +284,13 @@ export default function HistoryPage() {
                                                     <span className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest mb-0.5">DURAÇÃO</span>
                                                     <span className="text-xl font-extrabold font-inter text-slate-900">{formatDurationHMS(event.duration)}</span>
                                                 </div>
+                                                <div className="flex-1 px-5 py-3.5 flex flex-col border-r border-slate-50">
+                                                    <span className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest mb-0.5">SÉRIES</span>
+                                                    <span className="text-xl font-extrabold font-inter text-slate-900">{completedSets} / {totalSets}</span>
+                                                </div>
                                                 <div className="flex-1 px-5 py-3.5 flex flex-col">
                                                     <span className="text-[10px] font-bold font-montserrat text-slate-400 uppercase tracking-widest mb-0.5">CONCLUSÃO</span>
-                                                    <span className={`text-xl font-extrabold font-inter ${completionColor}`}>{completionPercent}%</span>
+                                                    <span className={`text-xl font-extrabold font-inter ${completionColor}`}>{formattedPercentage}</span>
                                                 </div>
                                             </div>
 
@@ -259,48 +300,53 @@ export default function HistoryPage() {
                                                     className="flex items-center justify-center gap-1.5 text-primary font-bold text-[11px] uppercase tracking-widest font-montserrat py-2.5 w-full hover:bg-slate-50 rounded-b-2xl transition-colors"
                                                     onClick={() => toggleExpand(event.id)}
                                                 >
-                                                    {isExpanded ? 'Ocultar' : `Ver exercícios (${exercisesDone})`}
+                                                    {isExpanded ? 'Ocultar' : `Ver exercícios (${renderItems.length})`}
                                                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </button>
 
                                                 {isExpanded && (
                                                     <div className="px-5 pb-5 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                                                        {dayLogs.map((log) => {
-                                                            const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
-                                                            const groups: { count: number; weight: number }[] = [];
-                                                            for (const s of log.sets) {
-                                                                if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
-                                                                    groups[groups.length - 1].count++;
-                                                                } else {
-                                                                    groups.push({ count: 1, weight: s.weight });
+                                                        {renderItems.map((item) => {
+                                                            const exName = store.exercises.find(e => e.id === item.exId)?.name || 'Exercício';
+                                                            const log = item.log;
+                                                            const plannedSets = item.plannedSets;
+                                                            const completedSets = log ? log.sets.length : 0;
+                                                            const skippedSets = Math.max(0, plannedSets - completedSets);
+
+                                                            let setsDisplay = '';
+                                                            if (log && log.sets.length > 0) {
+                                                                const groups: { count: number; weight: number }[] = [];
+                                                                for (const s of log.sets) {
+                                                                    if (groups.length > 0 && groups[groups.length - 1].weight === s.weight) {
+                                                                        groups[groups.length - 1].count++;
+                                                                    } else {
+                                                                        groups.push({ count: 1, weight: s.weight });
+                                                                    }
                                                                 }
+                                                                setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
+                                                            } else {
+                                                                setsDisplay = '-';
                                                             }
-                                                            const setsDisplay = groups.map(g => `${g.count}x ${g.weight}kg`).join(' / ');
 
                                                             return (
-                                                                <div key={log.id} className="flex justify-between items-center text-sm py-1 border-b border-slate-50 last:border-0">
-                                                                    <span className="text-slate-600 font-bold font-inter">{exName}</span>
+                                                                <div key={item.id} className="flex justify-between items-center text-sm py-1 border-b border-slate-50 last:border-0">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className={`font-bold font-inter ${!log ? 'text-slate-300 line-through' : 'text-slate-600'}`}>{exName}</span>
+                                                                        {log && skippedSets > 0 && (
+                                                                            <span className="text-[10px] bg-red-100 text-red-500 px-2 py-0.5 rounded-md font-bold uppercase tracking-wide">
+                                                                                faltou {skippedSets}
+                                                                            </span>
+                                                                        )}
+                                                                        {!log && (
+                                                                            <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
+                                                                                não feito
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     <span className="text-primary font-normal font-roboto pl-3 shrink-0">{setsDisplay}</span>
                                                                 </div>
                                                             );
                                                         })}
-
-                                                        {(() => {
-                                                            const loggedIds = dayLogs.map(l => l.exerciseId);
-                                                            const notDone = workout.exercises.filter(ex => !loggedIds.includes(ex.exerciseId));
-                                                            if (notDone.length === 0) return null;
-                                                            return notDone.map((planned, idx) => {
-                                                                const exName = store.exercises.find(e => e.id === planned.exerciseId)?.name || 'Exercício';
-                                                                return (
-                                                                    <div key={`nd-${idx}`} className="flex justify-between items-center text-sm py-1">
-                                                                        <span className="text-slate-300 line-through font-bold font-inter">{exName}</span>
-                                                                        <span className="text-[10px] bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest font-montserrat">
-                                                                            não feito
-                                                                        </span>
-                                                                    </div>
-                                                                );
-                                                            });
-                                                        })()}
                                                     </div>
                                                 )}
                                             </div>

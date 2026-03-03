@@ -316,13 +316,16 @@ export default function WorkoutDetailPage() {
                 <div className="flex flex-col gap-6 mb-12">
                     {workout.exercises.map(({ exerciseId, sets }, exIdx) => {
                         const slotKey = `${exerciseId}-${exIdx}`;
-                        const exName = store.exercises.find((e) => e.id === exerciseId)?.name ?? 'Exercício';
+                        const exObj = store.exercises.find((e) => e.id === exerciseId);
+                        const exName = exObj?.name ?? 'Exercício';
+                        const isAerobico = exObj?.muscle === 'Aeróbico';
                         const isOpen = expanded === slotKey;
                         const myLogs = getUserLogs(exerciseId, userId);
                         const lastLog = myLogs[myLogs.length - 1];
                         const lastFriendLog = comparisonFriendId ? getUserLogs(exerciseId, comparisonFriendId).slice(-1)[0] : undefined;
                         const chartData = buildChartData(exerciseId);
                         const repsSummary = sets.map((s) => s.reps).join(', ');
+                        const unitLabel = isAerobico ? 'min' : 'kg';
 
                         return (
                             <div key={slotKey} className="bg-white rounded-2xl card-depth overflow-hidden animate-fade transition-all">
@@ -334,8 +337,8 @@ export default function WorkoutDetailPage() {
                                         <div className="flex flex-col">
                                             <h3 className="text-base font-extrabold text-slate-900 leading-tight">{exName}</h3>
                                             <p className="text-[11px] font-bold text-slate-500 mt-1">
-                                                {sets.length} séries · {repsSummary} reps
-                                                {lastLog && <span className="ml-2 text-primary">· Último: {Math.max(...lastLog.sets.map(s => s.weight))} kg</span>}
+                                                {sets.length} séries{!isAerobico && <> · {repsSummary} reps</>}
+                                                {lastLog && <span className="ml-2 text-primary">· Último: {Math.max(...lastLog.sets.map(s => s.weight))} {unitLabel}</span>}
                                             </p>
                                         </div>
                                     </div>
@@ -356,7 +359,7 @@ export default function WorkoutDetailPage() {
                                                 <div className="flex flex-wrap gap-2">
                                                     {lastFriendLog.sets.map((s, i) => (
                                                         <span key={i} className="text-xs font-bold bg-white text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 shadow-sm">
-                                                            S{i + 1}: <strong className="text-indigo-900">{s.weight} kg</strong> × {s.reps}
+                                                            S{i + 1}: <strong className="text-indigo-900">{s.weight} {unitLabel}</strong>{!isAerobico && <> × {s.reps}</>}
                                                         </span>
                                                     ))}
                                                 </div>
@@ -373,12 +376,12 @@ export default function WorkoutDetailPage() {
                                                             <div key={sIdx} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                                                                 <div className="flex items-center gap-4">
                                                                     <span className="w-16 text-sm font-bold text-slate-700">{setDef.label || `Série ${sIdx + 1}`}</span>
-                                                                    <span className="w-20 text-sm font-bold text-slate-400">× {setDef.reps} reps</span>
+                                                                    {!isAerobico && <span className="w-20 text-sm font-bold text-slate-400">× {setDef.reps} reps</span>}
                                                                 </div>
                                                                 <div className="flex items-center gap-3">
                                                                     <input
                                                                         className="w-24 h-12 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-slate-900 text-base"
-                                                                        type="number" min={0} step={0.5} placeholder="kg"
+                                                                        type="number" min={0} step={0.5} placeholder={unitLabel}
                                                                         value={weights[slotKey]?.[sIdx] ?? ''}
                                                                         onChange={(e) => {
                                                                             const arr = [...(weights[slotKey] ?? Array(sets.length).fill(''))];
@@ -436,7 +439,7 @@ export default function WorkoutDetailPage() {
                                                                         {log.sets.map((s, i) => (
                                                                             <div key={i} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm text-xs font-bold">
                                                                                 <span className="text-slate-400">S{i + 1}</span>
-                                                                                <span className="text-slate-900">{s.weight}kg</span>
+                                                                                <span className="text-slate-900">{s.weight}{unitLabel}</span>
                                                                             </div>
                                                                         ))}
                                                                     </div>
@@ -468,7 +471,7 @@ export default function WorkoutDetailPage() {
 
             {/* Sticky Floating Action Bar */}
             {hasAccess && (
-                <div className="fixed bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40">
+                <div className="fixed bottom-[70px] md:bottom-0 left-0 w-full bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40">
                     <div className="max-w-[600px] mx-auto flex items-center justify-center gap-3 md:gap-4">
                         {!timerRunning && elapsedSeconds === 0 ? (
                             <button
@@ -566,13 +569,15 @@ export default function WorkoutDetailPage() {
                                     </div>
                                     <div className="divide-y divide-slate-100 max-h-[220px] overflow-y-auto no-scrollbar">
                                         {todayLogs.map(log => {
-                                            const exName = store.exercises.find(e => e.id === log.exerciseId)?.name || 'Exercício';
+                                            const logEx = store.exercises.find(e => e.id === log.exerciseId);
+                                            const exName = logEx?.name || 'Exercício';
+                                            const logUnit = logEx?.muscle === 'Aeróbico' ? 'min' : 'kg';
                                             const vol = log.sets.reduce((sum, s) => sum + (s.weight * s.reps), 0);
                                             totalVolume += vol;
                                             totalSets += log.sets.length;
 
                                             // Formatar pesos de cada série separados por barra
-                                            const weightsStr = log.sets.map(s => `${s.weight} kg`).join(' / ');
+                                            const weightsStr = log.sets.map(s => `${s.weight} ${logUnit}`).join(' / ');
 
                                             return (
                                                 <div key={log.id} className="p-3 flex items-center justify-between text-xs md:text-sm">
@@ -589,7 +594,7 @@ export default function WorkoutDetailPage() {
                                     </div>
                                     <div className="bg-slate-900 px-4 py-3 flex justify-between items-center text-white">
                                         <span className="font-bold text-[10px] uppercase tracking-widest text-slate-400">Total: {totalSets} Séries</span>
-                                        <span className="font-extrabold text-sm">{totalVolume} kg levantados</span>
+                                        <span className="font-extrabold text-sm">{totalVolume} volume total</span>
                                     </div>
                                 </div>
                             );

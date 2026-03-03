@@ -19,6 +19,7 @@ export default function StudentsPage() {
     const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
     const [students, setStudents] = useState<{ profile: Profile; link: PersonalStudent; activeProject?: Project }[]>([]);
@@ -151,7 +152,11 @@ export default function StudentsPage() {
 
     if (!ready || loading || !userId || currentUser?.role !== 'personal') return null;
 
-    const filteredStudents = students.filter(s => s.profile.name.toLowerCase().includes(search.toLowerCase()) || s.profile.email.toLowerCase().includes(search.toLowerCase()));
+    const filteredStudents = students.filter(s => {
+        const matchSearch = s.profile.name.toLowerCase().includes(search.toLowerCase()) || s.profile.email.toLowerCase().includes(search.toLowerCase());
+        const matchStatus = statusFilter === 'todos' || (statusFilter === 'ativos' && s.link.status === 'active') || (statusFilter === 'inativos' && s.link.status === 'inactive');
+        return matchSearch && matchStatus;
+    });
 
     return (
         <>
@@ -165,7 +170,7 @@ export default function StudentsPage() {
                             </button>
                         </div>
                         <h1 className="page-title">Meus Alunos</h1>
-                        <p className="page-subtitle">{students.length} aluno(s) ativos/inativos</p>
+                        <p className="page-subtitle">{filteredStudents.length} aluno(s){statusFilter !== 'todos' ? ` ${statusFilter}` : ''}</p>
                     </div>
                     <div style={{ alignSelf: 'flex-start', display: 'flex', gap: 10 }}>
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4" onClick={() => setShowInviteModal(true)}>
@@ -206,15 +211,33 @@ export default function StudentsPage() {
                         {/* Search & List */}
                         <section>
                             {students.length > 0 && (
-                                <div className="relative w-full max-w-md mb-6">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar por nome ou e-mail..."
-                                        value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm font-roboto transition-all text-slate-900 shadow-sm"
-                                    />
+                                <div className="flex flex-col gap-4 mb-6">
+                                    {/* Status Filter Tabs */}
+                                    <div className="flex bg-slate-100 rounded-full p-1 w-full max-w-md">
+                                        {(['todos', 'ativos', 'inativos'] as const).map(tab => (
+                                            <button
+                                                key={tab}
+                                                onClick={() => setStatusFilter(tab)}
+                                                className={`flex-1 py-2.5 px-4 rounded-full text-sm font-bold transition-all ${statusFilter === tab
+                                                        ? 'bg-white text-primary shadow-sm'
+                                                        : 'text-slate-500 hover:text-slate-700'
+                                                    }`}
+                                            >
+                                                {tab === 'todos' ? 'Todos' : tab === 'ativos' ? 'Ativos' : 'Inativos'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {/* Search */}
+                                    <div className="relative w-full max-w-md">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="Buscar por nome ou e-mail..."
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-sm font-roboto transition-all text-slate-900 shadow-sm"
+                                        />
+                                    </div>
                                 </div>
                             )}
 
@@ -242,7 +265,11 @@ export default function StudentsPage() {
                                                             )}
                                                         </div>
                                                         <div className="overflow-hidden">
-                                                            <h3 className="font-extrabold font-inter text-slate-900 text-base truncate" title={s.profile.name}>
+                                                            <h3
+                                                                className="font-extrabold font-inter text-slate-900 text-base truncate cursor-pointer hover:text-primary transition-colors"
+                                                                title={`Ver treinos de ${s.profile.name}`}
+                                                                onClick={() => router.push(`/projects?student=${s.profile.id}`)}
+                                                            >
                                                                 {s.profile.name}
                                                             </h3>
                                                             <p className="text-slate-400 font-roboto text-xs truncate" title={s.profile.email}>

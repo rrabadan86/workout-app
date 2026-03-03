@@ -371,11 +371,13 @@ export default function ProjectDetailPage() {
                                             <div key={setIdx} className="flex flex-wrap md:flex-nowrap items-center gap-3">
                                                 <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-3 py-2 text-sm font-roboto text-slate-900 placeholder:text-slate-400 outline-none transition-all w-16 text-center" type="text" placeholder={`S${setIdx + 1}`} value={s.label ?? ''}
                                                     onChange={(e) => updateSetLabel(exIdx, setIdx, e.target.value)} />
-                                                <div className="flex items-center gap-2">
-                                                    <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-3 py-2 text-sm font-roboto text-slate-900 outline-none transition-all w-16 text-center" type="number" min={1} max={100} value={s.reps}
-                                                        onChange={(e) => updateSetReps(exIdx, setIdx, +e.target.value)} />
-                                                    <span className="text-xs font-bold font-montserrat text-slate-400 uppercase tracking-wider">reps</span>
-                                                </div>
+                                                {exInfo?.muscle !== 'Aeróbico' && (
+                                                    <div className="flex items-center gap-2">
+                                                        <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-3 py-2 text-sm font-roboto text-slate-900 outline-none transition-all w-16 text-center" type="number" min={1} max={100} value={s.reps}
+                                                            onChange={(e) => updateSetReps(exIdx, setIdx, +e.target.value)} />
+                                                        <span className="text-xs font-bold font-montserrat text-slate-400 uppercase tracking-wider">reps</span>
+                                                    </div>
+                                                )}
                                                 <input className="bg-slate-50 border border-slate-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-xl px-3 py-2 text-sm font-roboto text-slate-900 placeholder:text-slate-400 outline-none transition-all flex-1 min-w-[120px]" type="text" placeholder="Observações" value={s.notes ?? ''}
                                                     onChange={(e) => updateSetNotes(exIdx, setIdx, e.target.value)} />
                                                 {item.sets.length > 1 && (

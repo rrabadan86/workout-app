@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, FolderOpen, Pencil, Trash2, ChevronRight, Share2, X, Users, Sparkles, Loader2, Calendar, Dumbbell } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Modal from '@/components/Modal';
@@ -71,7 +71,17 @@ export default function ProjectsPage() {
     const [filterShared, setFilterShared] = useState<'Todos' | 'Sim' | 'Não'>('Todos');
     const [linkedStudentIds, setLinkedStudentIds] = useState<string[]>([]);
 
+    const searchParams = useSearchParams();
+
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
+
+    // Read student filter from URL query param (from students page navigation)
+    useEffect(() => {
+        const studentParam = searchParams.get('student');
+        if (studentParam) {
+            setFilterStudent(studentParam);
+        }
+    }, [searchParams]);
 
     // AI cooldown countdown timer
     useEffect(() => {
@@ -389,6 +399,43 @@ export default function ProjectsPage() {
                             const st = STATUS_LABEL[statusLabel];
                             const workoutCount = store.workouts.filter((w) => w.projectId === p.id).length;
 
+                            // Accumulated completion % (sets-based) across all workout sessions
+                            // For prescribed projects: show the student's completion; otherwise: own
+                            const completionUserId = (p.prescribed_to && p.prescribed_by === userId) ? p.prescribed_to : userId;
+                            const pWorkouts = store.workouts.filter(w => w.projectId === p.id);
+                            let accTotalSets = 0;
+                            let accCompletedSets = 0;
+                            for (const wo of pWorkouts) {
+                                const woEvents = store.feedEvents.filter(e =>
+                                    e.referenceId === wo.id &&
+                                    e.userId === completionUserId &&
+                                    (e.eventType.startsWith('WO_COMPLETED') || e.eventType.startsWith('WO_COMPLETED_HIDDEN'))
+                                );
+                                for (const ev of woEvents) {
+                                    const rawType = ev.eventType.replace('WO_COMPLETED_HIDDEN', 'WO_COMPLETED');
+                                    const parts = rawType.split('|');
+                                    const last = parts[parts.length - 1];
+                                    const hasIds = parts.length >= 5 && !/^\d+$/.test(last);
+                                    const pLogIds = hasIds ? last.split(',').filter(Boolean) : [];
+                                    const evDate = new Date(ev.createdAt);
+                                    const dateStr = `${evDate.getFullYear()}-${String(evDate.getMonth() + 1).padStart(2, '0')}-${String(evDate.getDate()).padStart(2, '0')}`;
+                                    const allLogs = store.logs.filter(l => l.userId === ev.userId && l.workoutId === wo.id && l.date === dateStr);
+                                    const dayLogs = pLogIds.length > 0 ? store.logs.filter(l => pLogIds.includes(l.id)) : allLogs;
+                                    const available = [...dayLogs];
+                                    wo.exercises.forEach(planned => {
+                                        accTotalSets += planned.sets.length;
+                                        let logIdx = available.findIndex(l => l.exerciseId === planned.exerciseId);
+                                        let log;
+                                        if (logIdx !== -1) { log = available[logIdx]; available.splice(logIdx, 1); }
+                                        else if (pLogIds.length > 0) { log = allLogs.find(l => l.exerciseId === planned.exerciseId && !dayLogs.some(dl => dl.id === l.id)); }
+                                        if (log) accCompletedSets += log.sets.length;
+                                    });
+                                }
+                            }
+                            const accPercent = accTotalSets > 0 ? (accCompletedSets / accTotalSets) * 100 : -1;
+                            const accFormatted = accPercent >= 0 ? accPercent.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%' : null;
+                            const accColor = accPercent >= 90 ? 'text-emerald-600 bg-emerald-50' : accPercent >= 50 ? 'text-amber-600 bg-amber-50' : accPercent >= 0 ? 'text-rose-600 bg-rose-50' : '';
+
                             const isOwner = p.ownerId === userId;
                             const isPrescribedByMe = p.prescribed_by === userId;
                             const isPrescriptionForMe = p.prescribed_to === userId;
@@ -442,6 +489,11 @@ export default function ProjectsPage() {
                                                     {isPrescribedByMe && p.prescribed_to && (
                                                         <span className="inline-flex items-center text-[0.65rem] font-bold text-blue-500 bg-blue-500/10 rounded-full px-2 py-0.5">
                                                             Prescrito
+                                                        </span>
+                                                    )}
+                                                    {accFormatted && (
+                                                        <span className={`inline-flex items-center text-[0.65rem] font-bold rounded-full px-2 py-0.5 ${accColor}`}>
+                                                            📊 {accFormatted}
                                                         </span>
                                                     )}
                                                 </div>

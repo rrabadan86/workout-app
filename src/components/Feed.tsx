@@ -141,12 +141,14 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
             }
 
             let dayLogs;
+            const eventDateObj = new Date(event.createdAt);
+            const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
+            const allDateLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
+
             if (payloadLogIds.length > 0) {
                 dayLogs = store.logs.filter(l => payloadLogIds.includes(l.id));
             } else {
-                const eventDateObj = new Date(event.createdAt);
-                const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
-                dayLogs = store.logs.filter(l => l.userId === event.userId && l.workoutId === workout.id && l.date === localDateStr);
+                dayLogs = allDateLogs;
             }
 
             let totalVolume = 0;
@@ -159,6 +161,10 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
                 if (logIdx !== -1) {
                     log = availableLogs[logIdx];
                     availableLogs.splice(logIdx, 1);
+                } else if (payloadLogIds.length > 0) {
+                    // Secondary lookup: log may not be in payload due to race condition
+                    const fallbackLog = allDateLogs.find(l => l.exerciseId === planned.exerciseId && !dayLogs.some(dl => dl.id === l.id));
+                    if (fallbackLog) log = fallbackLog;
                 }
                 renderItems.push({ id: `planned-${idx}-${planned.exerciseId}`, exId: planned.exerciseId, plannedSets: planned.sets.length, log });
             });
@@ -167,9 +173,9 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
                 renderItems.push({ id: `extra-${idx}-${log.id}`, exId: log.exerciseId, plannedSets: 0, log, isExtra: true });
             });
 
-            const totalExercises = renderItems.length;
-            const completedExercises = renderItems.filter(item => item.log && item.log.sets.length > 0).length;
-            const completionPercentage = totalExercises > 0 ? (completedExercises / totalExercises) * 100 : 0;
+            const totalSets = renderItems.reduce((sum, item) => sum + item.plannedSets, 0);
+            const completedSets = renderItems.reduce((sum, item) => sum + (item.log ? item.log.sets.length : 0), 0);
+            const completionPercentage = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
             const formattedPercentage = completionPercentage.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
 
             if (renderItems.length === 0) {
@@ -189,8 +195,8 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
                                 <span className="text-lg sm:text-xl font-extrabold text-slate-900">{formatDuration(event.duration)}</span>
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Exercícios</span>
-                                <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedExercises} / {totalExercises}</span>
+                                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Séries</span>
+                                <span className="text-lg sm:text-xl font-extrabold text-slate-900">{completedSets} / {totalSets}</span>
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Conclusão</span>
@@ -199,7 +205,7 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
                         </div>
                         <div className="mt-2 flex flex-col items-center">
                             <button className="text-[10px] text-primary font-bold uppercase tracking-widest hover:underline py-1" onClick={() => setIsExpanded(!isExpanded)}>
-                                {isExpanded ? 'Ocultar Exercícios' : `Ver Exercícios (${totalExercises})`}
+                                {isExpanded ? 'Ocultar Exercícios' : `Ver Exercícios (${renderItems.length})`}
                             </button>
 
                             {isExpanded && (
@@ -418,8 +424,8 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
                             if (!showComments) setTimeout(() => textareaRef.current?.focus(), 100);
                         }}
                         className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-bold font-montserrat transition-all border ${showComments
-                                ? 'bg-amber-50 text-amber-600 border-amber-200'
-                                : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'
+                            ? 'bg-amber-50 text-amber-600 border-amber-200'
+                            : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'
                             }`}
                     >
                         <MessageSquare size={15} />
