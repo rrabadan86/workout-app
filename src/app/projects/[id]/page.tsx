@@ -95,25 +95,27 @@ export default function ProjectDetailPage() {
         if (completions.length === 0) return null;
         const w = store.workouts.find(wk => wk.id === workoutId);
         if (!w || w.exercises.length === 0) return null;
-        const totalPlannedExercises = w.exercises.length * completions.length;
-        let totalCompletedExercises = 0;
+
+        // Set-based calculation (matching Feed/History)
+        let totalPlannedSets = 0;
+        let totalCompletedSets = 0;
         completions.forEach(event => {
             const eventDateObj = new Date(event.createdAt);
             const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
             const dayLogs = store.logs.filter(l => l.userId === targetUserId && l.workoutId === workoutId && l.date === localDateStr);
             const availableLogs = [...dayLogs];
-            let completedInThisSession = 0;
+
             w.exercises.forEach(planned => {
+                totalPlannedSets += planned.sets.length;
                 const logIdx = availableLogs.findIndex(l => l.exerciseId === planned.exerciseId);
                 if (logIdx !== -1) {
-                    const l = availableLogs[logIdx];
-                    if (l.sets.length > 0) completedInThisSession++;
+                    totalCompletedSets += availableLogs[logIdx].sets.length;
                     availableLogs.splice(logIdx, 1);
                 }
             });
-            totalCompletedExercises += completedInThisSession;
         });
-        const pct = (totalCompletedExercises / totalPlannedExercises) * 100;
+        if (totalPlannedSets === 0) return null;
+        const pct = (totalCompletedSets / totalPlannedSets) * 100;
         return pct.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
     }, [project, userId, store.feedEvents, store.logs, store.workouts]);
 

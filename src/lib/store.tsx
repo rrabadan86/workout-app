@@ -264,6 +264,8 @@ export function useStore() {
     }, [refresh]);
 
     const deleteLog = useCallback(async (id: string) => {
+        // Optimistic: remove from local state immediately so UI recalculates
+        setStore(prev => ({ ...prev, logs: prev.logs.filter(l => l.id !== id) }));
         await supabase.from('workout_logs').delete().eq('id', id);
         await refresh();
     }, [refresh]);
