@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dumbbell, X, Play } from 'lucide-react';
 
 interface ExerciseThumbnailProps {
@@ -26,9 +26,27 @@ export default function ExerciseThumbnail({
     const [showGif, setShowGif] = useState(false);
     const [imgError, setImgError] = useState(false);
     const [gifLoaded, setGifLoaded] = useState(false);
+    const [useProxy, setUseProxy] = useState(false);
+    const [useGifProxy, setUseGifProxy] = useState(false);
 
-    const hasThumb = !!thumbnailUrl && !imgError;
-    const hasGif = !!gifUrl;
+    const actualThumbUrl = (thumbnailUrl || gifUrl)?.trim();
+    const actualGifUrl = gifUrl?.trim();
+
+    // Reset error state if the URL changes
+    useEffect(() => {
+        setImgError(false);
+        setUseProxy(false);
+        setUseGifProxy(false);
+    }, [actualThumbUrl]);
+
+    const hasThumb = !!actualThumbUrl && !imgError;
+    const hasGif = !!actualGifUrl;
+
+    const getProxiedUrl = (url: string | null | undefined) => {
+        if (!url) return '';
+        if (url.includes('supabase.co')) return url;
+        return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+    };
 
     return (
         <>
@@ -42,13 +60,20 @@ export default function ExerciseThumbnail({
             >
                 {hasThumb ? (
                     <img
-                        src={thumbnailUrl!}
+                        src={useProxy ? getProxiedUrl(actualThumbUrl) : actualThumbUrl!}
                         alt={name}
                         width={size}
                         height={size}
                         loading="lazy"
                         className={`object-cover w-full h-full ${rounded}`}
-                        onError={() => setImgError(true)}
+                        onError={(e) => {
+                            if (!useProxy && actualThumbUrl && !actualThumbUrl.includes('supabase.co')) {
+                                setUseProxy(true); // Retry with proxy!
+                            } else {
+                                console.error('Thumbnail load error:', e);
+                                setImgError(true);
+                            }
+                        }}
                     />
                 ) : (
                     <div className={`w-full h-full bg-primary/10 text-primary flex items-center justify-center ${rounded}`}>
@@ -94,10 +119,18 @@ export default function ExerciseThumbnail({
                                 </div>
                             )}
                             <img
-                                src={gifUrl!}
+                                src={useGifProxy ? getProxiedUrl(actualGifUrl) : actualGifUrl!}
                                 alt={`Execução de ${name}`}
                                 className={`w-full max-h-[60vh] object-contain transition-opacity ${gifLoaded ? 'opacity-100' : 'opacity-0'}`}
                                 onLoad={() => setGifLoaded(true)}
+                                onError={(e) => {
+                                    if (!useGifProxy && actualGifUrl && !actualGifUrl.includes('supabase.co')) {
+                                        setUseGifProxy(true); // Retry with proxy!
+                                    } else {
+                                        console.error('GIF load error:', e);
+                                        setGifLoaded(true);
+                                    }
+                                }}
                             />
                         </div>
                     </div>

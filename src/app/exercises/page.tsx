@@ -74,15 +74,24 @@ export default function ExercisesPage() {
         e.preventDefault();
         setSaving(true);
         if (editTarget) {
-            await updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc, thumbnail_url: exThumbUrl || null, gif_url: exGifUrl || null });
-            setToast({ msg: 'Exercício atualizado!', type: 'success' });
+            try {
+                await updateExercise({ ...editTarget, name: exName, muscle: exMuscle, description: exDesc, thumbnail_url: exThumbUrl || null, gif_url: exGifUrl || null });
+                setToast({ msg: 'Exercício atualizado!', type: 'success' });
+                setShowModal(false);
+            } catch (err: any) {
+                setToast({ msg: err.message || 'Erro ao salvar o exercício', type: 'error' });
+            }
         } else {
-            await addExercise({ id: uid(), name: exName, muscle: exMuscle, description: exDesc, createdBy: userId, thumbnail_url: exThumbUrl || null, gif_url: exGifUrl || null });
-            setToast({ msg: 'Exercício criado!', type: 'success' });
+            try {
+                await addExercise({ id: crypto.randomUUID(), name: exName, muscle: exMuscle, description: exDesc, thumbnail_url: exThumbUrl || null, gif_url: exGifUrl || null, createdBy: userId });
+                setToast({ msg: 'Exercício criado!', type: 'success' });
+                setShowModal(false);
+            } catch (err: any) {
+                setToast({ msg: err.message || 'Erro ao criar o exercício', type: 'error' });
+            }
         }
         setExName(''); setExMuscle('Peito'); setExDesc(''); setExThumbUrl(''); setExGifUrl('');
         setSaving(false);
-        setShowModal(false);
     }
 
     async function confirmDelete() {

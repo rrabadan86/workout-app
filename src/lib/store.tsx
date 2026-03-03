@@ -185,7 +185,14 @@ export function useStore() {
     }, [refresh]);
 
     const updateExercise = useCallback(async (e: Exercise) => {
-        await supabase.from('exercises').update(e).eq('id', e.id);
+        const { data, error } = await supabase.from('exercises').update(e).eq('id', e.id).select();
+        if (error) {
+            console.error('updateExercise error:', error);
+            throw new Error(error.message);
+        }
+        if (!data || data.length === 0) {
+            throw new Error('Acesso Supabase Negado: Você não tem permissão RLS para editar este exercício original.');
+        }
         await refresh();
     }, [refresh]);
 
