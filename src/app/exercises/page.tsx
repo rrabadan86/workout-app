@@ -133,15 +133,14 @@ export default function ExercisesPage() {
                         <button className="btn bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/30 px-6 py-4 mt-6" onClick={openCreate}>Criar exercício</button>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-10">
                         {exercises.map((ex) => {
-                            const isOwner = ex.createdBy === userId;
                             return (
                                 <div key={ex.id} className="flex flex-col gap-4 bg-white card-depth p-5 rounded-xl border border-transparent hover:border-primary/20 hover:shadow-lg transition-all relative">
                                     <div className="flex gap-4">
                                         <ExerciseThumbnail thumbnailUrl={ex.thumbnail_url} gifUrl={ex.gif_url} name={ex.name} size={48} />
-                                        <div className="flex-1 min-w-0 pr-12">
-                                            <div className="item-card-title text-base sm:text-lg mb-1 truncate" title={ex.name}>{ex.name}</div>
+                                        <div className="flex-1 min-w-0 pr-16">
+                                            <div className="item-card-title text-base sm:text-lg mb-1 leading-snug break-words">{ex.name}</div>
                                             <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold font-montserrat tracking-widest uppercase ${muscleColors[ex.muscle] === 'badge-purple' ? 'bg-[#C084FC]/10 text-[#C084FC]' : muscleColors[ex.muscle] === 'badge-green' ? 'bg-emerald-500/10 text-emerald-500' : muscleColors[ex.muscle] === 'badge-red' ? 'bg-rose-500/10 text-rose-500' : muscleColors[ex.muscle] === 'badge-orange' ? 'bg-orange-500/10 text-orange-500' : 'bg-[#C084FC]/10 text-[#C084FC]'}`}>{ex.muscle}</span>
                                         </div>
                                     </div>
