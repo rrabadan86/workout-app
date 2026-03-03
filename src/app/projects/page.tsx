@@ -30,7 +30,7 @@ const STATUS_LABEL = {
 export default function ProjectsPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, addProject, updateProject, deleteProject, addWorkout, refresh, loading } = useStore();
+    const { store, addProject, updateProject, deleteProject, addWorkout, refresh, loading, createNotification } = useStore();
     const currentUser = store.profiles.find((u) => u.id === userId);
 
     const [showModal, setShowModal] = useState(false);
@@ -211,6 +211,18 @@ export default function ProjectsPage() {
                     prescribed_by: currentUser?.role === 'personal' && pPrescribeEmail ? userId : null,
                     prescribed_to: prescribedTo, status: 'active', is_evolution: pIsEvolution
                 });
+                // Notificar a aluna sobre o treino prescrito
+                if (prescribedTo) {
+                    const personalName = currentUser?.name ?? 'Seu personal';
+                    createNotification({
+                        id: uid(),
+                        user_id: prescribedTo,
+                        type: 'prescribed_workout',
+                        reference_id: newProjectId,
+                        title: '💪 Novo treino prescrito!',
+                        message: `${personalName} criou o treino "${pName}" para você.`,
+                    }).catch(console.error);
+                }
                 setToast({ msg: 'Treino criado!', type: 'success' });
             }
             setShowModal(false);
@@ -309,6 +321,19 @@ export default function ProjectsPage() {
 
             for (const w of (data.workouts || [])) {
                 await addWorkout({ id: uid(), projectId: newProjectId, ownerId: userId, name: w.name, order: w.order, exercises: w.exercises || [] });
+            }
+            // Notificar a aluna sobre o treino prescrito via IA
+            if (prescribedTo) {
+                const personalName = currentUser?.name ?? 'Seu personal';
+                const projName = data.projectName || `Treino IA (${aiFocus})`;
+                createNotification({
+                    id: uid(),
+                    user_id: prescribedTo,
+                    type: 'prescribed_workout',
+                    reference_id: newProjectId,
+                    title: '💪 Novo treino prescrito!',
+                    message: `${personalName} criou o treino "${projName}" para você.`,
+                }).catch(console.error);
             }
             setToast({ msg: `${studentMsg}Treino Gerado! 🚀`, type: 'success' });
             setShowAIModal(false);

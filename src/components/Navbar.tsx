@@ -72,7 +72,11 @@ export default function Navbar() {
     function handleNotificationClick(notif: typeof myNotifications[number]) {
         markNotificationRead(notif.id);
         if (notif.reference_id) {
-            router.push(`/challenges/${notif.reference_id}`);
+            if (notif.type === 'prescribed_workout') {
+                router.push(`/projects/${notif.reference_id}`);
+            } else {
+                router.push(`/challenges/${notif.reference_id}`);
+            }
         }
         setShowNotifications(false);
     }
@@ -80,6 +84,7 @@ export default function Navbar() {
     function NotifIcon(type: string) {
         if (type === 'rank_top1') return '🥇';
         if (type === 'rank_down') return '📉';
+        if (type === 'prescribed_workout') return '💪';
         return '🔔';
     }
 

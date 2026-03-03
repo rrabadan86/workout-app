@@ -26,7 +26,7 @@ export interface Notification {
   user_id: string;
   title: string;
   message: string;
-  type: 'challenge_alert' | 'rank_down' | 'rank_top1' | 'comment_on_post';
+  type: 'challenge_alert' | 'rank_down' | 'rank_top1' | 'comment_on_post' | 'prescribed_workout';
   reference_id?: string | null;
   read: boolean;
   created_at: string;
