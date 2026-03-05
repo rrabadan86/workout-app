@@ -538,6 +538,11 @@ export default function WorkoutDetailPage() {
                     });
 
                     const myPastLogs = store.logs.filter(l => l.userId === userId && l.exerciseId === exId && gymExecutionKeys.has(`${userId}_${l.workoutId}_${l.date}`));
+
+                    // ✅ FIX RN03: Pula academias onde este exercício nunca foi registrado com check-in
+                    // Sem isso, exercícios de outros treinos/academias apareciam indevidamente
+                    if (myPastLogs.length === 0) continue;
+
                     let myOldMax = 0;
                     for (const log of myPastLogs) {
                         for (const s of log.sets) myOldMax = Math.max(myOldMax, s.weight);

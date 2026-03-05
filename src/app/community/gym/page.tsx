@@ -59,19 +59,24 @@ function GymDetailContent() {
     }, [validCheckins, store.profiles]);
 
     // ─── Exercise Ranking ───
-    // Get all public workout logs from gym users
+    // Get only workout logs from sessions checked-in at THIS specific gym
     const exerciseRankings = useMemo(() => {
-        // Build a faster lookup for active workout execution dates per user & workout
-        // Map keys: `${userId}_${workoutId}_${dateString}` -> true
+        // ✅ FIX: Pegar APENAS os feed_event_ids dos check-ins DESTA academia
+        const gymFeedEventIds = new Set(
+            validCheckins.map(c => c.feed_event_id).filter(Boolean)
+        );
+
+        // Build execution keys SOMENTE dos feed events desta academia
         const activeExecutionKeys = new Set<string>();
         store.feedEvents.forEach(e => {
-            if (activeFeedEventIds.has(e.id) && e.createdAt) {
+            // ✅ FIX: usar gymFeedEventIds (desta academia) em vez de activeFeedEventIds (todas)
+            if (gymFeedEventIds.has(e.id) && e.createdAt) {
                 const dateStr = e.createdAt.split('T')[0];
                 activeExecutionKeys.add(`${e.userId}_${e.referenceId}_${dateStr}`);
             }
         });
 
-        // For each gym user, find their max weight per exercise (only from active workouts)
+        // For each gym user, find their max weight per exercise (only from workouts at THIS gym)
         const exerciseData: Record<string, { userId: string; maxWeight: number; date: string }[]> = {};
 
         for (const uid of gymUserIds) {
@@ -117,7 +122,7 @@ function GymDetailContent() {
         // Sort exercises by most participants, then name
         rankings.sort((a, b) => b.entries.length !== a.entries.length ? b.entries.length - a.entries.length : a.exerciseName.localeCompare(b.exerciseName));
         return rankings;
-    }, [gymUserIds, store.logs, store.exercises, store.profiles, activeFeedEventIds, store.feedEvents]);
+    }, [gymUserIds, store.logs, store.exercises, store.profiles, validCheckins, store.feedEvents]);
 
     const myCheckinPosition = checkinRanking.findIndex(e => e.userId === userId) + 1;
 
