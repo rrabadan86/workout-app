@@ -227,6 +227,51 @@ export default function DashboardPage() {
                             </button>
                         </div>
 
+                        {/* TEMPORARY FEED EVENT RECOVERY SCRIPT */}
+                        <div className="bg-white rounded-2xl card-depth p-4 mb-2">
+                            <button
+                                onClick={async () => {
+                                    alert("Iniciando inserção vinculada ao seu login...");
+                                    const storageKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+                                    if (!storageKey) return alert("Erro: Sem sessão ativa no LocalStorage.");
+
+                                    const tokenData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                                    const token = tokenData.access_token;
+                                    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/feed_events`;
+                                    const apikey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+                                    try {
+                                        const res = await fetch(url, {
+                                            method: 'POST',
+                                            headers: {
+                                                'apikey': apikey,
+                                                'Authorization': `Bearer ${token}`,
+                                                'Content-Type': 'application/json',
+                                                'Prefer': 'return=representation'
+                                            },
+                                            body: JSON.stringify({
+                                                id: crypto.randomUUID(),
+                                                userId: "d4f799bc-b23b-419a-9a88-2234a80787c4",
+                                                eventType: "WO_COMPLETED",
+                                                referenceId: "96d443e8-9113-4756-847f-66cee145a590",
+                                                duration: 3506,
+                                                createdAt: "2026-03-04T12:00:00.000Z"
+                                            })
+                                        });
+                                        const d = await res.json();
+                                        if (d.code) throw new Error(d.message);
+                                        alert("Recuperado com sucesso! Recarregue a página.");
+                                    } catch (e: any) {
+                                        alert("Erro: " + e.message);
+                                    }
+                                }}
+                                className="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded-lg font-bold text-xs shadow-md transition-colors"
+                            >
+                                🔧 FORÇAR REINSERÇÃO NO FEED
+                            </button>
+                        </div>
+                        {/* ------------------------------------- */}
+
                         {/* Cards de Personal Trainer */}
                         {user.role === 'personal' && (
                             <div className="grid grid-cols-2 gap-3">
