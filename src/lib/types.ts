@@ -116,6 +116,7 @@ export interface FeedEvent {
   referenceId: string; // e.g. workoutId
   createdAt: string;   // ISO date
   duration?: number;   // workout duration in seconds
+  photoUrl?: string | null; // workout completion photo URL (Supabase Storage)
 }
 
 export interface Kudo {

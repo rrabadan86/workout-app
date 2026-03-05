@@ -9,6 +9,8 @@ import Navbar from '@/components/Navbar';
 import ExerciseThumbnail from '@/components/ExerciseThumbnail';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
+import WorkoutPhotoCapture from '@/components/WorkoutPhotoCapture';
+import ShareCard from '@/components/ShareCard';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
@@ -73,6 +75,15 @@ export default function WorkoutDetailPage() {
     const [finalDuration, setFinalDuration] = useState(0);
     const startedAtRef = useRef<number | null>(null);
 
+    // ─── Photo & Share Card ───────────────────────────────────────────────
+    const [workoutPhoto, setWorkoutPhoto] = useState<File | null>(null);
+    const [showShareCard, setShowShareCard] = useState(false);
+    const [shareCardData, setShareCardData] = useState<{
+        workoutName: string; projectName?: string; date: string; duration: string;
+        totalSets: number; completedSets: number; totalVolume: number;
+        exercises: { name: string; sets: string }[]; photoUrl?: string | null; userName?: string;
+    } | null>(null);
+
     useEffect(() => {
         if (!timerRunning) return;
         const interval = setInterval(() => {
@@ -99,9 +110,9 @@ export default function WorkoutDetailPage() {
     async function finishWorkout() {
         console.log('[Workout] Finishing workout...', { id, elapsedSeconds });
         const finalSecs = elapsedSeconds;
+        const capturedWeights = { ...weights };
         setTimerRunning(false);
         setFinalDuration(finalSecs);
-        setShowSummary(true);
         setIsFinished(true);
 
         // Zera UI
@@ -118,7 +129,7 @@ export default function WorkoutDetailPage() {
         if (workout) {
             try {
                 const totalEx = workout.exercises.length;
-                let doneEx = Object.values(weights).filter(arr =>
+                let doneEx = Object.values(capturedWeights).filter(arr =>
                     arr.some(v => v !== '')).length;
 
                 // Capture the log IDs for TODAY's entries for this workout
@@ -134,15 +145,79 @@ export default function WorkoutDetailPage() {
 
                 console.log('[Workout] Creating feed event...');
                 const newFeedEventId = uid();
+
+                // ─── Photo Upload ──────────────────────────────────────────
+                let photoUrl: string | null = null;
+                if (workoutPhoto) {
+                    try {
+                        const storagePath = `${userId}/${newFeedEventId}.webp`;
+                        const { error: uploadErr } = await supabase.storage
+                            .from('workout-photos')
+                            .upload(storagePath, workoutPhoto, { contentType: 'image/webp', upsert: false });
+                        if (uploadErr) {
+                            console.error('[Workout] Photo upload error:', uploadErr);
+                        } else {
+                            const { data: publicData } = supabase.storage
+                                .from('workout-photos')
+                                .getPublicUrl(storagePath);
+                            photoUrl = publicData.publicUrl;
+                            console.log('[Workout] Photo uploaded:', photoUrl);
+                        }
+                    } catch (photoErr) {
+                        console.error('[Workout] Photo upload failed:', photoErr);
+                    }
+                }
+
                 await addFeedEvent({
                     id: newFeedEventId,
                     userId,
                     eventType: payloadType,
                     referenceId: workout.id,
                     createdAt: new Date().toISOString(),
-                    duration: finalSecs > 0 ? finalSecs : undefined
+                    duration: finalSecs > 0 ? finalSecs : undefined,
+                    photoUrl,
                 });
                 console.log('[Workout] Feed event created successfully.');
+
+                // ─── Build Share Card Data ─────────────────────────────────
+                const todayLogs = store.logs.filter(l => l.workoutId === workout.id && l.userId === userId && l.date === todayStr);
+                let totalVolume = 0;
+                let totalSetsCount = 0;
+                const exerciseList: { name: string; sets: string }[] = [];
+
+                for (const log of todayLogs) {
+                    const exObj = store.exercises.find(e => e.id === log.exerciseId);
+                    const vol = log.sets.reduce((sum, s) => sum + (s.weight * s.reps), 0);
+                    totalVolume += vol;
+                    totalSetsCount += log.sets.length;
+                    const weightsStr = log.sets.map(s => `${s.weight}kg`).join(' / ');
+                    exerciseList.push({ name: exObj?.name || 'Exercício', sets: `${log.sets.length}x · ${weightsStr}` });
+                }
+
+                const plannedSetsTotal = workout.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
+                const fmtDur = finalSecs > 0 ? (
+                    Math.floor(finalSecs / 3600) > 0
+                        ? `${Math.floor(finalSecs / 3600)}h${String(Math.floor((finalSecs % 3600) / 60)).padStart(2, '0')}min`
+                        : `${String(Math.floor(finalSecs / 60)).padStart(2, '0')}:${String(finalSecs % 60).padStart(2, '0')}`
+                ) : '00:00';
+                const dateStr = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+                const userName = store.profiles.find(p => p.id === userId)?.name;
+                const projName = project?.name;
+
+                setShareCardData({
+                    workoutName: workout.name,
+                    projectName: projName,
+                    date: dateStr,
+                    duration: fmtDur,
+                    totalSets: plannedSetsTotal,
+                    completedSets: totalSetsCount,
+                    totalVolume,
+                    exercises: exerciseList,
+                    photoUrl: photoUrl || (workoutPhoto ? URL.createObjectURL(workoutPhoto) : null),
+                    userName,
+                });
+                setShowShareCard(true);
+                setWorkoutPhoto(null);
 
                 // --- 🏆 Challenge Auto Check-in Logic ---
                 console.log('[Workout] Processing auto check-ins...');
@@ -553,6 +628,13 @@ export default function WorkoutDetailPage() {
                         );
                     })}
                 </div>
+
+                {/* ─── Photo Capture Section ─── */}
+                {canExecute && timerRunning && (
+                    <div className="bg-white rounded-2xl card-depth p-5 mb-12">
+                        <WorkoutPhotoCapture photo={workoutPhoto} onPhotoChange={setWorkoutPhoto} />
+                    </div>
+                )}
             </div>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
@@ -691,29 +773,15 @@ export default function WorkoutDetailPage() {
                 </Modal>
             )}
 
-            {/* Summary Modal (After Confirmation) */}
-            {showSummary && (
-                <Modal title="🏁 Treino finalizado!" onClose={() => setShowSummary(false)}
-                    footer={
-                        <>
-                            <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors" onClick={() => setShowSummary(false)}>Fechar</button>
-                            <button className="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors" onClick={() => { setShowSummary(false); router.push(project ? `/projects/${project.id}` : '/projects'); }}>
-                                Voltar ao Treino
-                            </button>
-                        </>
-                    }
-                >
-                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: 12 }}>💪</div>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: 8 }}>Duração do treino</p>
-                        <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#22c55e', fontVariantNumeric: 'tabular-nums', letterSpacing: 1 }}>
-                            {fmtTime(finalDuration)}
-                        </div>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 12 }}>
-                            {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                        </p>
-                    </div>
-                </Modal>
+            {/* Share Card (After Confirmation) */}
+            {showShareCard && shareCardData && (
+                <ShareCard
+                    {...shareCardData}
+                    onClose={() => {
+                        setShowShareCard(false);
+                        setShareCardData(null);
+                    }}
+                />
             )}
         </div>
     );

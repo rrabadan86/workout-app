@@ -8,6 +8,7 @@ import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
+import { supabase } from '@/lib/supabase';
 import { Clock, Trash2, Eye, EyeOff, Dumbbell, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { FeedEvent } from '@/lib/types';
@@ -110,6 +111,20 @@ export default function HistoryPage() {
             );
             for (const log of logsToDelete) {
                 await deleteLog(log.id);
+            }
+        }
+
+        // ─── Cleanup photo from Storage (RN09) ───
+        if (deleteTarget.photoUrl) {
+            try {
+                const url = new URL(deleteTarget.photoUrl);
+                const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/workout-photos\/(.+)/);
+                if (pathMatch) {
+                    await supabase.storage.from('workout-photos').remove([pathMatch[1]]);
+                    console.log('[History] Photo removed from storage.');
+                }
+            } catch (e) {
+                console.warn('[History] Failed to cleanup photo:', e);
             }
         }
 
@@ -277,6 +292,14 @@ export default function HistoryPage() {
                                                     </button>
                                                 </div>
                                             </div>
+
+                                            {/* ── Photo Thumbnail (RN08) ── */}
+                                            {event.photoUrl && (
+                                                <div className="relative w-full h-36 overflow-hidden bg-slate-100">
+                                                    <img src={event.photoUrl} alt="Foto do treino" className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                                </div>
+                                            )}
 
                                             {/* ── Stats Row ── */}
                                             <div className="flex items-center gap-0 border-t border-slate-50">

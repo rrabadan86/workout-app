@@ -401,6 +401,14 @@ function FeedItemCard({ event, myId, challengeId, isAdmin }: { event: FeedEvent,
                 )}
             </div>
 
+            {/* Workout photo thumbnail */}
+            {event.photoUrl && (
+                <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-100">
+                    <img src={event.photoUrl} alt="Foto do treino" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                </div>
+            )}
+
             {statsUI}
 
             {/* ─── Action bar: Curtir + Comentar ─── */}
