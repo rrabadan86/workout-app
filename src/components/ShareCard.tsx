@@ -205,9 +205,9 @@ export default function ShareCard({
                 </button>
                 <button
                     onClick={onClose}
-                    className="flex items-center justify-center gap-2 w-full py-3 text-white/60 font-bold text-sm hover:text-white transition-colors"
+                    className="flex items-center justify-center gap-2 w-full py-3.5 bg-white/5 text-white/80 rounded-2xl font-bold text-sm hover:bg-white/10 hover:text-white transition-colors"
                 >
-                    <ArrowLeft size={16} /> Voltar ao App
+                    <ArrowLeft size={16} /> Voltar aos Treinos
                 </button>
             </div>
         </div>
