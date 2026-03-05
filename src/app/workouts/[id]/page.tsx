@@ -285,46 +285,92 @@ export default function WorkoutDetailPage() {
                 setWorkoutPhoto(null);
 
                 // --- 🏆 Challenge Auto Check-in Logic ---
+                // ✅ FIX: Buscar dados FRESCOS do Supabase em vez de usar store (que está stale por causa do closure)
+                // O addFeedEvent acima chama refresh() que atualiza o store, mas esta função ainda referencia
+                // o snapshot antigo do store capturado antes do refresh. Buscar direto do banco resolve.
                 console.log('[Workout] Processing auto check-ins...');
                 try {
-                    const todayStr = today();
-                    const myChallengeIds = store.challengeParticipants.filter(p => p.user_id === userId).map(p => p.challenge_id);
-                    const activeChallenges = store.challenges.filter(c =>
-                        myChallengeIds.includes(c.id) &&
-                        c.status === 'active' &&
-                        todayStr >= c.start_date && todayStr <= c.end_date
-                    );
+                    const todayStr2 = today();
 
-                    const checkinsToInsert = [];
-                    for (const challenge of activeChallenges) {
-                        // Validate Specific Workout Rule
-                        if (challenge.checkin_type === 'specific_workout' && challenge.specific_workout_id !== workout.id) continue;
+                    // Buscar participações do usuário diretamente do Supabase
+                    const { data: freshParticipants, error: partErr } = await supabase
+                        .from('challenge_participants')
+                        .select('challenge_id')
+                        .eq('user_id', userId);
 
-                        // Validate check-in doesn't already exist for today
-                        const alreadyCheckedIn = store.challengeCheckins.some(ck => ck.challenge_id === challenge.id && ck.user_id === userId && ck.checkin_date === todayStr);
-                        if (alreadyCheckedIn) continue;
+                    if (partErr) {
+                        console.error('[Workout] Failed to fetch challenge participants:', partErr);
+                    } else {
+                        const myChallengeIds = (freshParticipants || []).map((p: any) => p.challenge_id);
+                        console.log('[Workout] My challenge IDs:', myChallengeIds);
 
-                        checkinsToInsert.push({
-                            id: uid(),
-                            challenge_id: challenge.id,
-                            user_id: userId,
-                            checkin_date: todayStr,
-                            checkin_type: 'auto',
-                            workout_id: workout.id,
-                            feed_event_id: newFeedEventId
-                        });
-                    }
+                        if (myChallengeIds.length > 0) {
+                            // Buscar desafios ativos
+                            const { data: freshChallenges, error: chalErr } = await supabase
+                                .from('challenges')
+                                .select('*')
+                                .in('id', myChallengeIds)
+                                .eq('status', 'active')
+                                .lte('start_date', todayStr2)
+                                .gte('end_date', todayStr2);
 
-                    if (checkinsToInsert.length > 0) {
-                        const { error } = await supabase.from('challenge_checkins').insert(checkinsToInsert);
-                        if (error) console.error('[Workout] Failed array insert for checkins:', error);
-                        else {
-                            console.log(`[Workout] Auto check-in completed for ${checkinsToInsert.length} challenges.`);
-                            const updatedCheckins = [...store.challengeCheckins, ...(checkinsToInsert as any[])];
-                            for (const ck of checkinsToInsert) {
-                                await evaluateBadges(userId, ck.challenge_id, updatedCheckins, store.challengeBadges);
+                            if (chalErr) {
+                                console.error('[Workout] Failed to fetch challenges:', chalErr);
+                            } else {
+                                const activeChallenges = freshChallenges || [];
+                                console.log('[Workout] Active challenges found:', activeChallenges.length);
+
+                                // Buscar check-ins de hoje para evitar duplicatas
+                                const { data: freshCheckins } = await supabase
+                                    .from('challenge_checkins')
+                                    .select('challenge_id')
+                                    .eq('user_id', userId)
+                                    .eq('checkin_date', todayStr2);
+
+                                const alreadyCheckedChallengeIds = new Set(
+                                    (freshCheckins || []).map((ck: any) => ck.challenge_id)
+                                );
+
+                                const checkinsToInsert = [];
+                                for (const challenge of activeChallenges) {
+                                    // Validate Specific Workout Rule
+                                    if (challenge.checkin_type === 'specific_workout' && challenge.specific_workout_id !== workout.id) continue;
+
+                                    // Validate check-in doesn't already exist for today
+                                    if (alreadyCheckedChallengeIds.has(challenge.id)) continue;
+
+                                    checkinsToInsert.push({
+                                        id: uid(),
+                                        challenge_id: challenge.id,
+                                        user_id: userId,
+                                        checkin_date: todayStr2,
+                                        checkin_type: 'auto',
+                                        workout_id: workout.id,
+                                        feed_event_id: newFeedEventId
+                                    });
+                                }
+
+                                console.log('[Workout] Check-ins to insert:', checkinsToInsert.length);
+
+                                if (checkinsToInsert.length > 0) {
+                                    const { error } = await supabase.from('challenge_checkins').insert(checkinsToInsert);
+                                    if (error) console.error('[Workout] Failed array insert for checkins:', error);
+                                    else {
+                                        console.log(`[Workout] Auto check-in completed for ${checkinsToInsert.length} challenges.`);
+                                        // Fetch fresh badges for evaluation
+                                        const { data: freshAllCheckins } = await supabase
+                                            .from('challenge_checkins')
+                                            .select('*');
+                                        const { data: freshBadges } = await supabase
+                                            .from('challenge_badges')
+                                            .select('*');
+                                        for (const ck of checkinsToInsert) {
+                                            await evaluateBadges(userId, ck.challenge_id, freshAllCheckins || [], freshBadges || []);
+                                        }
+                                        await refresh();
+                                    }
+                                }
                             }
-                            await refresh();
                         }
                     }
                 } catch (ckErr) {
@@ -540,7 +586,6 @@ export default function WorkoutDetailPage() {
                     const myPastLogs = store.logs.filter(l => l.userId === userId && l.exerciseId === exId && gymExecutionKeys.has(`${userId}_${l.workoutId}_${l.date}`));
 
                     // ✅ FIX RN03: Pula academias onde este exercício nunca foi registrado com check-in
-                    // Sem isso, exercícios de outros treinos/academias apareciam indevidamente
                     if (myPastLogs.length === 0) continue;
 
                     let myOldMax = 0;
@@ -617,8 +662,6 @@ export default function WorkoutDetailPage() {
                             <h1 className="page-title" style={{ marginBottom: 4 }}>{workout.name}</h1>
                             <p className="page-subtitle" style={{ marginTop: 0 }}>{workout.exercises.length} EXERCÍCIO(S)</p>
                         </div>
-
-                        {/* Os botões do Timer saíram do Header e foram pro Footer Flutuante */}
                     </div>
                 </div>
 
@@ -726,7 +769,6 @@ export default function WorkoutDetailPage() {
                                                             <div className="flex flex-col gap-1.5">
                                                                 {historyEntries.map((entry) => (
                                                                     <div key={entry.id} className={`flex items-center gap-2 py-2 px-3 rounded-lg transition-colors ${entry.owner === 'friend' ? 'bg-indigo-50/60 hover:bg-indigo-50' : 'bg-slate-50 hover:bg-slate-100'}`}>
-                                                                        {/* Color dot indicator */}
                                                                         <span className={`shrink-0 w-2 h-2 rounded-full ${entry.owner === 'friend' ? 'bg-indigo-400' : 'bg-primary'}`} />
                                                                         <span className="text-[11px] font-bold text-slate-500 shrink-0 w-[72px]">{formatDate(entry.date)}</span>
                                                                         {entry.owner === 'friend' && (
@@ -845,7 +887,7 @@ export default function WorkoutDetailPage() {
                             <button className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full sm:w-auto" onClick={() => {
                                 setConfirmingFinish(false);
                                 if (startedAtRef.current && elapsedSeconds > 0) {
-                                    setTimerRunning(true); // Retoma o cronômetro caso estivesse rodando
+                                    setTimerRunning(true);
                                 }
                             }}>
                                 Continuar Treinando
@@ -904,7 +946,6 @@ export default function WorkoutDetailPage() {
                                             totalVolume += vol;
                                             totalSets += log.sets.length;
 
-                                            // Formatar pesos de cada série separados por barra
                                             const weightsStr = log.sets.map(s => `${s.weight} ${logUnit}`).join(' / ');
 
                                             return (

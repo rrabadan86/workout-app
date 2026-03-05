@@ -30,9 +30,6 @@ export default function ChallengeDetailsPage() {
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
     const [saving, setSaving] = useState(false);
 
-    // Comments
-    // (comment state is now managed inside FeedItemCard in Feed.tsx)
-
     // Check-in modal
     const [showCheckinModal, setShowCheckinModal] = useState(false);
     const [checkinNote, setCheckinNote] = useState('');
@@ -51,7 +48,19 @@ export default function ChallengeDetailsPage() {
         if (c) {
             setChallenge(c);
             setParticipants(store.challengeParticipants.filter(p => p.challenge_id === id));
-            setCheckins(store.challengeCheckins.filter(ck => ck.challenge_id === id));
+
+            // ✅ FIX: Filtrar check-ins de treinos excluídos/ocultados
+            // Check-ins automáticos vinculados a feed events que foram deletados ou ocultados
+            // não devem ser contados no ranking, streak ou contagem total
+            const activeIds = new Set(
+                store.feedEvents
+                    .filter(e => e.eventType.startsWith('WO_COMPLETED') && !e.eventType.startsWith('WO_COMPLETED_HIDDEN'))
+                    .map(e => e.id)
+            );
+            const allCheckins = store.challengeCheckins.filter(ck => ck.challenge_id === id);
+            setCheckins(allCheckins.filter(ck =>
+                ck.checkin_type === 'manual' || !ck.feed_event_id || activeIds.has(ck.feed_event_id)
+            ));
         }
     }, [store, id]);
 
@@ -71,9 +80,7 @@ export default function ChallengeDetailsPage() {
     const hasCheckedInToday = checkins.some(ck =>
         ck.user_id === userId &&
         ck.checkin_date === todayStr &&
-        // Only count if the linked feed event still exists and is not hidden
-        (ck.checkin_type === 'manual' || (ck.feed_event_id && activeFeedEventIds.has(ck.feed_event_id)))
-    );
+        (ck.checkin_type === 'manual' || ck.checkin_type === 'auto' || (ck.feed_event_id && activeFeedEventIds.has(ck.feed_event_id))));
 
     const isActive = challenge?.status === 'active' && challenge?.start_date <= todayStr && challenge?.end_date >= todayStr;
 
@@ -81,14 +88,12 @@ export default function ChallengeDetailsPage() {
     const syncingRef = useRef(false);
 
     // --- Retroactive / Auto Check-in Sync ---
-    // NOTE: uses syncingRef exclusively; intentionally does NOT touch `saving` so admin UI stays responsive
     useEffect(() => {
         if (!challenge || !isParticipant || !isActive || hasCheckedInToday || !userId || syncingRef.current) return;
 
         const syncCheckin = async () => {
             syncingRef.current = true;
             try {
-                // Find if the user has a valid workout today
                 const todayLogs = store.logs.filter(l => l.userId === userId && l.date === todayStr);
                 if (todayLogs.length === 0) return;
 
@@ -98,8 +103,6 @@ export default function ChallengeDetailsPage() {
                 if (!challenge) return;
 
                 if (challenge.checkin_type === 'any_workout') {
-                    // Find the most recent WO_COMPLETED feed event from today for this user
-                    // This ensures we link to the latest session, not an arbitrary one
                     const todayWorkoutEvents = store.feedEvents.filter(e =>
                         e.userId === userId &&
                         e.eventType.startsWith('WO_COMPLETED') &&
@@ -110,12 +113,10 @@ export default function ChallengeDetailsPage() {
                         hasValidWorkoutToday = true;
                         validWorkoutId = todayWorkoutEvents[0].referenceId;
                     } else if (todayLogs.length > 0) {
-                        // Fallback: use logs if no feed event found yet (race condition)
                         hasValidWorkoutToday = true;
                         validWorkoutId = todayLogs[0].workoutId;
                     }
                 } else if (challenge.checkin_type === 'specific_workout') {
-                    // Specific workouts must also be completed today (tied to a feed event) to avoid resurrecting
                     const specificEvent = store.feedEvents.find(e => {
                         if (e.userId !== userId || e.referenceId !== challenge.specific_workout_id || !e.eventType.startsWith('WO_COMPLETED')) return false;
                         const eDateStr = `${new Date(e.createdAt).getFullYear()}-${String(new Date(e.createdAt).getMonth() + 1).padStart(2, '0')}-${String(new Date(e.createdAt).getDate()).padStart(2, '0')}`;
@@ -131,15 +132,12 @@ export default function ChallengeDetailsPage() {
                 if (hasValidWorkoutToday) {
                     console.log('[Challenge Sync] User has a valid workout today. Performing retroactive check-in for challenge:', challenge.id);
 
-                    // Search for the workout's feed event FROM TODAY to link to the check-in
                     const workoutFeedEvent = store.feedEvents.find(e => {
                         if (e.userId !== userId || e.referenceId !== validWorkoutId || !e.eventType.startsWith('WO_COMPLETED')) return false;
                         const eDateStr = `${new Date(e.createdAt).getFullYear()}-${String(new Date(e.createdAt).getMonth() + 1).padStart(2, '0')}-${String(new Date(e.createdAt).getDate()).padStart(2, '0')}`;
                         return eDateStr === todayStr;
                     });
 
-                    // If the feed event for today doesn't exist anymore, DO NOT auto check-in.
-                    // This prevents resurrecting a check-in after the user deletes the workout from history.
                     if (!workoutFeedEvent) {
                         console.log('[Challenge Sync] No feed event found for today. Aborting retroactive check-in.');
                         return;
@@ -156,7 +154,6 @@ export default function ChallengeDetailsPage() {
                     };
 
                     const { error } = await supabase.from('challenge_checkins').insert(newCheckin);
-                    // Ignore duplicate key error that might happen
                     if (error && error.code !== '23505') throw error;
 
                     const updatedCheckins = [...store.challengeCheckins, newCheckin as any];
@@ -179,9 +176,8 @@ export default function ChallengeDetailsPage() {
     useEffect(() => {
         const finalizeChallenge = async () => {
             if (!challenge || !participants.length || finalizationRef.current) return;
-            if (challenge.end_date >= todayStr) return; // Not ended yet
+            if (challenge.end_date >= todayStr) return;
 
-            // Check if ANY completion badge exists for this challenge
             const hasFinalized = store.challengeBadges.some(b => b.challenge_id === challenge.id && b.badge_type === 'challenge_completed');
             if (hasFinalized) return;
 
@@ -189,7 +185,6 @@ export default function ChallengeDetailsPage() {
             console.log('[Challenge Finalization] Evaluating end-of-challenge badges for:', challenge.id);
 
             try {
-                // Determine final leaderboard based on check-ins
                 const finalLeaderboard = participants.map(p => {
                     const userCheckins = checkins.filter(ck => ck.user_id === p.user_id).length;
                     return { ...p, score: userCheckins };
@@ -199,9 +194,8 @@ export default function ChallengeDetailsPage() {
                 const now = new Date().toISOString();
 
                 finalLeaderboard.forEach((p, index) => {
-                    if (p.score === 0) return; // No badges for 0 check-ins
+                    if (p.score === 0) return;
 
-                    // Everyone gets 'challenge_completed' if they have >0 checkins
                     newBadges.push({
                         id: uid(),
                         challenge_id: challenge.id,
@@ -210,7 +204,6 @@ export default function ChallengeDetailsPage() {
                         earned_at: now
                     });
 
-                    // Top 3 medals
                     if (index === 0) {
                         newBadges.push({ id: uid(), challenge_id: challenge.id, user_id: p.user_id, badge_type: 'top_1_challenge', earned_at: now });
                     } else if (index === 1) {
@@ -223,7 +216,7 @@ export default function ChallengeDetailsPage() {
                 if (newBadges.length > 0) {
                     const { error } = await supabase.from('challenge_badges').insert(newBadges);
                     if (error) throw error;
-                    await refresh(); // Reload to show the badges on their profiles
+                    await refresh();
                 }
 
             } catch (err) {
@@ -249,11 +242,9 @@ export default function ChallengeDetailsPage() {
         participants.forEach(p => {
             const profile = store.profiles.find(u => u.id === p.user_id);
             if (!profile) return;
-            // Respect preference (default = true)
             const wantsAlerts = profile.notification_prefs?.challenge_alerts !== false;
             if (!wantsAlerts) return;
 
-            // Avoid duplicate: check if we already sent this type today
             const alreadySent = store.notifications.some(n =>
                 n.user_id === p.user_id &&
                 n.reference_id === challenge.id &&
@@ -276,16 +267,13 @@ export default function ChallengeDetailsPage() {
         });
     }, [challenge, participants, store.profiles, store.notifications, todayStr, createNotification]);
 
-    if (!ready || !userId || !challenge) return null; // Or a loading spinner
+    if (!ready || !userId || !challenge) return null;
 
     async function handleJoin() {
         setSaving(true);
         try {
             if (challenge!.max_participants && participants.length >= challenge!.max_participants) {
                 throw new Error('O desafio já está lotado!');
-            }
-            if (challenge!.start_date < todayStr) {
-                // Not ideal but let's allow late joining for now unless we strictly enforce it
             }
 
             const { error } = await supabase.from('challenge_participants').insert({
@@ -309,12 +297,10 @@ export default function ChallengeDetailsPage() {
         e.preventDefault();
         setSaving(true);
         try {
-            // Build all DB operations in parallel, then do a SINGLE refresh at the end
             let feedEventId: string | null = null;
 
             if (challenge?.visibility === 'public') {
                 feedEventId = uid();
-                // Insert directly — avoid calling addFeedEvent() which triggers its own refresh()
                 const { error: feErr } = await supabase.from('feed_events').insert({
                     id: feedEventId,
                     userId,
@@ -337,7 +323,6 @@ export default function ChallengeDetailsPage() {
             const { error } = await supabase.from('challenge_checkins').insert(newCheckin);
             if (error) throw error;
 
-            // Snapshot rankings BEFORE and AFTER for notification logic
             const rankSnapshot = (ckList: ChallengeCheckin[]) =>
                 participants
                     .map(p => ({
@@ -350,7 +335,6 @@ export default function ChallengeDetailsPage() {
             const afterCheckins = [...checkins, newCheckin as any];
             const afterRanks = rankSnapshot(afterCheckins);
 
-            // For each person whose rank dropped, send a rank_down notification (fire-and-forget)
             afterRanks.forEach((entry, newIdx) => {
                 const oldIdx = beforeRanks.findIndex(r => r.user_id === entry.user_id);
                 if (newIdx > oldIdx && entry.user_id !== userId) {
@@ -368,7 +352,6 @@ export default function ChallengeDetailsPage() {
                 }
             });
 
-            // If the current user just reached 1st place (and wasn't before), notify them
             const myOldRank = beforeRanks.findIndex(r => r.user_id === userId);
             const myNewRank = afterRanks.findIndex(r => r.user_id === userId);
             if (myNewRank === 0 && myOldRank > 0) {
@@ -387,10 +370,8 @@ export default function ChallengeDetailsPage() {
             }
 
             const updatedCheckins = [...store.challengeCheckins, newCheckin as any];
-            // evaluateBadges only inserts if needed — still a single extra round-trip
             await evaluateBadges(userId, challenge!.id, updatedCheckins, store.challengeBadges);
 
-            // ONE refresh at the very end
             await refresh();
             setShowCheckinModal(false);
             setCheckinNote('');
@@ -491,18 +472,16 @@ export default function ChallengeDetailsPage() {
     function calculateStreak(dates: string[]): number {
         if (!dates || dates.length === 0) return 0;
 
-        // Sort dates descending
         const sorted = [...new Set(dates)].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
         let streak = 0;
-        const todayDate = new Date(todayStr); // local today
+        const todayDate = new Date(todayStr);
         const yesterdayDate = new Date(todayDate);
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`;
 
-        // Streak must be active (either checked in today or yesterday)
         if (sorted[0] !== todayStr && sorted[0] !== yesterdayStr) {
-            return 0; // Streak broken
+            return 0;
         }
 
         let currentDate = new Date(sorted[0]);
@@ -516,15 +495,14 @@ export default function ChallengeDetailsPage() {
 
             if (prevDateStr === expectedStr) {
                 streak++;
-                currentDate = expectedDate; // Move back one day
+                currentDate = expectedDate;
             } else {
-                break; // Gap found, streak ends
+                break;
             }
         }
         return streak;
     }
 
-    // Leaderboard logic: Sort by score (checkins), then by streak. 
     const leaderboard = participants.map(p => {
         const userCheckinDates = checkins.filter(ck => ck.user_id === p.user_id).map(ck => ck.checkin_date);
         const userCheckinsCount = userCheckinDates.length;
@@ -542,7 +520,6 @@ export default function ChallengeDetailsPage() {
         return b.streak - a.streak;
     });
 
-    // Build a map: userId -> Set of checkin dates for fast lookup
     const participantCheckinDates = new Map<string, Set<string>>();
     checkins.forEach(ck => {
         if (!participantCheckinDates.has(ck.user_id)) {
@@ -553,23 +530,18 @@ export default function ChallengeDetailsPage() {
 
     const participantIds = new Set(participants.map(p => p.user_id));
 
-    // Comments for this challenge, sorted newest first
     const challengeComments = store.challengeComments
         .filter(c => c.challenge_id === id)
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     const challengeFeedEvents = store.feedEvents
         .filter(event => {
-            // 1. Explicit CHALLENGE_CHECKIN event for this challenge
             if (event.eventType.startsWith('CHALLENGE_CHECKIN') && event.referenceId === challenge?.id) {
                 return true;
             }
-            // 2. Explicitly linked via feed_event_id on a checkin
             const checkinFeedEventIds = checkins.map(ck => ck.feed_event_id).filter(Boolean);
             if (checkinFeedEventIds.includes(event.id)) return true;
 
-            // 3. WO_COMPLETED event from a participant whose checkin date matches the event's local date
-            // This is the most robust approach: if the person had a check-in that day, show their workout
             if (event.eventType.startsWith('WO_COMPLETED') && participantIds.has(event.userId)) {
                 const eventDate = new Date(event.createdAt);
                 const eventLocalDate = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
@@ -587,14 +559,11 @@ export default function ChallengeDetailsPage() {
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
             <main className="flex-1 w-full max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-12 py-6 sm:py-8">
-                {/* ─── Back Nav ─── */}
                 <button onClick={() => router.push('/challenges')} className="btn inline-flex items-center text-slate-500 hover:text-slate-800 text-sm font-bold mb-6">
                     <ChevronLeft size={16} className="-ml-1" /> Todos os Desafios
                 </button>
 
-                {/* ─── Header ─── */}
                 <div className="bg-white rounded-3xl p-6 sm:p-10 card-depth border border-transparent mb-6 relative overflow-hidden">
-                    {/* Decorative bg */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
 
                     <div className="flex flex-col md:flex-row gap-6 md:gap-8 relative z-10">
@@ -651,7 +620,6 @@ export default function ChallengeDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Action Bar (Join / Check-in) */}
                     <div className="mt-8 pt-6 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 relative z-10">
                         {!isParticipant ? (
                             <button
@@ -692,7 +660,6 @@ export default function ChallengeDetailsPage() {
                     </div>
                 </div>
 
-                {/* ─── Tabs Nav ─── */}
                 <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-slate-200">
                     <button className={`px-5 py-3 text-sm font-bold transition-colors border-b-2 outline-none ${activeTab === 'ranking' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}`} onClick={() => setActiveTab('ranking')}>
                         <span className="flex items-center gap-2"><Trophy size={16} /> Ranking</span>
@@ -710,7 +677,6 @@ export default function ChallengeDetailsPage() {
                     )}
                 </div>
 
-                {/* ─── Tabs Content ─── */}
                 <div className="bg-white rounded-2xl card-depth p-4 sm:p-6 min-h-[400px]">
                     {activeTab === 'ranking' && (
                         <div className="animate-in fade-in duration-200">
@@ -770,7 +736,6 @@ export default function ChallengeDetailsPage() {
                         </div>
                     )}
 
-
                     {activeTab === 'rules' && (() => {
                         const specificWorkout = challenge.specific_workout_id
                             ? store.workouts.find(w => w.id === challenge.specific_workout_id)
@@ -782,7 +747,6 @@ export default function ChallengeDetailsPage() {
                             <div className="animate-in fade-in duration-200 flex flex-col gap-5">
                                 <h3 className="text-lg font-bold text-slate-800 px-1">Regras do Desafio</h3>
 
-                                {/* Período */}
                                 <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 flex flex-col gap-2">
                                     <div className="flex items-center gap-2 mb-1">
                                         <Calendar size={16} className="text-slate-400" />
@@ -797,7 +761,6 @@ export default function ChallengeDetailsPage() {
                                     </p>
                                 </div>
 
-                                {/* Frequência */}
                                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 flex flex-col gap-2">
                                     <div className="flex items-center gap-2 mb-1">
                                         <Flame size={16} className="text-amber-500" />
@@ -812,7 +775,6 @@ export default function ChallengeDetailsPage() {
                                     </p>
                                 </div>
 
-                                {/* Pontuação / Check-in */}
                                 <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-5 flex flex-col gap-2">
                                     <div className="flex items-center gap-2 mb-1">
                                         <CheckCircle2 size={16} className="text-emerald-500" />
@@ -839,7 +801,6 @@ export default function ChallengeDetailsPage() {
                                     )}
                                 </div>
 
-                                {/* Participantes */}
                                 <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex flex-col gap-2">
                                     <div className="flex items-center gap-2 mb-1">
                                         <Users size={16} className="text-blue-500" />
@@ -873,7 +834,6 @@ export default function ChallengeDetailsPage() {
                                 )}
                             </div>
 
-                            {/* Adicionar Participante */}
                             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6">
                                 <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
                                     <UserPlus size={18} className="text-blue-500" />
@@ -895,7 +855,6 @@ export default function ChallengeDetailsPage() {
                                 </form>
                             </div>
 
-                            {/* Lista de Participantes */}
                             <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-8">
                                 <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
                                     <Users size={18} className="text-slate-500" />
@@ -938,7 +897,6 @@ export default function ChallengeDetailsPage() {
                                 </div>
                             </div>
 
-                            {/* Excluir Desafio */}
                             {isOwner && (
                                 <div className="bg-red-50 border border-red-100 rounded-2xl p-5">
                                     <h4 className="font-bold text-red-800 flex items-center gap-2 mb-2">
@@ -962,7 +920,6 @@ export default function ChallengeDetailsPage() {
                 </div>
             </main>
 
-            {/* Checkin Modal */}
             {showCheckinModal && (
                 <Modal title="Fazer Check-in" onClose={() => setShowCheckinModal(false)}
                     footer={
@@ -991,7 +948,6 @@ export default function ChallengeDetailsPage() {
                 </Modal>
             )}
 
-            {/* Edit Challenge Modal */}
             {showEditModal && (
                 <Modal title="Editar Desafio" onClose={() => setShowEditModal(false)}
                     footer={
