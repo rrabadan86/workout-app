@@ -34,57 +34,74 @@ export default function ShareCard({
     const cardRef = useRef<HTMLDivElement>(null);
     const [saving, setSaving] = useState(false);
 
-    async function handleSaveImage() {
-        if (!cardRef.current) return;
-        setSaving(true);
+    async function captureCard(): Promise<HTMLCanvasElement | null> {
+        if (!cardRef.current) return null;
         try {
             const html2canvas = (await import('html2canvas')).default;
-            const canvas = await html2canvas(cardRef.current, {
+            return await html2canvas(cardRef.current, {
                 scale: 2,
                 useCORS: true,
-                backgroundColor: null,
+                allowTaint: true,
+                backgroundColor: '#0f172a',
                 logging: false,
+                imageTimeout: 10000,
             });
-            const link = document.createElement('a');
-            link.download = `treino-${workoutName.replace(/\s+/g, '-').toLowerCase()}-${date.replace(/\//g, '-')}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
         } catch (err) {
-            console.error('[ShareCard] Failed to save image:', err);
+            console.error('[ShareCard] html2canvas failed:', err);
+            return null;
+        }
+    }
+
+    async function handleSaveImage() {
+        setSaving(true);
+        const canvas = await captureCard();
+        if (!canvas) {
+            setSaving(false);
+            alert('Não foi possível gerar a imagem. Tente novamente.');
+            return;
+        }
+        try {
+            const link = document.createElement('a');
+            const slug = workoutName.replace(/\s+/g, '-').toLowerCase();
+            link.download = `vimu-treino-${slug}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error('[ShareCard] Download failed:', err);
+            alert('Erro ao baixar a imagem.');
         } finally {
             setSaving(false);
         }
     }
 
     async function handleShare() {
-        if (!cardRef.current) return;
-        try {
-            const html2canvas = (await import('html2canvas')).default;
-            const canvas = await html2canvas(cardRef.current, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: null,
-                logging: false,
-            });
-
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-                const file = new File([blob], 'share-card.png', { type: 'image/png' });
-
-                if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        const canvas = await captureCard();
+        if (!canvas) {
+            alert('Não foi possível gerar a imagem para compartilhar.');
+            return;
+        }
+        canvas.toBlob(async (blob) => {
+            if (!blob) { alert('Erro ao gerar imagem.'); return; }
+            const file = new File([blob], 'vimu-treino.png', { type: 'image/png' });
+            try {
+                if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
                     await navigator.share({
                         files: [file],
-                        title: `Treino ${workoutName} concluído!`,
-                        text: `Acabei de concluir meu treino "${workoutName}" 💪🔥`,
+                        title: `Treino "${workoutName}" concluído! 💪`,
+                        text: `Acabei de concluir meu treino "${workoutName}" no VIMU 🔥`,
                     });
                 } else {
-                    // Fallback: download
+                    // Fallback: trigger download
                     handleSaveImage();
                 }
-            }, 'image/png');
-        } catch (err) {
-            console.error('[ShareCard] Share failed:', err);
-        }
+            } catch (err: any) {
+                if (err?.name !== 'AbortError') {
+                    console.error('[ShareCard] Share failed:', err);
+                }
+            }
+        }, 'image/png');
     }
 
     const completionPct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 100;

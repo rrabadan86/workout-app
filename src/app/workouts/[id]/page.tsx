@@ -628,13 +628,6 @@ export default function WorkoutDetailPage() {
                         );
                     })}
                 </div>
-
-                {/* ─── Photo Capture Section ─── */}
-                {canExecute && timerRunning && (
-                    <div className="bg-white rounded-2xl card-depth p-5 mb-12">
-                        <WorkoutPhotoCapture photo={workoutPhoto} onPhotoChange={setWorkoutPhoto} />
-                    </div>
-                )}
             </div>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
@@ -716,6 +709,9 @@ export default function WorkoutDetailPage() {
                                 <span className="font-extrabold text-emerald-600 text-xl tabular-nums">{fmtTime(elapsedSeconds)}</span>
                             </div>
                         )}
+
+                        {/* ─── Photo Capture ─── */}
+                        <WorkoutPhotoCapture photo={workoutPhoto} onPhotoChange={setWorkoutPhoto} />
 
                         {(() => {
                             const todayLogs = store.logs.filter(l => l.workoutId === id && l.userId === userId && l.date === today());
