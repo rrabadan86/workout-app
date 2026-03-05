@@ -156,13 +156,6 @@ export default function ShareCard({
                                 </div>
                             </div>
 
-                            {/* Volume */}
-                            {totalVolume > 0 && (
-                                <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 flex items-center justify-between mb-5">
-                                    <span className="text-white/50 text-[9px] font-bold uppercase tracking-wider">Volume Total</span>
-                                    <span className="text-white font-black text-xl">{totalVolume.toLocaleString('pt-BR')} kg</span>
-                                </div>
-                            )}
 
                             {/* Exercise list */}
                             {exercises.length > 0 && (
