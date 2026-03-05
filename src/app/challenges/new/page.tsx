@@ -28,6 +28,7 @@ export default function NewChallengeWizard() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [weeklyFrequency, setWeeklyFrequency] = useState(3);
+    const [weeklyPoints, setWeeklyPoints] = useState(10);
 
     // Step 3: Check-in Rules
     const [checkinType, setCheckinType] = useState<'any_workout' | 'specific_workout'>('any_workout');
@@ -70,6 +71,7 @@ export default function NewChallengeWizard() {
                 start_date: startDate,
                 end_date: endDate,
                 weekly_frequency: weeklyFrequency,
+                weekly_points: weeklyPoints,
                 checkin_type: checkinType,
                 specific_workout_id: checkinType === 'specific_workout' ? (specificWorkoutId || null) : null,
                 visibility,
@@ -213,6 +215,18 @@ export default function NewChallengeWizard() {
                                     </div>
                                     <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2 px-1">
                                         <span>1x</span><span>7x</span>
+                                    </div>
+                                </div>
+                                <div className="field mt-4 border-t border-slate-100 pt-6">
+                                    <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Pontuação Semanal *</label>
+                                    <p className="text-xs text-slate-500 mb-4">Quantos pontos o participante ganha por semana se bater a meta de {weeklyFrequency} check-in{weeklyFrequency > 1 ? 's' : ''}?</p>
+
+                                    <div className="flex items-center gap-4">
+                                        <input type="range" min="1" max="20" value={weeklyPoints} onChange={(e) => setWeeklyPoints(parseInt(e.target.value))} className="w-full accent-amber-500 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                                        <span className="text-xl font-bold text-slate-800 w-16 text-center bg-slate-100 py-1 rounded-lg">{weeklyPoints}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2 px-1">
+                                        <span>1 pt</span><span>20 pts</span>
                                     </div>
                                 </div>
                             </div>

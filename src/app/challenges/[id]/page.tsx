@@ -20,7 +20,7 @@ export default function ChallengeDetailsPage() {
     const id = params.id as string;
 
     const { userId, ready } = useAuth();
-    const { store, refresh, addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, createNotification } = useStore();
+    const { store, refresh, addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, createNotification, toggleChallengeAdmin } = useStore();
 
     const [challenge, setChallenge] = useState<Challenge | null>(null);
     const [participants, setParticipants] = useState<ChallengeParticipant[]>([]);
@@ -38,6 +38,11 @@ export default function ChallengeDetailsPage() {
     const [newParticipantEmail, setNewParticipantEmail] = useState('');
     const [showEditModal, setShowEditModal] = useState(false);
     const [editData, setEditData] = useState({ title: '', description: '', end_date: '' });
+
+    // Admin Bulk Checkin State
+    const [checkinDate, setCheckinDate] = useState(today());
+    const [selectedParticipants, setSelectedParticipants] = useState<Set<string>>(new Set());
+    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => { if (ready && !userId) router.replace('/'); }, [ready, userId, router]);
 
@@ -297,6 +302,61 @@ export default function ChallengeDetailsPage() {
         e.preventDefault();
         setSaving(true);
         try {
+            // Se for Admin e estiver no modo de checkin múltiplo/retroativo:
+            if (isAdmin) {
+                if (selectedParticipants.size === 0) throw new Error('Selecione pelo menos um participante.');
+                if (!checkinDate || checkinDate < challenge!.start_date) throw new Error(`A data do check-in não pode ser anterior a ${formatDate(challenge!.start_date)}.`);
+                if (checkinDate > todayStr) throw new Error('A data do check-in não pode estar no futuro.');
+
+                const newCheckinsToInsert: ChallengeCheckin[] = [];
+                for (const pid of Array.from(selectedParticipants)) {
+                    // Decide whether we broadcast on public challenges for each user
+                    // Em bulk inserts a gente não costuma flodar a feed, mas vamos deixar como manual simples pra garantir que não quebra a exp (se não public, feedEvent=null)
+                    let feedEventId: string | null = null;
+                    if (challenge?.visibility === 'public') {
+                        feedEventId = uid();
+                        // Aqui otimizaríamos insertMany, mas para respeitar a base logada a nível componente é o viável no tempo
+                        await supabase.from('feed_events').insert({
+                            id: feedEventId,
+                            userId: pid,
+                            eventType: `CHALLENGE_CHECKIN|${challenge.title}`,
+                            referenceId: challenge.id,
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+
+                    newCheckinsToInsert.push({
+                        id: uid(),
+                        challenge_id: challenge!.id,
+                        user_id: pid,
+                        checkin_date: checkinDate,
+                        checkin_type: 'manual' as const,
+                        evidence_note: checkinNote.trim() || null,
+                        feed_event_id: feedEventId,
+                        created_at: new Date().toISOString()
+                    } as ChallengeCheckin);
+                }
+
+                const { error } = await supabase.from('challenge_checkins').insert(newCheckinsToInsert);
+                if (error) throw error;
+
+                const updatedCheckins = [...store.challengeCheckins, ...newCheckinsToInsert];
+
+                // Recalcular badges para todos os usuários atingidos
+                for (const pid of Array.from(selectedParticipants)) {
+                    await evaluateBadges(pid, challenge!.id, updatedCheckins, store.challengeBadges);
+                }
+
+                await refresh();
+                setShowCheckinModal(false);
+                setCheckinNote('');
+                setSelectedParticipants(new Set());
+                setCheckinDate(todayStr);
+                setToast({ msg: `${newCheckinsToInsert.length} check-in(s) registrado(s) com sucesso! 💥`, type: 'success' });
+                return;
+            }
+
+            // -------------- FLUXO NORMAL DO USUÁRIO --------------
             let feedEventId: string | null = null;
 
             if (challenge?.visibility === 'public') {
@@ -315,7 +375,7 @@ export default function ChallengeDetailsPage() {
                 id: uid(),
                 challenge_id: challenge!.id,
                 user_id: userId,
-                checkin_date: todayStr,
+                checkin_date: todayStr, // Usuário comum sempre faz pra "hoje"
                 checkin_type: 'manual' as const,
                 evidence_note: checkinNote.trim() || null,
                 feed_event_id: feedEventId
@@ -325,11 +385,18 @@ export default function ChallengeDetailsPage() {
 
             const rankSnapshot = (ckList: ChallengeCheckin[]) =>
                 participants
-                    .map(p => ({
-                        ...p,
-                        score: ckList.filter(ck => ck.user_id === p.user_id).length
-                    }))
-                    .sort((a, b) => b.score - a.score);
+                    .map(p => {
+                        const checkinsForCalculus = ckList.filter(ck => ck.user_id === p.user_id).map(ck => ck.checkin_date);
+                        return {
+                            ...p,
+                            score: calculateTotalPoints(checkinsForCalculus),
+                            totalCheckins: checkinsForCalculus.length
+                        };
+                    })
+                    .sort((a, b) => {
+                        if (b.score !== a.score) return b.score - a.score;
+                        return b.totalCheckins - a.totalCheckins;
+                    });
 
             const beforeRanks = rankSnapshot(checkins);
             const afterCheckins = [...checkins, newCheckin as any];
@@ -437,6 +504,19 @@ export default function ChallengeDetailsPage() {
         }
     }
 
+    async function handleToggleAdmin(participantId: string, currentRole: 'admin' | 'participant') {
+        if (!confirm(currentRole === 'admin' ? 'Remover privilégios de administrador?' : 'Promover este usuário a administrador?')) return;
+        setSaving(true);
+        try {
+            await toggleChallengeAdmin(participantId, currentRole);
+            setToast({ msg: 'Nível de acesso atualizado.', type: 'success' });
+        } catch (err: any) {
+            setToast({ msg: 'Erro ao atualizar nível de acesso.', type: 'error' });
+        } finally {
+            setSaving(false);
+        }
+    }
+
     async function handleDeleteChallenge() {
         if (!confirm('Tem certeza que deseja EXCLUIR este desafio? Esta ação não pode ser desfeita e todos os check-ins serão perdidos.')) return;
         setSaving(true);
@@ -503,20 +583,62 @@ export default function ChallengeDetailsPage() {
         return streak;
     }
 
+    function calculateTotalPoints(userCheckinDates: string[]): number {
+        if (!challenge) return 0;
+        if (!userCheckinDates || userCheckinDates.length === 0) return 0;
+
+        const totalPointsPerWeek = challenge.weekly_points || 1; // Default to 1 if not set
+        const meta = challenge.weekly_frequency;
+
+        // Crio um array ordenado de checkins
+        const uniqueDates = [...new Set(userCheckinDates)].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+        const challengeStart = new Date(challenge.start_date);
+
+        // Group check-ins by week
+        const weekMap = new Map<number, number>(); // weekIndex -> checkin count
+
+        for (const dateStr of uniqueDates) {
+            const checkinDate = new Date(dateStr);
+            const diffTime = Math.abs(checkinDate.getTime() - challengeStart.getTime());
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            // Qual semana esse checkin caiu? (0 = primeira semana, 1 = segunda semana, etc)
+            // Assumimos que a semana 1 começa na data de start_date
+            const weekIndex = Math.floor(diffDays / 7);
+
+            weekMap.set(weekIndex, (weekMap.get(weekIndex) || 0) + 1);
+        }
+
+        let totalPoints = 0;
+
+        // Para cada semana, se atingiu a meta, ganha os pontos da semana
+        for (const [weekIndex, count] of weekMap.entries()) {
+            if (count >= meta) {
+                totalPoints += totalPointsPerWeek;
+            }
+        }
+
+        return totalPoints;
+    }
+
     const leaderboard = participants.map(p => {
         const userCheckinDates = checkins.filter(ck => ck.user_id === p.user_id).map(ck => ck.checkin_date);
         const userCheckinsCount = userCheckinDates.length;
+        const totalPoints = calculateTotalPoints(userCheckinDates);
         const streak = calculateStreak(userCheckinDates);
         const profile = store.profiles.find(u => u.id === p.user_id);
 
         return {
             ...p,
             profile,
-            score: userCheckinsCount,
+            score: totalPoints,
+            totalCheckins: userCheckinsCount,
             streak,
         };
     }).sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
+        if (b.totalCheckins !== a.totalCheckins) return b.totalCheckins - a.totalCheckins;
         return b.streak - a.streak;
     });
 
@@ -621,7 +743,7 @@ export default function ChallengeDetailsPage() {
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 relative z-10">
-                        {!isParticipant ? (
+                        {!isParticipant && !isAdmin ? ( // Admins won't see "Join" if they just administrate, they use the add interface. Or if they joined they are participants.
                             <button
                                 className="btn bg-amber-500 text-white hover:bg-amber-600 shadow-xl shadow-amber-500/20 px-8 py-3.5 border-none text-sm"
                                 onClick={handleJoin}
@@ -631,18 +753,36 @@ export default function ChallengeDetailsPage() {
                             </button>
                         ) : (
                             <div className="flex items-center gap-3 w-full sm:w-auto">
-                                {!hasCheckedInToday && isActive && (
+                                {isAdmin ? (
                                     <button
                                         className="btn bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/20 px-8 py-3.5 border-none text-sm w-full sm:w-auto"
-                                        onClick={() => setShowCheckinModal(true)}
+                                        onClick={() => {
+                                            setCheckinDate(todayStr); // Reset modal fields
+                                            setSelectedParticipants(new Set());
+                                            if (isParticipant) {
+                                                setSelectedParticipants(new Set([userId]));
+                                            }
+                                            setShowCheckinModal(true);
+                                        }}
                                     >
-                                        <CheckCircle2 size={16} /> Fazer Check-in Hoje
+                                        <CheckCircle2 size={16} /> Lançar Check-in
                                     </button>
-                                )}
-                                {hasCheckedInToday && (
-                                    <div className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-6 py-3.5 rounded-xl w-full sm:w-auto justify-center">
-                                        <CheckCircle2 size={18} /> Check-in Feito Hoje
-                                    </div>
+                                ) : (
+                                    <>
+                                        {!hasCheckedInToday && isActive && (
+                                            <button
+                                                className="btn bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/20 px-8 py-3.5 border-none text-sm w-full sm:w-auto"
+                                                onClick={() => setShowCheckinModal(true)}
+                                            >
+                                                <CheckCircle2 size={16} /> Fazer Check-in Hoje
+                                            </button>
+                                        )}
+                                        {hasCheckedInToday && (
+                                            <div className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-6 py-3.5 rounded-xl w-full sm:w-auto justify-center">
+                                                <CheckCircle2 size={18} /> Check-in Feito Hoje
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}
@@ -700,9 +840,11 @@ export default function ChallengeDetailsPage() {
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <h4 className="font-bold text-slate-900 text-sm truncate">{u.profile?.name}</h4>
                                                 {u.role === 'owner' && <span className="text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-100 px-1.5 py-0.5 rounded">Criador</span>}
+                                                {u.role === 'admin' && <span className="text-[10px] uppercase font-black tracking-wider text-blue-500 bg-blue-100 px-1.5 py-0.5 rounded">Admin</span>}
                                             </div>
-                                            <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
-                                                <span className="flex items-center gap-1 font-semibold"><CheckCircle2 size={12} className="text-emerald-500" /> {u.score} check-ins</span>
+                                            <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-3">
+                                                <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy size={12} className="text-amber-500" /> {u.score} pts</span>
+                                                <span className="flex items-center gap-1 font-semibold"><CheckCircle2 size={12} className="text-emerald-500" /> {u.totalCheckins} check-ins</span>
                                                 {u.streak > 0 && (
                                                     <span className="flex items-center gap-1 font-semibold text-amber-500"><Flame size={12} /> {u.streak} {u.streak === 1 ? 'dia' : 'dias'}</span>
                                                 )}
@@ -882,14 +1024,26 @@ export default function ChallengeDetailsPage() {
                                                 {u.role === 'owner' ? (
                                                     <span className="text-[10px] uppercase font-black tracking-wider text-amber-500 bg-amber-100 px-2 py-1 rounded">Criador</span>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => handleRemoveParticipant(u.id, u.role)}
-                                                        disabled={saving}
-                                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                                        title="Remover participante"
-                                                    >
-                                                        <X size={18} />
-                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        {isOwner && (
+                                                            <button
+                                                                onClick={() => handleToggleAdmin(u.id, u.role as 'admin' | 'participant')}
+                                                                disabled={saving}
+                                                                className={`p-2 rounded-lg transition-colors ${u.role === 'admin' ? 'text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                                                title={u.role === 'admin' ? "Remover admin" : "Tornar admin"}
+                                                            >
+                                                                <ShieldAlert size={18} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleRemoveParticipant(u.id, u.role)}
+                                                            disabled={saving}
+                                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                                            title="Remover participante"
+                                                        >
+                                                            <X size={18} />
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -925,21 +1079,104 @@ export default function ChallengeDetailsPage() {
                     footer={
                         <div className="flex justify-end gap-3 mt-8">
                             <button className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 py-4 border-none" onClick={() => setShowCheckinModal(false)} disabled={saving}>Cancelar</button>
-                            <button className="btn bg-slate-900 text-white hover:scale-[1.02] shadow-xl shadow-slate-900/30 px-8 py-4 border-none text-sm" form="checkin-form" type="submit" disabled={saving}>
+                            <button
+                                className="btn bg-slate-900 text-white hover:scale-[1.02] shadow-xl shadow-slate-900/30 px-8 py-4 border-none text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                form="checkin-form"
+                                type="submit"
+                                disabled={saving || (isAdmin && selectedParticipants.size === 0)}
+                            >
                                 {saving ? 'Salvando...' : 'Confirmar Check-in 🔥'}
                             </button>
                         </div>
                     }
                 >
                     <form id="checkin-form" onSubmit={handleManualCheckin} className="flex flex-col gap-5 mt-6">
-                        <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-800 text-sm mb-2 text-center">
-                            Você está registrando um check-in para o dia <strong className="font-bold">{formatDate(todayStr)}</strong>.
-                        </div>
+                        {isAdmin ? (
+                            <div className="flex flex-col gap-4">
+                                <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-blue-800 text-sm mb-2 flex items-start gap-3">
+                                    <ShieldAlert className="mt-0.5 shrink-0 text-blue-600" size={16} />
+                                    <p><strong>Modo Admin:</strong> Registre check-ins para um ou mais participantes. A pontuação usará rigorosamente a data selecionada abaixo.</p>
+                                </div>
+
+                                <div className="field">
+                                    <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-1">Data do Check-in</label>
+                                    <input
+                                        type="date"
+                                        className="bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 w-full outline-none transition-all focus:bg-white"
+                                        value={checkinDate}
+                                        min={challenge.start_date}
+                                        max={todayStr}
+                                        onChange={(e) => setCheckinDate(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="field flex-col">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block">Participantes ({selectedParticipants.size} selecionados)</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (selectedParticipants.size === leaderboard.length) {
+                                                    setSelectedParticipants(new Set());
+                                                } else {
+                                                    setSelectedParticipants(new Set(leaderboard.map(u => u.user_id)));
+                                                }
+                                            }}
+                                            className="text-xs font-bold text-amber-600 hover:text-amber-700 hover:underline"
+                                        >
+                                            {selectedParticipants.size === leaderboard.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                                        </button>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Buscar participante..."
+                                        className="bg-white border border-slate-200 text-sm py-2 px-3 rounded-t-lg outline-none w-full focus:border-amber-500"
+                                        value={searchTerm}
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                    />
+                                    <div className="max-h-[200px] overflow-y-auto border border-t-0 border-slate-200 rounded-b-lg divide-y divide-slate-100 bg-white">
+                                        {leaderboard.filter(u => u.profile?.name?.toLowerCase().includes(searchTerm.toLowerCase())).map(u => (
+                                            <label key={u.user_id} className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-50 transition-colors ${selectedParticipants.has(u.user_id) ? 'bg-amber-50/50' : ''}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 text-amber-500 border-slate-300 rounded focus:ring-amber-500 accent-amber-500"
+                                                    checked={selectedParticipants.has(u.user_id)}
+                                                    onChange={(e) => {
+                                                        const newSet = new Set(selectedParticipants);
+                                                        if (e.target.checked) newSet.add(u.user_id);
+                                                        else newSet.delete(u.user_id);
+                                                        setSelectedParticipants(newSet);
+                                                    }}
+                                                />
+                                                <div className="size-6 rounded-md bg-slate-200 overflow-hidden shrink-0">
+                                                    {u.profile?.photo_url ? (
+                                                        <img src={u.profile.photo_url} alt={u.profile.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center font-bold text-slate-500 text-[10px] bg-slate-100">
+                                                            {u.profile?.name?.charAt(0).toUpperCase() || '?'}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="font-semibold text-sm text-slate-800 flex-1 truncate">{u.profile?.name}</span>
+                                            </label>
+                                        ))}
+                                        {leaderboard.filter(u => u.profile?.name?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                                            <div className="p-4 text-center text-sm text-slate-500 font-medium">Nenhum participante encontrado.</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-800 text-sm mb-2 text-center">
+                                Você está registrando um check-in para o dia <strong className="font-bold">{formatDate(todayStr)}</strong>.
+                            </div>
+                        )}
                         <div className="field">
                             <label className="text-[10px] font-bold font-montserrat text-slate-500 uppercase tracking-widest block mb-2">Nota ou Link para Evidência (Opcional)</label>
                             <textarea
                                 className="bg-slate-50 border border-slate-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-xl px-4 py-3 text-sm text-slate-900 w-full outline-none transition-all focus:bg-white min-h-[80px]"
-                                placeholder="Gravei um stories treinando hoje!"
+                                placeholder={isAdmin ? "Nota da auditoria (será aplicado em lote)..." : "Gravei um stories treinando hoje!"}
                                 value={checkinNote}
                                 onChange={(e) => setCheckinNote(e.target.value)}
                             />

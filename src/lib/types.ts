@@ -134,6 +134,7 @@ export interface Challenge {
   start_date: string;       // ISO date
   end_date: string;         // ISO date
   weekly_frequency: number;  // 1-7
+  weekly_points?: number;    // Points earned per week if weekly_frequency is met
   checkin_type: 'any_workout' | 'specific_workout';
   specific_workout_id?: string | null;
   visibility: 'public' | 'private';

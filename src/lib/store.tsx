@@ -313,6 +313,13 @@ export function useStore() {
     }, [refresh, store.kudos]);
 
     // ─── Challenges Admin ─────────────────────────────────────────────────
+    const toggleChallengeAdmin = useCallback(async (participantId: string, currentRole: 'admin' | 'participant') => {
+        const newRole = currentRole === 'admin' ? 'participant' : 'admin';
+        const { error } = await supabase.from('challenge_participants').update({ role: newRole }).eq('id', participantId);
+        if (error) throw new Error(error.message);
+        await refresh();
+    }, [refresh]);
+
     const addChallengeParticipant = useCallback(async (p: ChallengeParticipant) => {
         const { error } = await supabase.from('challenge_participants').insert(p);
         if (error) throw new Error(error.message);
@@ -397,7 +404,7 @@ export function useStore() {
         addWorkout, updateWorkout, deleteWorkout,
         addLog, updateLog, deleteLog,
         addFeedEvent, updateFeedEvent, deleteFeedEvent, toggleKudo,
-        addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge,
+        addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, toggleChallengeAdmin,
         addChallengeComment, deleteChallengeComment,
         createNotification, markNotificationRead, markAllNotificationsRead,
     };
