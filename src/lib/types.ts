@@ -126,7 +126,6 @@ export interface Kudo {
   createdAt: string;
 }
 
-// ─── Challenges ────────────────────────────────────────────────────────────
 export interface Challenge {
   id: string;
   title: string;
@@ -144,6 +143,17 @@ export interface Challenge {
   status: 'active' | 'ended';
   invite_token?: string | null;
   created_at: string;
+}
+
+// ─── Check-ins ─────────────────────────────────────────────────────────────
+export interface GymCheckin {
+  id: string;
+  user_id: string;
+  feed_event_id: string | null;
+  place_name: string;
+  lat: number | null;
+  lng: number | null;
+  checked_in_at: string;
 }
 
 export interface ChallengeParticipant {
@@ -208,4 +218,5 @@ export interface AppStore {
   challengeComments: ChallengeComment[];
   challengeBadges: ChallengeBadge[];
   notifications: Notification[];
+  gymCheckins: GymCheckin[];
 }

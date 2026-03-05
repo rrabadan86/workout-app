@@ -62,7 +62,18 @@ export default function ChallengeDetailsPage() {
     const isParticipant = !!myParticipant;
 
     const todayStr = today();
-    const hasCheckedInToday = checkins.some(ck => ck.user_id === userId && ck.checkin_date === todayStr);
+    // Only count feed events that are active (not deleted) AND not hidden
+    const activeFeedEventIds = new Set(
+        store.feedEvents
+            .filter(e => e.eventType.startsWith('WO_COMPLETED') && !e.eventType.startsWith('WO_COMPLETED_HIDDEN'))
+            .map(e => e.id)
+    );
+    const hasCheckedInToday = checkins.some(ck =>
+        ck.user_id === userId &&
+        ck.checkin_date === todayStr &&
+        // Only count if the linked feed event still exists and is not hidden
+        (ck.checkin_type === 'manual' || (ck.feed_event_id && activeFeedEventIds.has(ck.feed_event_id)))
+    );
 
     const isActive = challenge?.status === 'active' && challenge?.start_date <= todayStr && challenge?.end_date >= todayStr;
 
@@ -104,18 +115,35 @@ export default function ChallengeDetailsPage() {
                         validWorkoutId = todayLogs[0].workoutId;
                     }
                 } else if (challenge.checkin_type === 'specific_workout') {
-                    const specificLog = todayLogs.find(l => l.workoutId === challenge.specific_workout_id);
-                    if (specificLog) {
+                    // Specific workouts must also be completed today (tied to a feed event) to avoid resurrecting
+                    const specificEvent = store.feedEvents.find(e => {
+                        if (e.userId !== userId || e.referenceId !== challenge.specific_workout_id || !e.eventType.startsWith('WO_COMPLETED')) return false;
+                        const eDateStr = `${new Date(e.createdAt).getFullYear()}-${String(new Date(e.createdAt).getMonth() + 1).padStart(2, '0')}-${String(new Date(e.createdAt).getDate()).padStart(2, '0')}`;
+                        return eDateStr === todayStr;
+                    });
+
+                    if (specificEvent) {
                         hasValidWorkoutToday = true;
-                        validWorkoutId = specificLog.workoutId;
+                        validWorkoutId = specificEvent.referenceId;
                     }
                 }
 
                 if (hasValidWorkoutToday) {
                     console.log('[Challenge Sync] User has a valid workout today. Performing retroactive check-in for challenge:', challenge.id);
 
-                    // Search for the workout's feed event to link to the check-in
-                    const workoutFeedEvent = store.feedEvents.find(e => e.userId === userId && e.referenceId === validWorkoutId && e.eventType.startsWith('WO_COMPLETED'));
+                    // Search for the workout's feed event FROM TODAY to link to the check-in
+                    const workoutFeedEvent = store.feedEvents.find(e => {
+                        if (e.userId !== userId || e.referenceId !== validWorkoutId || !e.eventType.startsWith('WO_COMPLETED')) return false;
+                        const eDateStr = `${new Date(e.createdAt).getFullYear()}-${String(new Date(e.createdAt).getMonth() + 1).padStart(2, '0')}-${String(new Date(e.createdAt).getDate()).padStart(2, '0')}`;
+                        return eDateStr === todayStr;
+                    });
+
+                    // If the feed event for today doesn't exist anymore, DO NOT auto check-in.
+                    // This prevents resurrecting a check-in after the user deletes the workout from history.
+                    if (!workoutFeedEvent) {
+                        console.log('[Challenge Sync] No feed event found for today. Aborting retroactive check-in.');
+                        return;
+                    }
 
                     const newCheckin = {
                         id: uid(),
@@ -124,7 +152,7 @@ export default function ChallengeDetailsPage() {
                         checkin_date: todayStr,
                         checkin_type: 'auto' as const,
                         workout_id: validWorkoutId,
-                        feed_event_id: workoutFeedEvent ? workoutFeedEvent.id : null
+                        feed_event_id: workoutFeedEvent.id
                     };
 
                     const { error } = await supabase.from('challenge_checkins').insert(newCheckin);

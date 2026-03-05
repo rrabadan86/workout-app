@@ -26,6 +26,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [userEmail, setUserEmail] = useState('');
     const [ready, setReady] = useState(false);
 
+    const logout = useCallback(async () => {
+        clearSession();
+        setUserId('');
+        setUserEmail('');
+        await supabase.auth.signOut();
+    }, []);
+
+    // ─── Auto-logout apos 4 horas de inatividade ───
+    useEffect(() => {
+        if (!userId) return; // Nao monitora se não estiver logado
+
+        let timeoutId: NodeJS.Timeout;
+        const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
+
+        const resetTimer = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                console.log('[Auth] Usuário inativo por 4 horas. Fazendo logoff automático.');
+                logout();
+            }, FOUR_HOURS_MS);
+        };
+
+        // Inicia o timer
+        resetTimer();
+
+        // Escuta eventos de atividade
+        const events = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+
+        // Usa debounce simples para não sobrecarregar o reset
+        let throttleId: NodeJS.Timeout;
+        const handleActivity = () => {
+            if (throttleId) clearTimeout(throttleId);
+            throttleId = setTimeout(resetTimer, 500);
+        };
+
+        events.forEach(evt => window.addEventListener(evt, handleActivity));
+
+        return () => {
+            clearTimeout(timeoutId);
+            if (throttleId) clearTimeout(throttleId);
+            events.forEach(evt => window.removeEventListener(evt, handleActivity));
+        };
+    }, [userId, logout]);
+
     useEffect(() => {
         // 1. Carrega sessão local (login email/senha)
         const localSession = getSession();
@@ -82,13 +126,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = useCallback((uid: string) => {
         setSession(uid);
         setUserId(uid);
-    }, []);
-
-    const logout = useCallback(async () => {
-        clearSession();
-        setUserId('');
-        setUserEmail('');
-        await supabase.auth.signOut();
     }, []);
 
     return (

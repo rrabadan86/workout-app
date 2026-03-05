@@ -12,8 +12,9 @@ import {
 } from 'lucide-react';
 import type { Profile, FeedEvent, Challenge } from '@/lib/types';
 import { formatDate, today } from '@/lib/utils';
+import GymRanking from '@/components/GymRanking';
 
-type Tab = 'comunidade' | 'desafios';
+type Tab = 'comunidade' | 'desafios' | 'academias';
 
 // ─── Challenge helpers ────────────────────────────────────────────────────────
 
@@ -206,6 +207,12 @@ function CommunityContent() {
                         onClick={() => setActiveTab('desafios')}
                     >
                         Desafios
+                    </button>
+                    <button
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-sm font-bold font-montserrat transition-all ${activeTab === 'academias' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => setActiveTab('academias')}
+                    >
+                        Academias
                     </button>
                 </div>
 
@@ -461,6 +468,21 @@ function CommunityContent() {
                                 })}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* ════════════════════════════════════════
+                    Tab: Academias (Ranking de Liderança)
+                ════════════════════════════════════════ */}
+                {activeTab === 'academias' && (
+                    <div className="flex flex-col gap-5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Trophy size={18} className="text-amber-500" />
+                                <span className="text-sm font-bold text-slate-600">Ranking por Academia</span>
+                            </div>
+                        </div>
+                        <GymRanking userId={userId} />
                     </div>
                 )}
             </main>

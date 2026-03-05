@@ -71,7 +71,7 @@ export default function DashboardPage() {
 
     const activeProject = myProjects
         .filter(p => !p.prescribed_to || p.prescribed_to === userId)
-        .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+        .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''))[0];
 
     // Student count (for personal trainers)
     const myStudents = useMemo(() => {

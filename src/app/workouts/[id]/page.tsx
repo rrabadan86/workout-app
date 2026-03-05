@@ -10,6 +10,7 @@ import ExerciseThumbnail from '@/components/ExerciseThumbnail';
 import Modal from '@/components/Modal';
 import Toast from '@/components/Toast';
 import WorkoutPhotoCapture from '@/components/WorkoutPhotoCapture';
+import GymCheckinComponent from '@/components/GymCheckin';
 import ShareCard from '@/components/ShareCard';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
@@ -75,13 +76,14 @@ export default function WorkoutDetailPage() {
     const [finalDuration, setFinalDuration] = useState(0);
     const startedAtRef = useRef<number | null>(null);
 
-    // ─── Photo & Share Card ───────────────────────────────────────────────
+    // ─── Photo, Check-in & Share Card ─────────────────────────────────────
     const [workoutPhoto, setWorkoutPhoto] = useState<File | null>(null);
+    const [gymCheckin, setGymCheckin] = useState<{ placeName: string; lat: number | null; lng: number | null } | null>(null);
     const [showShareCard, setShowShareCard] = useState(false);
     const [shareCardData, setShareCardData] = useState<{
         workoutName: string; projectName?: string; date: string; duration: string;
         totalSets: number; completedSets: number; totalVolume: number;
-        exercises: { name: string; sets: string }[]; photoUrl?: string | null; userName?: string;
+        exercises: { name: string; sets: string }[]; photoUrl?: string | null; userName?: string; checkinName?: string;
     } | null>(null);
 
     useEffect(() => {
@@ -156,6 +158,7 @@ export default function WorkoutDetailPage() {
                             .upload(storagePath, workoutPhoto, { contentType: 'image/webp', upsert: false });
                         if (uploadErr) {
                             console.error('[Workout] Photo upload error:', uploadErr);
+                            setToast({ msg: 'Bucket workout-photos não encontrado ou erro de permissão. Foto não salva.', type: 'error' });
                         } else {
                             const { data: publicData } = supabase.storage
                                 .from('workout-photos')
@@ -165,6 +168,7 @@ export default function WorkoutDetailPage() {
                         }
                     } catch (photoErr) {
                         console.error('[Workout] Photo upload failed:', photoErr);
+                        setToast({ msg: 'Erro de conexão ao salvar a foto.', type: 'error' });
                     }
                 }
 
@@ -178,6 +182,66 @@ export default function WorkoutDetailPage() {
                     photoUrl,
                 });
                 console.log('[Workout] Feed event created successfully.');
+
+                // ─── Save Gym Check-in ─────────────────────────────────────
+                if (gymCheckin) {
+                    const { error: checkinError } = await supabase
+                        .from('gym_checkins')
+                        .insert({
+                            user_id: userId,
+                            feed_event_id: newFeedEventId,
+                            place_name: gymCheckin.placeName,
+                            lat: gymCheckin.lat,
+                            lng: gymCheckin.lng
+                        });
+                    if (checkinError) console.error('[Workout] Failed to save gym checkin:', checkinError);
+                    else {
+                        console.log('[Workout] Gym checkin saved.');
+
+                        // ─── RN07: Leader overtake notification ─────────────
+                        try {
+                            const allGymCheckins = store.gymCheckins.filter(c => c.place_name === gymCheckin.placeName);
+                            // Count per user (including the new one we just inserted)
+                            const counts: Record<string, number> = {};
+                            allGymCheckins.forEach(c => { counts[c.user_id] = (counts[c.user_id] || 0) + 1; });
+                            counts[userId] = (counts[userId] || 0) + 1; // add the one we just inserted
+
+                            // Find previous leader (before this checkin)
+                            const previousCounts = { ...counts };
+                            previousCounts[userId] = previousCounts[userId] - 1; // subtract the one we just added
+                            let previousLeaderId: string | null = null;
+                            let previousLeaderCount = 0;
+                            for (const [uid, count] of Object.entries(previousCounts)) {
+                                if (count > previousLeaderCount) {
+                                    previousLeaderCount = count;
+                                    previousLeaderId = uid;
+                                }
+                            }
+
+                            const myNewCount = counts[userId];
+                            // If I'm now the leader AND I wasn't before AND there was a previous leader
+                            if (
+                                previousLeaderId &&
+                                previousLeaderId !== userId &&
+                                myNewCount > previousLeaderCount
+                            ) {
+                                const myName = store.profiles.find(p => p.id === userId)?.name || 'Alguém';
+                                await supabase.from('notifications').insert({
+                                    user_id: previousLeaderId,
+                                    type: 'gym_leader_overtake',
+                                    title: `Você foi ultrapassado na ${gymCheckin.placeName}!`,
+                                    body: `${myName} assumiu a liderança com ${myNewCount} check-ins.`,
+                                    reference_id: gymCheckin.placeName,
+                                    created_at: new Date().toISOString(),
+                                    read: false,
+                                });
+                                console.log('[Workout] Leader overtake notification sent to:', previousLeaderId);
+                            }
+                        } catch (notifErr) {
+                            console.warn('[Workout] Could not check leader overtake:', notifErr);
+                        }
+                    }
+                }
 
                 // ─── Build Share Card Data ─────────────────────────────────
                 const todayLogs = store.logs.filter(l => l.workoutId === workout.id && l.userId === userId && l.date === todayStr);
@@ -215,6 +279,7 @@ export default function WorkoutDetailPage() {
                     exercises: exerciseList,
                     photoUrl: photoUrl || (workoutPhoto ? URL.createObjectURL(workoutPhoto) : null),
                     userName,
+                    checkinName: gymCheckin?.placeName,
                 });
                 setShowShareCard(true);
                 setWorkoutPhoto(null);
@@ -440,6 +505,92 @@ export default function WorkoutDetailPage() {
             id: uid(), workoutId: id, userId, exerciseId: exId, date: today(),
             sets: validSets
         });
+
+        // RN03: Exercise Competition Overtake Notification
+        const newMax = Math.max(...validSets.map(s => Number(s.weight) || 0));
+        if (newMax > 0) {
+            try {
+                const activeFeedEventIds = new Set(
+                    store.feedEvents
+                        .filter(e => e.eventType.startsWith('WO_COMPLETED') && !e.eventType.startsWith('WO_COMPLETED_HIDDEN'))
+                        .map(e => e.id)
+                );
+
+                const myGymNames = new Set(
+                    store.gymCheckins
+                        .filter(c => c.user_id === userId && c.feed_event_id && activeFeedEventIds.has(c.feed_event_id))
+                        .map(c => c.place_name)
+                );
+
+                for (const gymName of myGymNames) {
+                    const gymFeedEventIds = new Set(
+                        store.gymCheckins
+                            .filter(c => c.place_name === gymName && c.feed_event_id && activeFeedEventIds.has(c.feed_event_id))
+                            .map(c => c.feed_event_id)
+                    );
+
+                    const gymExecutionKeys = new Set<string>();
+                    store.feedEvents.forEach(e => {
+                        if (gymFeedEventIds.has(e.id) && e.createdAt) {
+                            const dateStr = e.createdAt.split('T')[0];
+                            gymExecutionKeys.add(`${e.userId}_${e.referenceId}_${dateStr}`);
+                        }
+                    });
+
+                    const myPastLogs = store.logs.filter(l => l.userId === userId && l.exerciseId === exId && gymExecutionKeys.has(`${userId}_${l.workoutId}_${l.date}`));
+                    let myOldMax = 0;
+                    for (const log of myPastLogs) {
+                        for (const s of log.sets) myOldMax = Math.max(myOldMax, s.weight);
+                    }
+
+                    if (newMax > myOldMax) {
+                        const gymUsers = new Set(
+                            store.gymCheckins
+                                .filter(c => c.place_name === gymName && c.feed_event_id && activeFeedEventIds.has(c.feed_event_id))
+                                .map(c => c.user_id)
+                        );
+                        gymUsers.delete(userId);
+
+                        let previousLeaderId: string | null = null;
+                        let previousMax = 0;
+
+                        for (const uid of gymUsers) {
+                            const logs = store.logs.filter(l => l.userId === uid && l.exerciseId === exId && gymExecutionKeys.has(`${uid}_${l.workoutId}_${l.date}`));
+                            let userMax = 0;
+                            for (const log of logs) {
+                                for (const s of log.sets) userMax = Math.max(userMax, s.weight);
+                            }
+                            if (userMax > previousMax) {
+                                previousMax = userMax;
+                                previousLeaderId = uid;
+                            }
+                        }
+
+                        if (previousLeaderId && previousMax >= myOldMax && newMax > previousMax) {
+                            const leaderProfile = store.profiles.find(p => p.id === previousLeaderId);
+                            if (leaderProfile?.notification_prefs?.rank_changes !== false) {
+                                const myName = store.profiles.find(p => p.id === userId)?.name || 'Alguém';
+                                const exerciseName = store.exercises.find(e => e.id === exId)?.name || 'exercício';
+                                supabase.from('notifications').insert({
+                                    user_id: previousLeaderId,
+                                    type: 'exercise_overtake',
+                                    title: `Você perdeu a liderança na ${gymName}!`,
+                                    body: `${myName} assumiu a liderança no ${exerciseName} com ${newMax}kg.`,
+                                    reference_id: exId,
+                                    created_at: new Date().toISOString(),
+                                    read: false,
+                                }).then(({ error }) => {
+                                    if (error) console.error('Error sending exercise overtake notif', error);
+                                });
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Overtake check failed', err);
+            }
+        }
+
         setWeights((prev) => ({ ...prev, [slotKey]: Array(setsDef.length).fill('') }));
         setSaving(null);
         setToast({ msg: 'Registro salvo!', type: 'success' });
@@ -628,6 +779,9 @@ export default function WorkoutDetailPage() {
                         );
                     })}
                 </div>
+
+                {/* ─── Photo Capture Section ─── */}
+                {/* Moved inside the modal */}
             </div>
 
             {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
@@ -713,6 +867,9 @@ export default function WorkoutDetailPage() {
                         {/* ─── Photo Capture ─── */}
                         <WorkoutPhotoCapture photo={workoutPhoto} onPhotoChange={setWorkoutPhoto} />
 
+                        {/* ─── Gym Check-in ─── */}
+                        <GymCheckinComponent checkin={gymCheckin} onCheckin={setGymCheckin} />
+
                         {(() => {
                             const todayLogs = store.logs.filter(l => l.workoutId === id && l.userId === userId && l.date === today());
                             if (todayLogs.length === 0) {
@@ -773,9 +930,11 @@ export default function WorkoutDetailPage() {
             {showShareCard && shareCardData && (
                 <ShareCard
                     {...shareCardData}
+                    checkinName={gymCheckin?.placeName}
                     onClose={() => {
                         setShowShareCard(false);
                         setShareCardData(null);
+                        setGymCheckin(null);
                     }}
                 />
             )}

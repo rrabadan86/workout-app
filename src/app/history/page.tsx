@@ -128,13 +128,20 @@ export default function HistoryPage() {
             }
         }
 
-        // ─── Cleanup challenge check-ins linked to this feed event ───
         const { error: checkinErr } = await supabase
             .from('challenge_checkins')
             .delete()
             .eq('feed_event_id', deleteTarget.id);
         if (checkinErr) console.warn('[History] Failed to delete challenge checkins:', checkinErr);
         else console.log('[History] Challenge checkins deleted for feed event:', deleteTarget.id);
+
+        // ─── Cleanup gym check-ins linked to this feed event ───
+        const { error: gymCheckinErr } = await supabase
+            .from('gym_checkins')
+            .delete()
+            .eq('feed_event_id', deleteTarget.id);
+        if (gymCheckinErr) console.warn('[History] Failed to delete gym checkin:', gymCheckinErr);
+        else console.log('[History] Gym check-ins deleted for feed event:', deleteTarget.id);
 
         await deleteFeedEvent(deleteTarget.id);
         await refresh();

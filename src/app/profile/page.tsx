@@ -6,7 +6,8 @@ import Navbar from '@/components/Navbar';
 import Toast from '@/components/Toast';
 import { useAuth } from '@/lib/AuthContext';
 import { useStore } from '@/lib/store';
-import { UserCircle, Trophy, ChevronRight, Bell } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { UserCircle, Trophy, ChevronRight, Bell, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -29,6 +30,9 @@ export default function ProfilePage() {
 
     const [ufs, setUfs] = useState<{ id: number, sigla: string, nome: string }[]>([]);
     const [cities, setCities] = useState<{ id: number, nome: string }[]>([]);
+
+    // Gym Checkins History
+    const [gymCheckins, setGymCheckins] = useState<{ id: string, place_name: string, checked_in_at: string }[]>([]);
 
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -61,7 +65,18 @@ export default function ProfilePage() {
             .then(res => res.json())
             .then(data => setUfs(data))
             .catch(err => console.error('Erro IBGE UF', err));
-    }, []);
+
+        if (userId && ready) {
+            supabase
+                .from('gym_checkins')
+                .select('id, place_name, checked_in_at')
+                .eq('user_id', userId)
+                .order('checked_in_at', { ascending: false })
+                .then(({ data, error }) => {
+                    if (!error && data) setGymCheckins(data);
+                });
+        }
+    }, [userId, ready]);
 
     useEffect(() => {
         if (!stateUF) {
@@ -297,6 +312,34 @@ export default function ProfilePage() {
                             </button>
                         </div>
                     </form>
+                </div>
+
+                {/* ─── Academias Visitadas Section ─── */}
+                <div className="mt-12 mb-4 flex items-center gap-3">
+                    <MapPin size={24} className="text-emerald-500" />
+                    <h2 className="text-2xl font-extrabold text-slate-800 font-inter tracking-tight">Academias Visitadas</h2>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 lg:p-8">
+                    {gymCheckins.length === 0 ? (
+                        <p className="text-slate-500 text-sm">Você ainda não fez check-in em nenhum local.</p>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {gymCheckins.map(ck => (
+                                <div key={ck.id} className="group flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-emerald-500/20 hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-12 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors shrink-0">
+                                            <MapPin size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-slate-900">{ck.place_name}</h4>
+                                            <p className="text-xs text-slate-500 capitalize">{new Date(ck.checked_in_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* ─── Desafios Section ─── */}

@@ -3,9 +3,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from './supabase';
-import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo, Challenge, ChallengeParticipant, ChallengeInvite, ChallengeCheckin, ChallengeComment, ChallengeBadge, Notification } from './types';
+import type { AppStore, Profile, Exercise, Project, Workout, WorkoutLog, FeedEvent, Kudo, Challenge, ChallengeParticipant, ChallengeInvite, ChallengeCheckin, ChallengeComment, ChallengeBadge, Notification, GymCheckin } from './types';
 
-const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [], challenges: [], challengeParticipants: [], challengeInvites: [], challengeCheckins: [], challengeComments: [], challengeBadges: [], notifications: [] };
+const defaultStore: AppStore = { profiles: [], exercises: [], projects: [], workouts: [], logs: [], feedEvents: [], kudos: [], challenges: [], challengeParticipants: [], challengeInvites: [], challengeCheckins: [], challengeComments: [], challengeBadges: [], notifications: [], gymCheckins: [] };
 
 // ─── Store Context ────────────────────────────────────────────────────────────
 interface StoreContextValue {
@@ -50,6 +50,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     supabase.from('challenge_comments').select('*'),
                     supabase.from('challenge_badges').select('*'),
                     supabase.from('notifications').select('*').order('created_at', { ascending: false }),
+                    supabase.from('gym_checkins').select('*'),
                 ]);
 
                 const result = await Promise.race([fetchTask, timeout]);
@@ -74,7 +75,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     return res.value?.data ?? [];
                 };
 
-                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes, challengesRes, challengeParticipantsRes, challengeInvitesRes, challengeCheckinsRes, challengeCommentsRes, challengeBadgesRes, notificationsRes] = settled;
+                const [usersRes, exercisesRes, projectsRes, workoutsRes, logsRes, feedRes, kudosRes, challengesRes, challengeParticipantsRes, challengeInvitesRes, challengeCheckinsRes, challengeCommentsRes, challengeBadgesRes, notificationsRes, gymCheckinsRes] = settled;
 
                 let workouts = getValue(workoutsRes, 'workouts') as Workout[];
                 let projects = getValue(projectsRes, 'projects') as Project[];
@@ -138,6 +139,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                     challengeComments: getValue(challengeCommentsRes, 'challenge_comments') as ChallengeComment[],
                     challengeBadges: getValue(challengeBadgesRes, 'challenge_badges') as ChallengeBadge[],
                     notifications: getValue(notificationsRes, 'notifications') as Notification[],
+                    gymCheckins: getValue(gymCheckinsRes, 'gym_checkins') as GymCheckin[],
                 });
             } catch (err) {
                 console.error('[Store] Refresh issue:', err);
