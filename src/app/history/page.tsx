@@ -47,7 +47,7 @@ type Tab = 'historico' | 'comparar';
 export default function HistoryPage() {
     const router = useRouter();
     const { userId, ready } = useAuth();
-    const { store, loading, deleteFeedEvent, updateFeedEvent, deleteLog } = useStore();
+    const { store, loading, deleteFeedEvent, updateFeedEvent, deleteLog, refresh } = useStore();
 
     const [activeTab, setActiveTab] = useState<Tab>('historico');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -128,7 +128,16 @@ export default function HistoryPage() {
             }
         }
 
+        // ─── Cleanup challenge check-ins linked to this feed event ───
+        const { error: checkinErr } = await supabase
+            .from('challenge_checkins')
+            .delete()
+            .eq('feed_event_id', deleteTarget.id);
+        if (checkinErr) console.warn('[History] Failed to delete challenge checkins:', checkinErr);
+        else console.log('[History] Challenge checkins deleted for feed event:', deleteTarget.id);
+
         await deleteFeedEvent(deleteTarget.id);
+        await refresh();
         setSaving(false);
         setDeleteTarget(null);
 

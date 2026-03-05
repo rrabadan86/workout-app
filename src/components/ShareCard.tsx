@@ -53,7 +53,6 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
 
 async function loadImageAsBlob(url: string): Promise<HTMLImageElement | null> {
     try {
-        // Try fetching as blob first (avoids CORS taint)
         const resp = await fetch(url, { mode: 'cors', cache: 'force-cache' });
         const blob = await resp.blob();
         const blobUrl = URL.createObjectURL(blob);
@@ -63,11 +62,32 @@ async function loadImageAsBlob(url: string): Promise<HTMLImageElement | null> {
             img.onerror = () => rej(new Error('img load fail'));
             img.src = blobUrl;
         });
-        // Note: intentionally not revoking here so img stays valid
         return img;
     } catch {
         return null;
     }
+}
+
+async function drawVimuLogo(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): Promise<void> {
+    const svgStr = `<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="vmG" x1="20" y1="40" x2="180" y2="160" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#FF5722"/>
+                <stop offset="45%" stop-color="#E64A19"/>
+                <stop offset="100%" stop-color="#7B1FA2"/>
+            </linearGradient>
+        </defs>
+        <path d="M 22 50 L 58 148 L 88 68 L 110 128 L 130 72 Q 145 42, 168 52 Q 186 60, 182 78 Q 178 90, 165 85 Q 155 80, 158 70"
+            stroke="url(#vmG)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>`;
+    return new Promise<void>((resolve) => {
+        const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, x, y, size, size); URL.revokeObjectURL(url); resolve(); };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+        img.src = url;
+    });
 }
 
 async function generateShareCanvas(props: {
@@ -116,10 +136,11 @@ async function generateShareCanvas(props: {
         ctx.fillRect(0, 0, W, H);
     }
 
-    // ── Brand: VIMU text ─────────────────────────────────────────
+    // ── Brand: Logo + VIMU text ──────────────────────────────────
+    await drawVimuLogo(ctx, PAD, 60, 56);
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
     ctx.font = '800 52px system-ui, -apple-system, Arial, sans-serif';
-    ctx.fillText('VIMU', PAD, 130);
+    ctx.fillText('VIMU', PAD + 68, 105);
 
     // ── User name ────────────────────────────────────────────────
     if (props.userName) {
@@ -163,10 +184,6 @@ async function generateShareCanvas(props: {
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 62px system-ui, -apple-system, Arial, sans-serif';
     ctx.fillText(props.duration, badgeX + 28, badgeY + 10);
-
-    // ── Emoji ────────────────────────────────────────────────────
-    ctx.font = '90px serif';
-    ctx.fillText('💪🔥', W - 220, H - 90);
 
     return canvas;
 }
@@ -270,8 +287,6 @@ export default function ShareCard({
                                 <span className="text-white/50 text-[9px] font-bold uppercase tracking-wider mb-1">Duração</span>
                                 <span className="text-white font-black text-3xl">{duration}</span>
                             </div>
-
-                            <div className="text-center text-3xl">💪🔥</div>
                         </div>
                     </div>
                 </div>
