@@ -110,10 +110,20 @@ export default function ProjectsPage() {
         const isShared = p.sharedWith.includes(userId);
         const isPrescribedToMe = p.prescribed_to === userId;
         const isPrescribedByMe = p.prescribed_by === userId;
+
+        const projectWorkouts = store.workouts.filter(w => w.projectId === p.id);
+        const myChallenges = store.challenges.filter(c =>
+            c.status === 'active' &&
+            c.checkin_type === 'specific_workout' &&
+            store.challengeParticipants.some(cp => cp.challenge_id === c.id && cp.user_id === userId)
+        );
+        const challengeWorkoutIds = myChallenges.map(c => c.specific_workout_id).filter(Boolean);
+        const isChallengeProject = projectWorkouts.some(w => challengeWorkoutIds.includes(w.id || ''));
+
         if (currentUser?.role === 'personal') {
-            return isOwner || isPrescribedByMe;
+            return isOwner || isPrescribedByMe || isChallengeProject;
         } else {
-            return isOwner || isShared || isPrescribedToMe;
+            return isOwner || isShared || isPrescribedToMe || isChallengeProject;
         }
     }).filter(p => {
         const isActive = p.status === 'active' || !p.status;
@@ -431,6 +441,15 @@ export default function ProjectsPage() {
                 ) : (
                     <div className="flex flex-col gap-3 mb-10">
                         {myProjects.map((p) => {
+                            const projectWorkouts = store.workouts.filter(w => w.projectId === p.id);
+                            const myChallenges = store.challenges.filter(c =>
+                                c.status === 'active' &&
+                                c.checkin_type === 'specific_workout' &&
+                                store.challengeParticipants.some(cp => cp.challenge_id === c.id && cp.user_id === userId)
+                            );
+                            const challengeWorkoutIds = myChallenges.map(c => c.specific_workout_id).filter(Boolean);
+                            const isChallengeProject = projectWorkouts.some(w => challengeWorkoutIds.includes(w.id || ''));
+
                             const statusLabel = p.status === 'inactive' ? projectStatus({ ...p, endDate: '1970-01-01' }) : projectStatus(p);
                             const st = STATUS_LABEL[statusLabel];
                             const workoutCount = store.workouts.filter((w) => w.projectId === p.id).length;
@@ -511,6 +530,11 @@ export default function ProjectsPage() {
 
                                                 {/* Badges row */}
                                                 <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                                                    {isChallengeProject && (
+                                                        <span className="inline-flex items-center text-[0.65rem] font-bold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                                                            🏆 Desafio
+                                                        </span>
+                                                    )}
                                                     {isAI && currentUser?.role === 'personal' && (
                                                         <span className="inline-flex items-center gap-1 text-[0.65rem] font-bold text-[#C084FC] bg-[#C084FC]/10 rounded-full px-2 py-0.5">
                                                             <Sparkles size={9} /> IA

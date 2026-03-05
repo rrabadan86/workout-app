@@ -369,6 +369,12 @@ export function useStore() {
         if (error) throw new Error(error.message);
     }, []);
 
+    const deleteChallengeCheckin = useCallback(async (id: string) => {
+        const { error } = await supabase.from('challenge_checkins').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+        await refresh();
+    }, [refresh]);
+
     // ─── Notifications ─────────────────────────────────────────────────────
     const createNotification = useCallback(async (n: Omit<Notification, 'created_at' | 'read'>) => {
         const { error } = await supabase.from('notifications').insert({ ...n, read: false });
@@ -405,7 +411,7 @@ export function useStore() {
         addLog, updateLog, deleteLog,
         addFeedEvent, updateFeedEvent, deleteFeedEvent, toggleKudo,
         addChallengeParticipant, removeChallengeParticipant, deleteChallenge, updateChallenge, toggleChallengeAdmin,
-        addChallengeComment, deleteChallengeComment,
+        addChallengeComment, deleteChallengeComment, deleteChallengeCheckin,
         createNotification, markNotificationRead, markAllNotificationsRead,
     };
 }

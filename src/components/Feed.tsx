@@ -11,16 +11,20 @@ import { MessageSquare, Send, Trash2 } from 'lucide-react';
 function timeAgo(dateStr: string) {
     const d = new Date(dateStr);
     const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'agora mesmo';
-    if (diffMins < 60) return `${diffMins}m atrás`;
-    if (diffHours < 24) return `${diffHours}h atrás`;
-    if (diffDays === 1) return 'ontem';
-    return `${diffDays}d atrás`;
+    // Check if it's the same day
+    if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+        const diffMs = now.getTime() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+
+        if (diffMins < 1) return 'agora mesmo';
+        if (diffMins < 60) return `${diffMins}m atrás`;
+        return `${diffHours}h atrás`;
+    }
+
+    // Explicit date format instead of relative days
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 function formatDuration(seconds?: number) {

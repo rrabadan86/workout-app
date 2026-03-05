@@ -11,7 +11,7 @@ import { useStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { Clock, Trash2, Eye, EyeOff, Dumbbell, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import type { FeedEvent } from '@/lib/types';
+import type { FeedEvent, ChallengeCheckin } from '@/lib/types';
 
 const CompareChart = dynamic(() => import('@/components/CompareChart'), {
     ssr: false,
@@ -29,17 +29,20 @@ function formatDurationHMS(seconds?: number) {
 function timeAgo(dateStr: string) {
     const d = new Date(dateStr);
     const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return 'agora mesmo';
-    if (diffMins < 60) return `${diffMins}m atrás`;
-    if (diffHours < 24) return `${diffHours}h atrás`;
-    if (diffDays === 1) return 'ontem';
-    if (diffDays < 30) return `${diffDays}d atrás`;
-    return `${Math.floor(diffDays / 30)} mês(es) atrás`;
+    // Check if it's the same day
+    if (d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+        const diffMs = now.getTime() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+
+        if (diffMins < 1) return 'agora mesmo';
+        if (diffMins < 60) return `${diffMins}m atrás`;
+        return `${diffHours}h atrás`;
+    }
+
+    // Explicit date format instead of relative days
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
 type Tab = 'historico' | 'comparar';
@@ -51,7 +54,7 @@ export default function HistoryPage() {
 
     const [activeTab, setActiveTab] = useState<Tab>('historico');
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-    const [deleteTarget, setDeleteTarget] = useState<FeedEvent | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<HistoryItem | null>(null);
     const [saving, setSaving] = useState(false);
     const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
     const [mounted, setMounted] = useState(false);
@@ -69,9 +72,26 @@ export default function HistoryPage() {
 
     const currentUser = store.profiles.find(u => u.id === userId);
 
-    const myHistory = store.feedEvents
+    type HistoryItem =
+        | { type: 'workout', data: FeedEvent, dateObj: Date, id: string }
+        | { type: 'manual_checkin', data: ChallengeCheckin, dateObj: Date, id: string }
+        | { type: 'orphan_feed', data: FeedEvent, dateObj: Date, id: string };
+
+    const workoutEvents = store.feedEvents
         .filter(e => e.userId === userId && (e.eventType.startsWith('WO_COMPLETED') || e.eventType.startsWith('WO_COMPLETED_HIDDEN')))
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .map(e => ({ type: 'workout' as const, data: e, dateObj: new Date(e.createdAt), id: e.id }));
+
+    const manualCheckins = store.challengeCheckins
+        .filter(ck => ck.user_id === userId && !ck.workout_id)
+        .map(ck => ({ type: 'manual_checkin' as const, data: ck, dateObj: new Date(ck.created_at || ck.checkin_date || new Date().toISOString()), id: ck.id }));
+
+    const orphanFeeds = store.feedEvents
+        .filter(e => e.userId === userId && e.eventType.startsWith('CHALLENGE_CHECKIN'))
+        .filter(e => !store.challengeCheckins.some(ck => ck.feed_event_id === e.id))
+        .map(e => ({ type: 'orphan_feed' as const, data: e, dateObj: new Date(e.createdAt), id: e.id }));
+
+    const myHistory: HistoryItem[] = [...workoutEvents, ...manualCheckins, ...orphanFeeds]
+        .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
 
     function toggleExpand(eventId: string) {
         setExpandedCards(prev => {
@@ -94,11 +114,65 @@ export default function HistoryPage() {
         if (!deleteTarget) return;
         setSaving(true);
 
-        const eventDateObj = new Date(deleteTarget.createdAt);
+        if (deleteTarget.type === 'manual_checkin') {
+            try {
+                const ck = deleteTarget.data;
+                const { deleteChallengeCheckin } = store as any; // Destructure safely
+
+                // Only delete the feed event if it's explicitly a manual checkin's feed event (eventType string check to avoid deleting related actual workout events)
+                if (ck.feed_event_id) {
+                    const linkedFeedEvent = store.feedEvents.find(e => e.id === ck.feed_event_id);
+                    if (linkedFeedEvent && linkedFeedEvent.eventType.startsWith('CHALLENGE_CHECKIN')) {
+                        await deleteFeedEvent(ck.feed_event_id);
+                    }
+                }
+
+                // Se a interface do StoreContext não tiver deleteChallengeCheckin (fallback backend)
+                if (typeof deleteChallengeCheckin === 'function') {
+                    await deleteChallengeCheckin(ck.id);
+                } else {
+                    await supabase.from('challenge_checkins').delete().eq('id', ck.id);
+                }
+
+                // Recalculate badges over remaining checkins
+                const remainingCheckins = store.challengeCheckins.filter(c => c.id !== ck.id);
+                // Call evaluateBadges if possible, here we rely on the next refresh/calculate step inside the challenge view
+                // since this is the global history and the ranking will simply not see this point anymore.
+
+                await refresh();
+                setSaving(false);
+                setDeleteTarget(null);
+                setToast({ msg: 'Check-in de desafio apagado com sucesso.', type: 'success' });
+            } catch (err: any) {
+                console.error(err);
+                setSaving(false);
+                setToast({ msg: 'Erro ao excluir check-in.', type: 'error' });
+            }
+            return;
+        }
+
+        if (deleteTarget.type === 'orphan_feed') {
+            try {
+                await deleteFeedEvent(deleteTarget.data.id);
+                await refresh();
+                setSaving(false);
+                setDeleteTarget(null);
+                setToast({ msg: 'Check-in de desafio apagado com sucesso.', type: 'success' });
+            } catch (err) {
+                console.error(err);
+                setSaving(false);
+                setToast({ msg: 'Erro ao excluir.', type: 'error' });
+            }
+            return;
+        }
+
+        // --- EXCLUSÃO DE WORKOUT ---
+        const event = deleteTarget.data;
+        const eventDateObj = new Date(event.createdAt);
         const localDateStr = `${eventDateObj.getFullYear()}-${String(eventDateObj.getMonth() + 1).padStart(2, '0')}-${String(eventDateObj.getDate()).padStart(2, '0')}`;
 
         const sameDayEvents = store.feedEvents.filter(e => {
-            if (e.userId !== userId || e.referenceId !== deleteTarget.referenceId) return false;
+            if (e.userId !== userId || e.referenceId !== event.referenceId) return false;
             if (!e.eventType.startsWith('WO_COMPLETED') && !e.eventType.startsWith('WO_COMPLETED_HIDDEN')) return false;
             const eDateObj = new Date(e.createdAt);
             const eDateStr = `${eDateObj.getFullYear()}-${String(eDateObj.getMonth() + 1).padStart(2, '0')}-${String(eDateObj.getDate()).padStart(2, '0')}`;
@@ -107,7 +181,7 @@ export default function HistoryPage() {
 
         if (sameDayEvents.length <= 1) {
             const logsToDelete = store.logs.filter(l =>
-                l.userId === userId && l.workoutId === deleteTarget.referenceId && l.date === localDateStr
+                l.userId === userId && l.workoutId === event.referenceId && l.date === localDateStr
             );
             for (const log of logsToDelete) {
                 await deleteLog(log.id);
@@ -115,9 +189,9 @@ export default function HistoryPage() {
         }
 
         // ─── Cleanup photo from Storage (RN09) ───
-        if (deleteTarget.photoUrl) {
+        if (event.photoUrl) {
             try {
-                const url = new URL(deleteTarget.photoUrl);
+                const url = new URL(event.photoUrl);
                 const pathMatch = url.pathname.match(/\/storage\/v1\/object\/public\/workout-photos\/(.+)/);
                 if (pathMatch) {
                     await supabase.storage.from('workout-photos').remove([pathMatch[1]]);
@@ -131,19 +205,19 @@ export default function HistoryPage() {
         const { error: checkinErr } = await supabase
             .from('challenge_checkins')
             .delete()
-            .eq('feed_event_id', deleteTarget.id);
+            .eq('feed_event_id', event.id);
         if (checkinErr) console.warn('[History] Failed to delete challenge checkins:', checkinErr);
-        else console.log('[History] Challenge checkins deleted for feed event:', deleteTarget.id);
+        else console.log('[History] Challenge checkins deleted for feed event:', event.id);
 
         // ─── Cleanup gym check-ins linked to this feed event ───
         const { error: gymCheckinErr } = await supabase
             .from('gym_checkins')
             .delete()
-            .eq('feed_event_id', deleteTarget.id);
+            .eq('feed_event_id', event.id);
         if (gymCheckinErr) console.warn('[History] Failed to delete gym checkin:', gymCheckinErr);
-        else console.log('[History] Gym check-ins deleted for feed event:', deleteTarget.id);
+        else console.log('[History] Gym check-ins deleted for feed event:', event.id);
 
-        await deleteFeedEvent(deleteTarget.id);
+        await deleteFeedEvent(event.id);
         await refresh();
         setSaving(false);
         setDeleteTarget(null);
@@ -187,6 +261,8 @@ export default function HistoryPage() {
                 {/* ─── Tab: Histórico ─── */}
                 {activeTab === 'historico' && (
                     <>
+                        {/* Debug removido após correção */}
+
                         {myHistory.length === 0 ? (
                             <div className="bg-white rounded-xl card-depth p-10 mt-4 text-center flex flex-col items-center justify-center border border-slate-100">
                                 <Dumbbell size={48} className="text-slate-300 mb-4" />
@@ -197,7 +273,59 @@ export default function HistoryPage() {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-4 mb-10">
-                                {myHistory.map(event => {
+                                {myHistory.map(item => {
+                                    if (item.type === 'manual_checkin' || item.type === 'orphan_feed') {
+                                        const isOrphan = item.type === 'orphan_feed';
+
+                                        let challengeTitle = 'Desafio Desconhecido';
+                                        let evidenceNote = null;
+
+                                        if (isOrphan) {
+                                            const e = item.data as FeedEvent;
+                                            const payloadParts = e.eventType.split('|');
+                                            challengeTitle = payloadParts.length > 1 ? payloadParts[1] : 'Desafio Desconhecido';
+                                        } else {
+                                            const ck = item.data as ChallengeCheckin;
+                                            evidenceNote = ck.evidence_note;
+                                            const challenge = store.challenges.find(c => c.id === ck.challenge_id);
+                                            if (challenge) challengeTitle = challenge.title;
+                                        }
+
+                                        return (
+                                            <div key={item.id} className="bg-white rounded-2xl card-depth border border-transparent hover:border-slate-100 transition-colors">
+                                                <div className="flex items-start justify-between gap-3 p-5">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <h4 className="font-extrabold font-inter text-slate-900 text-base leading-snug line-clamp-1">
+                                                                🏆 Desafio: {challengeTitle}
+                                                            </h4>
+                                                            <span className="text-xs font-bold text-slate-400 shrink-0 mt-0.5">
+                                                                {timeAgo(item.dateObj.toISOString())}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 font-roboto mt-0.5">Check-in Desafio</p>
+                                                        {evidenceNote && (
+                                                            <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 italic text-sm text-slate-600 font-roboto">
+                                                                "{evidenceNote}"
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 shrink-0">
+                                                        <button
+                                                            className="p-1.5 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1.5"
+                                                            title="Excluir check-in"
+                                                            onClick={() => setDeleteTarget(item)}
+                                                            disabled={saving}
+                                                        >
+                                                            <Trash2 size={15} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    const event = item.data;
                                     const workout = store.workouts.find(w => w.id === event.referenceId);
                                     if (!workout) return null;
 
@@ -301,7 +429,7 @@ export default function HistoryPage() {
                                                     <button
                                                         className="p-1.5 rounded-xl hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
                                                         title="Excluir treino"
-                                                        onClick={() => setDeleteTarget(event)}
+                                                        onClick={() => setDeleteTarget(item)}
                                                         disabled={saving}
                                                     >
                                                         <Trash2 size={15} />

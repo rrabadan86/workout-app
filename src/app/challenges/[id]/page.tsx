@@ -309,7 +309,16 @@ export default function ChallengeDetailsPage() {
                 if (checkinDate > todayStr) throw new Error('A data do check-in não pode estar no futuro.');
 
                 const newCheckinsToInsert: ChallengeCheckin[] = [];
+                let skippedCount = 0;
+
                 for (const pid of Array.from(selectedParticipants)) {
+                    // Pre-check if this user already has a check-in for this challenge on this date
+                    const alreadyCheckedIn = store.challengeCheckins.some(ck => ck.challenge_id === challenge!.id && ck.user_id === pid && ck.checkin_date === checkinDate);
+                    if (alreadyCheckedIn) {
+                        skippedCount++;
+                        continue; // Skip this user
+                    }
+
                     // Decide whether we broadcast on public challenges for each user
                     // Em bulk inserts a gente não costuma flodar a feed, mas vamos deixar como manual simples pra garantir que não quebra a exp (se não public, feedEvent=null)
                     let feedEventId: string | null = null;
@@ -337,8 +346,17 @@ export default function ChallengeDetailsPage() {
                     } as ChallengeCheckin);
                 }
 
+                if (newCheckinsToInsert.length === 0) {
+                    throw new Error(skippedCount > 0 ? `Todos os ${skippedCount} usuários selecionados já possuem check-in nesta data.` : 'Nenhum check-in válido para lançar.');
+                }
+
                 const { error } = await supabase.from('challenge_checkins').insert(newCheckinsToInsert);
-                if (error) throw error;
+                if (error) {
+                    if (error.code === '23505') { // postgres unique_violation code
+                        throw new Error('Alguns destes usuários já possuem check-in nesta data.');
+                    }
+                    throw error;
+                }
 
                 const updatedCheckins = [...store.challengeCheckins, ...newCheckinsToInsert];
 
@@ -352,36 +370,46 @@ export default function ChallengeDetailsPage() {
                 setCheckinNote('');
                 setSelectedParticipants(new Set());
                 setCheckinDate(todayStr);
-                setToast({ msg: `${newCheckinsToInsert.length} check-in(s) registrado(s) com sucesso! 💥`, type: 'success' });
+
+                const msgSuffix = skippedCount > 0 ? ` (${skippedCount} ignorados pois já tinham check-in na data)` : '';
+                setToast({ msg: `${newCheckinsToInsert.length} check-in(s) registrado(s) com sucesso!${msgSuffix}`, type: 'success' });
                 return;
             }
 
             // -------------- FLUXO NORMAL DO USUÁRIO --------------
             let feedEventId: string | null = null;
+            let newCheckin: any = null;
 
-            if (challenge?.visibility === 'public') {
-                feedEventId = uid();
-                const { error: feErr } = await supabase.from('feed_events').insert({
-                    id: feedEventId,
-                    userId,
-                    eventType: `CHALLENGE_CHECKIN|${challenge.title}`,
-                    referenceId: challenge.id,
-                    createdAt: new Date().toISOString()
-                });
-                if (feErr) throw feErr;
+            try {
+                if (challenge?.visibility === 'public') {
+                    feedEventId = uid();
+                    const { error: feErr } = await supabase.from('feed_events').insert({
+                        id: feedEventId,
+                        userId,
+                        eventType: `CHALLENGE_CHECKIN|${challenge.title}`,
+                        referenceId: challenge.id,
+                        createdAt: new Date().toISOString()
+                    });
+                    if (feErr) throw feErr;
+                }
+
+                newCheckin = {
+                    id: uid(),
+                    challenge_id: challenge!.id,
+                    user_id: userId,
+                    checkin_date: todayStr, // Usuário comum sempre faz pra "hoje"
+                    checkin_type: 'manual' as const,
+                    evidence_note: checkinNote.trim() || null,
+                    feed_event_id: feedEventId
+                };
+                const { error } = await supabase.from('challenge_checkins').insert(newCheckin);
+                if (error) throw error;
+            } catch (err) {
+                if (feedEventId) {
+                    await supabase.from('feed_events').delete().eq('id', feedEventId);
+                }
+                throw err;
             }
-
-            const newCheckin = {
-                id: uid(),
-                challenge_id: challenge!.id,
-                user_id: userId,
-                checkin_date: todayStr, // Usuário comum sempre faz pra "hoje"
-                checkin_type: 'manual' as const,
-                evidence_note: checkinNote.trim() || null,
-                feed_event_id: feedEventId
-            };
-            const { error } = await supabase.from('challenge_checkins').insert(newCheckin);
-            if (error) throw error;
 
             const rankSnapshot = (ckList: ChallengeCheckin[]) =>
                 participants
