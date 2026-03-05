@@ -938,10 +938,10 @@ export default function ChallengeDetailsPage() {
                                     </div>
                                     <p className="text-slate-700 text-sm leading-relaxed">
                                         Este desafio exige <strong>{freq} treino{freq > 1 ? 's' : ''} por semana</strong>.
-                                        Cada semana você pode registrar no máximo <strong>{freq} check-in{freq > 1 ? 's' : ''}</strong> — se você treinar mais do que isso, apenas os primeiros <strong>{freq}</strong> serão contabilizados na sua pontuação.
+                                        Ao atingir essa meta semanal, você ganha <strong>{challenge.weekly_points || 1} ponto{challenge.weekly_points !== 1 ? 's' : ''}</strong> na pontuação.
                                     </p>
                                     <p className="text-slate-500 text-sm">
-                                        Exemplo: se este desafio exige {freq}x por semana e você treinar {freq + 1}x, apenas <strong>{freq} check-in{freq > 1 ? 's' : ''}</strong> serão somados ao seu total.
+                                        Exemplo: se este desafio exige {freq}x por semana e você treinar {freq + 1}x, os <strong>{freq + 1} check-ins</strong> serão somados ao seu total, porém a pontuação ganha será baseada nos <strong>{freq} check-ins</strong>.
                                     </p>
                                 </div>
 
