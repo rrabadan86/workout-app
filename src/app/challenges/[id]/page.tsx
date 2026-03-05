@@ -873,12 +873,6 @@ export default function ChallengeDetailsPage() {
                                             <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-3">
                                                 <span className="flex items-center gap-1 font-semibold text-amber-600"><Trophy size={12} className="text-amber-500" /> {u.score} pts</span>
                                                 <span className="flex items-center gap-1 font-semibold"><CheckCircle2 size={12} className="text-emerald-500" /> {u.totalCheckins} check-ins</span>
-                                                {u.streak > 0 && (
-                                                    <span className="flex items-center gap-1 font-semibold text-amber-500"><Flame size={12} /> {u.streak} {u.streak === 1 ? 'dia' : 'dias'}</span>
-                                                )}
-                                                {u.streak === 0 && (
-                                                    <span className="flex items-center gap-1 font-semibold text-slate-400"><Flame size={12} /> 0 dias</span>
-                                                )}
                                             </div>
                                         </div>
                                         {idx === 0 && u.score > 0 && <Medal size={24} className="text-amber-400 drop-shadow-sm" />}
